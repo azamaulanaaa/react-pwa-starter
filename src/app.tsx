@@ -1,9 +1,12 @@
-import { useEffect } from "react";
+import { BrowserRouter, Route, Routes } from "react-router";
+import { Homepage } from "@/component/homepage.tsx";
 
 export function App() {
-  useEffect(() => {
-    document.title = "Index";
-  });
-
-  return "Hello world";
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Homepage />} />
+      </Routes>
+    </BrowserRouter>
+  );
 }
