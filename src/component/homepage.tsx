@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import { z } from "zod";
 import { AnyFieldApi, useForm } from "@tanstack/react-form";
+import { Field } from "@base-ui/react/field";
+import { Button } from "@base-ui/react/button";
 
 const greetingSchema = z.object({
   name: z.string(),
@@ -48,25 +50,27 @@ export function Homepage() {
       <form.Field
         name="name"
         children={(field) => (
-          <div className="flex gap-1">
-            <label className="p-1">Name</label>
-            <input
+          <Field.Root className="flex gap-1">
+            <Field.Label className="p-1">Name</Field.Label>
+            <Field.Control
               name={field.name}
               value={field.state.value}
               onBlur={field.handleBlur}
               onChange={(e) => field.handleChange(e.target.value)}
               className="border p-1"
             />
-            <FieldInfo field={field} />
-          </div>
+            <Field.Error match={!field.state.meta.isValid}>
+              <FieldInfo field={field} />
+            </Field.Error>
+          </Field.Root>
         )}
       />
       <form.Subscribe
         selector={(state) => [state.canSubmit, state.isSubmitting]}
         children={([canSubmit, isSubmitting]) => (
-          <button type="submit" disabled={!canSubmit} className="border p-1">
+          <Button type="submit" disabled={!canSubmit} className="border p-1">
             {isSubmitting ? "..." : "Submit"}
-          </button>
+          </Button>
         )}
       />
     </form>
