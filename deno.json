@@ -19,6 +19,7 @@
     "@deno/vite-plugin": "npm:@deno/vite-plugin@^1.0.6",
     "@std/path": "jsr:@std/path@^1.1.4",
     "@tailwindcss/vite": "npm:@tailwindcss/vite@^4.1.18",
+    "@tanstack/react-form": "npm:@tanstack/react-form@^1.28.0",
     "@types/react": "npm:@types/react@^19.2.13",
     "@types/react-dom": "npm:@types/react-dom@^19.2.3",
     "@vitejs/plugin-react-swc": "npm:@vitejs/plugin-react-swc@^4.2.3",
@@ -26,7 +27,8 @@
     "react-dom": "npm:react-dom@^19.2.4",
     "react-router": "npm:react-router@^7.13.0",
     "tailwindcss": "npm:tailwindcss@^4.1.18",
-    "vite": "npm:vite@^7.3.1"
+    "vite": "npm:vite@^7.3.1",
+    "zod": "npm:zod@^4.3.6"
   },
   "allowScripts": ["npm:@swc/core@1.15.11", "npm:esbuild@0.27.2"]
 }
