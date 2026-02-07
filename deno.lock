@@ -10,9 +10,11 @@
     "npm:@tanstack/react-form@^1.28.0": "1.28.0_react@19.2.4_react-dom@19.2.4__react@19.2.4",
     "npm:@types/react@^19.2.13": "19.2.13",
     "npm:@vitejs/plugin-react-swc@^4.2.3": "4.2.3_vite@7.3.1__picomatch@4.0.3",
+    "npm:clsx@^2.1.1": "2.1.1",
     "npm:react-dom@^19.2.4": "19.2.4_react@19.2.4",
     "npm:react-router@^7.13.0": "7.13.0_react@19.2.4_react-dom@19.2.4__react@19.2.4",
     "npm:react@^19.2.4": "19.2.4",
+    "npm:tailwind-merge@^3.4.0": "3.4.0",
     "npm:tailwindcss@^4.1.18": "4.1.18",
     "npm:vite@*": "7.3.1_picomatch@4.0.3",
     "npm:vite@^7.3.1": "7.3.1_picomatch@4.0.3",
@@ -617,6 +619,9 @@
         "vite"
       ]
     },
+    "clsx@2.1.1": {
+      "integrity": "sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA=="
+    },
     "cookie@1.1.1": {
       "integrity": "sha512-ei8Aos7ja0weRpFzJnEA9UHJ/7XQmqglbRwnf2ATjcB9Wq874VKH9kfjjirM6UhU2/E5fFYadylyhFldcqSidQ=="
     },
@@ -857,6 +862,9 @@
     "tabbable@6.4.0": {
       "integrity": "sha512-05PUHKSNE8ou2dwIxTngl4EzcnsCDZGJ/iCLtDflR/SHB/ny14rXc+qU5P4mG9JkusiV7EivzY9Mhm55AzAvCg=="
     },
+    "tailwind-merge@3.4.0": {
+      "integrity": "sha512-uSaO4gnW+b3Y2aWoWfFpX62vn2sR3skfhbjsEnaBI81WD1wBLlHZe5sWf0AqjksNdYTbGBEd0UasQMT3SNV15g=="
+    },
     "tailwindcss@4.1.18": {
       "integrity": "sha512-4+Z+0yiYyEtUVCScyfHCxOYP06L5Ne+JiHhY2IjR2KWMIWhJOYZKLSGZaP5HkZ8+bY0cxfzwDE5uOmzFXyIwxw=="
     },
@@ -905,9 +913,11 @@
       "npm:@tanstack/react-form@^1.28.0",
       "npm:@types/react@^19.2.13",
       "npm:@vitejs/plugin-react-swc@^4.2.3",
+      "npm:clsx@^2.1.1",
       "npm:react-dom@^19.2.4",
       "npm:react-router@^7.13.0",
       "npm:react@^19.2.4",
+      "npm:tailwind-merge@^3.4.0",
       "npm:tailwindcss@^4.1.18",
       "npm:vite@^7.3.1",
       "npm:zod@^4.3.6"
