@@ -5,5 +5,5 @@ export function Homepage() {
     document.title = "Home";
   }, []);
 
-  return "Hello, world!";
+  return <h1 className="text-bold">Hello, world!</h1>;
 }
