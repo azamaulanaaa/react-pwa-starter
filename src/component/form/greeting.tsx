@@ -1,14 +1,17 @@
-import { useEffect } from "react";
 import { z } from "zod";
 import { AnyFieldApi, useForm } from "@tanstack/react-form";
 import { Field } from "@base-ui/react/field";
 import { Button } from "@base-ui/react/button";
 
+import { useTranslation } from "@/component/i18n_context.tsx";
+
 const greetingSchema = z.object({
-  name: z.string(),
+  name: z.string().min(1),
 });
 
 function FieldInfo({ field }: { field: AnyFieldApi }) {
+  const { t } = useTranslation("ui");
+
   return (
     <>
       {field.state.meta.isTouched && !field.state.meta.isValid
@@ -16,7 +19,7 @@ function FieldInfo({ field }: { field: AnyFieldApi }) {
           <em key={err.message}>{err.message}</em>
         ))
         : null}
-      {field.state.meta.isValidating ? "Validating..." : null}
+      {field.state.meta.isValidating ? t("validating") : null}
     </>
   );
 }
@@ -26,9 +29,11 @@ export type GreetingProps = {
 };
 
 export function Greeting(props: GreetingProps) {
+  const { t } = useTranslation("ui");
+
   const form = useForm({
     defaultValues: {
-      name: "vite",
+      name: "",
     },
     validators: {
       onChange: greetingSchema,
@@ -52,12 +57,13 @@ export function Greeting(props: GreetingProps) {
         name="name"
         children={(field) => (
           <Field.Root className="flex gap-1">
-            <Field.Label className="p-1">Name</Field.Label>
+            <Field.Label className="p-1">{t("name_label")}</Field.Label>
             <Field.Control
               name={field.name}
               value={field.state.value}
               onBlur={field.handleBlur}
               onChange={(e) => field.handleChange(e.target.value)}
+              placeholder={t("name_placeholder")}
               className="border p-1"
             />
             <Field.Error match={!field.state.meta.isValid}>
@@ -67,7 +73,7 @@ export function Greeting(props: GreetingProps) {
         )}
       />
       <Button type="submit" className="border p-1">
-        Submit
+        {t("submit_button")}
       </Button>
     </form>
   );
