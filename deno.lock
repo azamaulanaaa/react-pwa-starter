@@ -12,6 +12,7 @@
     "npm:@types/react@^18.3.28": "18.3.28",
     "npm:@vitejs/plugin-react-swc@^4.2.3": "4.2.3_vite@7.3.1__picomatch@4.0.3",
     "npm:clsx@^2.1.1": "2.1.1",
+    "npm:comlink@^4.4.2": "4.4.2",
     "npm:lucide-react@0.563": "0.563.0_react@18.3.1",
     "npm:motion@^12.34.0": "12.34.0_react@18.3.1_react-dom@18.3.1__react@18.3.1",
     "npm:react-dom@^18.3.1": "18.3.1_react@18.3.1",
@@ -19,6 +20,7 @@
     "npm:react@^18.3.1": "18.3.1",
     "npm:tailwind-merge@^3.4.0": "3.4.0",
     "npm:tailwindcss@^4.1.18": "4.1.18",
+    "npm:vite-plugin-comlink@^5.3.0": "5.3.0_comlink@4.4.2_vite@7.3.1__picomatch@4.0.3",
     "npm:vite@*": "7.3.1_picomatch@4.0.3",
     "npm:vite@^7.3.1": "7.3.1_picomatch@4.0.3",
     "npm:zod@^4.3.6": "4.3.6"
@@ -906,7 +908,7 @@
         "enhanced-resolve",
         "jiti",
         "lightningcss",
-        "magic-string",
+        "magic-string@0.30.21",
         "source-map-js",
         "tailwindcss"
       ]
@@ -1333,6 +1335,9 @@
     },
     "color-name@1.1.4": {
       "integrity": "sha512-dOy+3AuW3a2wNbZHIuMZpTcgjGuLU/uBL/ubcZF9OXbDo8ff4O8yVp5Bf0efS8uEoYo5q4Fx7dY9OgQGXgAsQA=="
+    },
+    "comlink@4.4.2": {
+      "integrity": "sha512-OxGdvBmJuNKSCMO4NTl1L47VRp6xn2wG4F/2hYzB6tiCb709otOxtEYCSvK80PtjODfXXZu8ds+Nw5kVCjqd2g=="
     },
     "comma-separated-tokens@2.0.3": {
       "integrity": "sha512-Fu4hJdvzeylCfQPp9SGWidpzrMs7tTrlu6Vb8XGaRGck8QSNZJJp538Wrb60Lax4fPwR64ViY468OIUTbRlGZg=="
@@ -2177,6 +2182,12 @@
       "integrity": "sha512-8dXPB2GI4dI8jV4MgUDGBeLdGk8ekfqVZ0BdLcrRzocGgG75ltNEmWS+gE7uokKF/0oSUuczNDT+g9hFJ23FkA==",
       "dependencies": [
         "react"
+      ]
+    },
+    "magic-string@0.30.17": {
+      "integrity": "sha512-sNPKHvyjVf7gyjwS4xGTaW/mCnF8wnjtifKBEhxfZ7E/S8tQ0rssrwGNn6q8JH/ohItJfSQp9mBtQYuTlH5QnA==",
+      "dependencies": [
+        "@jridgewell/sourcemap-codec"
       ]
     },
     "magic-string@0.30.21": {
@@ -3379,6 +3390,16 @@
         "vfile-message"
       ]
     },
+    "vite-plugin-comlink@5.3.0_comlink@4.4.2_vite@7.3.1__picomatch@4.0.3": {
+      "integrity": "sha512-grCxBC8JaCYIHPIvrM5c8Hq+XjFs3nhwSDc0SLpgY3D2LtE5j0wIZTF8zMWMzwMcrFPXWSejZI6MF6yvP/Iq9g==",
+      "dependencies": [
+        "comlink",
+        "json5",
+        "magic-string@0.30.17",
+        "source-map",
+        "vite@7.3.1_picomatch@4.0.3"
+      ]
+    },
     "vite-tsconfig-paths@5.1.4_vite@6.4.1__picomatch@4.0.3": {
       "integrity": "sha512-cYj0LRuLV2c2sMqhqhGpaO3LretdtMn/BVX4cPLanIZuwwrkVl+lK84E/miEXkCHWXuq65rhNN4rXsBcOB3S4w==",
       "dependencies": [
@@ -3513,6 +3534,7 @@
       "npm:@types/react@^18.3.28",
       "npm:@vitejs/plugin-react-swc@^4.2.3",
       "npm:clsx@^2.1.1",
+      "npm:comlink@^4.4.2",
       "npm:lucide-react@0.563",
       "npm:motion@^12.34.0",
       "npm:react-dom@^18.3.1",
@@ -3520,6 +3542,7 @@
       "npm:react@^18.3.1",
       "npm:tailwind-merge@^3.4.0",
       "npm:tailwindcss@^4.1.18",
+      "npm:vite-plugin-comlink@^5.3.0",
       "npm:vite@^7.3.1",
       "npm:zod@^4.3.6"
     ]

@@ -21,11 +21,11 @@ function FieldInfo({ field }: { field: AnyFieldApi }) {
   );
 }
 
-export function Homepage() {
-  useEffect(() => {
-    document.title = "Home";
-  }, []);
+export type GreetingProps = {
+  onSubmit: (value: z.infer<typeof greetingSchema>) => void | Promise<void>;
+};
 
+export function Greeting(props: GreetingProps) {
   const form = useForm({
     defaultValues: {
       name: "vite",
@@ -33,8 +33,9 @@ export function Homepage() {
     validators: {
       onChange: greetingSchema,
     },
-    onSubmit: ({ value }) => {
-      alert(`hello, ${value.name}!`);
+    onSubmit: async ({ value }) => {
+      const zValue = greetingSchema.parse(value);
+      await props.onSubmit(zValue);
     },
   });
 
@@ -65,14 +66,9 @@ export function Homepage() {
           </Field.Root>
         )}
       />
-      <form.Subscribe
-        selector={(state) => [state.canSubmit, state.isSubmitting]}
-        children={([canSubmit, isSubmitting]) => (
-          <Button type="submit" disabled={!canSubmit} className="border p-1">
-            {isSubmitting ? "..." : "Submit"}
-          </Button>
-        )}
-      />
+      <Button type="submit" className="border p-1">
+        Submit
+      </Button>
     </form>
   );
 }
