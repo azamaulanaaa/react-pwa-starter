@@ -11,7 +11,7 @@ export function Homepage() {
   }, []);
 
   const handleOnSubmit: GreetingProps["onSubmit"] = async (value) => {
-    const message = await worker.getGreeting(value.name);
+    const message = await worker.greeting.getGreeting(value.name);
     alert(message);
   };
 
