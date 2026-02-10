@@ -7,7 +7,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "ladle": "ladle serve",
-    "check": "tsgo"
+    "check": "tsgo",
+    "i18n": "i18next-cli extract"
   },
   "dependencies": {
     "@base-ui/react": "^1.1.0",
@@ -37,6 +38,7 @@
     "@types/react-dom": "^18.3.7",
     "@typescript/native-preview": "latest",
     "@vitejs/plugin-react-swc": "^4.2.3",
+    "i18next-cli": "^1.42.6",
     "vite": "^7.3.1",
     "vite-plugin-comlink": "^5.3.0",
     "vite-plugin-pwa": "^1.2.0"
