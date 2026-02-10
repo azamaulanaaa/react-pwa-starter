@@ -39,6 +39,7 @@
   "include": [
     ".ladle",
     "src",
+    "i18next.config.ts",
     "vite.config.ts"
   ]
 }
