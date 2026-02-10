@@ -1,0 +1,44 @@
+{
+  "compilerOptions": {
+    /* --- Core Environment --- */
+    "target": "ESNext",
+    "lib": [
+      "DOM",
+      "DOM.Iterable",
+      "ESNext"
+    ],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+    /* --- Strictness (The "Strict TypeScript" Wall) --- */
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    /* --- Cross-Runtime & Deno Compatibility --- */
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "forceConsistentCasingInFileNames": true,
+    "types": ["bun", "deno", "vite/client", "vite-plugin-comlink/client"],
+    /* --- JS Package Interop --- */
+    "allowJs": true, /* Allows TS to "see" your JS dependencies */
+    "checkJs": false, /* Prevents TS from checking errors inside JS files */
+    "skipLibCheck": true, /* Skips checking types in node_modules (Big speed boost) */
+    "resolveJsonModule": true, /* Essential for importing .json configs */
+    /* --- Output & Paths --- */
+    "noEmit": true,
+    "paths": {
+      "*": ["./*"],
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": [
+    ".ladle",
+    "src",
+    "vite.config.ts"
+  ]
+}

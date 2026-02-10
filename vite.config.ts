@@ -1,16 +1,13 @@
 import { defineConfig } from "vite";
-import { dirname, fromFileUrl, resolve } from "@std/path";
-import deno from "@deno/vite-plugin";
 import react from "@vitejs/plugin-react-swc";
 import tailwindcss from "@tailwindcss/vite";
 import { comlink } from "vite-plugin-comlink";
 import { VitePWA } from "vite-plugin-pwa";
 
-const __dirname = dirname(fromFileUrl(import.meta.url));
+const SRC_PATH = new URL("./src", import.meta.url).pathname;
 
 export default defineConfig({
   plugins: [
-    deno(),
     react(),
     tailwindcss(),
     comlink(),
@@ -25,6 +22,6 @@ export default defineConfig({
     plugins: () => [comlink()],
   },
   resolve: {
-    alias: { "@": resolve(__dirname, "src") },
+    alias: { "@": SRC_PATH },
   },
 });

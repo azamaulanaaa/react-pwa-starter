@@ -1,5 +1,3 @@
-/// <reference types="vite-plugin-comlink/client" />
-
 import { RemoteObject } from "comlink";
 import { createContext, ReactNode, useContext } from "react";
 
