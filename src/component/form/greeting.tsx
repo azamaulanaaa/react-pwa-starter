@@ -5,9 +5,10 @@ import { Button } from "@base-ui/react/button";
 
 import { useTranslation } from "@/component/i18n_context.tsx";
 
-const greetingSchema = z.object({
-  name: z.string().min(1),
-});
+import {
+  formGreetingSchema,
+  useFormGreetingState,
+} from "@/component/form/greeting.state.ts";
 
 function FieldInfo({ field }: { field: AnyFieldApi }) {
   const { t } = useTranslation("ui");
@@ -25,22 +26,28 @@ function FieldInfo({ field }: { field: AnyFieldApi }) {
 }
 
 export type GreetingProps = {
-  onSubmit: (value: z.infer<typeof greetingSchema>) => void | Promise<void>;
+  onSubmit: (value: z.infer<typeof formGreetingSchema>) => void | Promise<void>;
 };
 
 export function Greeting(props: GreetingProps) {
   const { t } = useTranslation("ui");
 
+  const value = useFormGreetingState((s) => s.value);
+  const setValue = useFormGreetingState((s) => s.setValue);
+
   const form = useForm({
-    defaultValues: {
-      name: "",
-    },
+    defaultValues: value,
     validators: {
-      onChange: greetingSchema,
+      onChange: formGreetingSchema,
     },
     onSubmit: async ({ value }) => {
-      const zValue = greetingSchema.parse(value);
+      const zValue = formGreetingSchema.parse(value);
       await props.onSubmit(zValue);
+    },
+    listeners: {
+      onChange: ({ formApi }) => {
+        setValue(formApi.state.values);
+      },
     },
   });
 
