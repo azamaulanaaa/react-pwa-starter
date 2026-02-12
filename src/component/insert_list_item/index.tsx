@@ -4,11 +4,9 @@ import { Field } from "@base-ui/react/field";
 import { Button } from "@base-ui/react/button";
 
 import { useTranslation } from "@/component/i18n_context.tsx";
-import { formGreetingSchema, useFormGreetingState } from "./state.ts";
+import { insertListItemSchema, useInsertListItemState } from "./state.ts";
 
 function FieldInfo({ field }: { field: AnyFieldApi }) {
-  const { t } = useTranslation("ui");
-
   return (
     <>
       {field.state.meta.isTouched && !field.state.meta.isValid
@@ -16,28 +14,29 @@ function FieldInfo({ field }: { field: AnyFieldApi }) {
           <em key={err.message}>{err.message}</em>
         ))
         : null}
-      {field.state.meta.isValidating ? t("validating") : null}
     </>
   );
 }
 
-export type GreetingProps = {
-  onSubmit: (value: z.infer<typeof formGreetingSchema>) => void | Promise<void>;
+export type FormInsertListItemProps = {
+  onSubmit: (
+    value: z.infer<typeof insertListItemSchema>,
+  ) => void | Promise<void>;
 };
 
-export function Greeting(props: GreetingProps) {
+export function FormInsertListItem(props: FormInsertListItemProps) {
   const { t } = useTranslation("ui");
 
-  const value = useFormGreetingState((s) => s.value);
-  const setValue = useFormGreetingState((s) => s.setValue);
+  const value = useInsertListItemState((s) => s.value);
+  const setValue = useInsertListItemState((s) => s.setValue);
 
   const form = useForm({
     defaultValues: value,
     validators: {
-      onChange: formGreetingSchema,
+      onChange: insertListItemSchema,
     },
     onSubmit: async ({ value }) => {
-      const zValue = formGreetingSchema.parse(value);
+      const zValue = insertListItemSchema.parse(value);
       await props.onSubmit(zValue);
     },
     listeners: {
@@ -54,20 +53,20 @@ export function Greeting(props: GreetingProps) {
         e.stopPropagation();
         form.handleSubmit();
       }}
-      className="flex flex-row gap-2"
+      className="flex flex-col gap-2"
     >
       <form.Field
-        name="name"
+        name="content"
         children={(field) => (
-          <Field.Root className="flex gap-1">
-            <Field.Label className="p-1">{t("name_label")}</Field.Label>
+          <Field.Root className="flex flex-col gap-1">
+            <Field.Label className="p-1">{t("content_label")}</Field.Label>
             <Field.Control
               name={field.name}
               value={field.state.value}
               onBlur={field.handleBlur}
               onChange={(e) => field.handleChange(e.target.value)}
-              placeholder={t("name_placeholder")}
-              className="border p-1"
+              placeholder={t("content_placeholder")}
+              className="border rounded p-1"
             />
             <Field.Error match={!field.state.meta.isValid}>
               <FieldInfo field={field} />
@@ -75,7 +74,7 @@ export function Greeting(props: GreetingProps) {
           </Field.Root>
         )}
       />
-      <Button type="submit" className="border p-1">
+      <Button type="submit" className="border rounded p-1">
         {t("submit_button")}
       </Button>
     </form>
