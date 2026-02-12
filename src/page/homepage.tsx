@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
 import { useWorker } from "@/component/worker_context.tsx";
-import { Greeting, GreetingProps } from "@/component/form/greeting.tsx";
+import { Greeting, GreetingProps } from "@/component/form/greeting/index.tsx";
 
 export function Homepage() {
   const worker = useWorker();

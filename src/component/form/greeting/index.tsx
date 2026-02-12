@@ -4,11 +4,7 @@ import { Field } from "@base-ui/react/field";
 import { Button } from "@base-ui/react/button";
 
 import { useTranslation } from "@/component/i18n_context.tsx";
-
-import {
-  formGreetingSchema,
-  useFormGreetingState,
-} from "@/component/form/greeting.state.ts";
+import { formGreetingSchema, useFormGreetingState } from "./state.ts";
 
 function FieldInfo({ field }: { field: AnyFieldApi }) {
   const { t } = useTranslation("ui");
