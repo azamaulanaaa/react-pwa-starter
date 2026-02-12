@@ -1,9 +1,10 @@
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect } from "react";
 
 import { useWorker } from "@/component/worker_context.tsx";
 import { Greeting, GreetingProps } from "@/component/form/greeting/index.tsx";
 
-export function Homepage() {
+export function Index() {
   const worker = useWorker();
 
   useEffect(() => {
@@ -17,3 +18,7 @@ export function Homepage() {
 
   return <Greeting onSubmit={handleOnSubmit} />;
 }
+
+export const Route = createFileRoute("/")({
+  component: Index,
+});

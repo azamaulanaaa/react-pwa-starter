@@ -1,12 +1,22 @@
 import { ReactNode, useCallback } from "react";
-import { BrowserRouter, Route, Routes } from "react-router";
+import { createRouter, RouterProvider } from "@tanstack/react-router";
 
 import "./app.css";
 import { syncZodLocale } from "./lib/zod.ts";
+import { routeTree } from "./routeTree.gen.ts";
 
 import { useWorker, WorkerProvider } from "./component/worker_context.tsx";
 import { I18nProvider, useI18n } from "./component/i18n_context.tsx";
-import { Homepage } from "./page/homepage.tsx";
+
+// Create a new router instance
+const router = createRouter({ routeTree });
+
+// Register the router instance for type safety
+declare module "@tanstack/react-router" {
+  interface Register {
+    router: typeof router;
+  }
+}
 
 function Loading() {
   return (
@@ -52,11 +62,7 @@ export function App() {
     <WorkerProvider>
       <WrappedI18nProvider>
         <LoadingTrigger>
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Homepage />} />
-            </Routes>
-          </BrowserRouter>
+          <RouterProvider router={router} />
         </LoadingTrigger>
       </WrappedI18nProvider>
     </WorkerProvider>

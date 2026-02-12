@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-import { z } from "@/lib/zod.ts";
+import { z } from "zod";
 
 export const formGreetingSchema = z.object({
   name: z.string().min(1),
