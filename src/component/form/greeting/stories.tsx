@@ -1,6 +1,6 @@
 import type { Story } from "@ladle/react";
 
-import { Greeting, GreetingProps } from "@/component/form/greeting.tsx";
+import { Greeting, GreetingProps } from "./index.tsx";
 
 export const Base: Story<GreetingProps> = (props) => <Greeting {...props} />;
 Base.args = {
