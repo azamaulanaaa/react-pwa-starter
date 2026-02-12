@@ -1,3 +1,4 @@
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import { useWorker } from "@/component/worker_context.tsx";
@@ -7,7 +8,7 @@ import {
 } from "@/component/insert_list_item/index.tsx";
 import { List, ListProps } from "@/component/list/index.tsx";
 
-export const Homepage = () => {
+const Index = () => {
   const worker = useWorker();
 
   const [items, setItems] = useState<
@@ -15,6 +16,8 @@ export const Homepage = () => {
   >([]);
 
   const refreshData = async () => {
+    if (!worker) return;
+
     const data = await worker.db.getAllListItems();
     const transformed_data = data.map((item) => ({
       ...item,
@@ -30,6 +33,8 @@ export const Homepage = () => {
   }, []);
 
   const handleOnSubmit: FormInsertListItemProps["onSubmit"] = async (value) => {
+    if (!worker) return;
+
     await worker.db.addListItem(value.content);
     await refreshData();
   };
@@ -41,3 +46,7 @@ export const Homepage = () => {
     </div>
   );
 };
+
+export const Route = createFileRoute("/")({
+  component: Index,
+});
