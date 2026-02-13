@@ -16,6 +16,7 @@
     "@tanstack/react-form": "^1.28.0",
     "@tanstack/react-router": "^1.159.5",
     "@tanstack/react-router-devtools": "^1.159.5",
+    "@tanstack/react-table": "^8.21.3",
     "clsx": "^2.1.1",
     "comlink": "^4.4.2",
     "i18next": "^25.8.4",
