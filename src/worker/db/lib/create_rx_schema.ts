@@ -14,10 +14,10 @@ export function createRxSchema<
   let schema = z.object({});
 
   for (const option of zodSchema._zod.def.options) {
-    schema = schema.extend(option._zod.def.shape);
+    schema = schema.safeExtend(option._zod.def.shape);
   }
 
-  const flatZodSchema = schema.partial().extend(BaseSchema.shape);
+  const flatZodSchema = schema.partial().safeExtend(BaseSchema.shape);
 
   const jsonSchema = z.toJSONSchema(flatZodSchema, { target: "jsonSchema7" });
 
