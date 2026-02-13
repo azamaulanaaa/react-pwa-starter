@@ -5,6 +5,7 @@ import react from "@vitejs/plugin-react-swc";
 import tailwindcss from "@tailwindcss/vite";
 import { comlink } from "vite-plugin-comlink";
 import { VitePWA, type VitePWAOptions } from "vite-plugin-pwa";
+import type { OutputOptions } from "rollup";
 
 const PWA_MANIFEST: VitePWAOptions["manifest"] = {
   name: "React PWA",
@@ -39,6 +40,60 @@ const PWA_MANIFEST: VitePWAOptions["manifest"] = {
   ],
 };
 
+const VENDOR_GROUPS: Record<string, string[]> = {
+  // Core UI & Framework
+  react: ["react", "react-dom", "scheduler"],
+  // Router
+  router: [
+    "@tanstack/router-core",
+    "@tanstack/react-router",
+    "@tanstack/react-store",
+    "@tanstack/history",
+    "isbot",
+    "tiny-invariant",
+    "tiny-warning",
+  ],
+  // Data Persistence (Large footprint, keep isolated)
+  rxdb: ["rxdb", "rxjs"],
+  dexie: ["dexie"],
+  // Animation & Icons (Heavy assets)
+  visuals: ["@base-ui", "motion", "lucide-react"],
+  // State & Logic
+  tanstack: ["@tanstack"],
+  // Internationalization
+  i18n: ["i18next", "i18next-browser-languagedetector", "i18next-http-backend"],
+  // Utils (Small, frequently used)
+  utils: ["zod", "zustand", "clsx", "tailwind-merge", "uuid"],
+};
+
+/**
+ * Custom chunk splitting strategy to group dependencies
+ * and prevent waterfall loading.
+ */
+const renderChunks = (id: string): string | undefined => {
+  if (id.includes("node_modules")) {
+    for (const [name, libs] of Object.entries(VENDOR_GROUPS)) {
+      if (libs.some((lib) => id.includes(`node_modules/${lib}/`))) {
+        return `vendor-${name}`;
+      }
+    }
+    // Fallback for all other node_modules
+    return "vendor-others";
+  }
+  return undefined;
+};
+
+/**
+ * Shared Rollup output options to ensure consistency
+ * between Main Build and Workers.
+ */
+const sharedOutputOptions: OutputOptions = {
+  manualChunks: renderChunks,
+  chunkFileNames: "assets/js/[name]-[hash].js",
+  entryFileNames: "assets/js/[name]-[hash].js",
+  assetFileNames: "assets/[ext]/[name]-[hash].[ext]",
+};
+
 export default defineConfig({
   plugins: [
     tsconfigPaths(),
@@ -68,5 +123,13 @@ export default defineConfig({
       tsconfigPaths(),
       comlink(),
     ],
+    rollupOptions: {
+      output: sharedOutputOptions,
+    },
+  },
+  build: {
+    rollupOptions: {
+      output: sharedOutputOptions,
+    },
   },
 });
