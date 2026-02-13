@@ -4,7 +4,40 @@ import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react-swc";
 import tailwindcss from "@tailwindcss/vite";
 import { comlink } from "vite-plugin-comlink";
-import { VitePWA } from "vite-plugin-pwa";
+import { VitePWA, type VitePWAOptions } from "vite-plugin-pwa";
+
+const PWA_MANIFEST: VitePWAOptions["manifest"] = {
+  name: "React PWA",
+  short_name: "RPWA",
+  description: "A high-performance PWA running everywhere",
+  theme_color: "#4f46e5",
+  background_color: "#ffffff",
+  display: "standalone",
+  icons: [
+    {
+      src: "icons/pwa-64x64.png",
+      sizes: "64x64",
+      type: "image/png",
+    },
+    {
+      src: "icons/pwa-192x192.png",
+      sizes: "192x192",
+      type: "image/png",
+    },
+    {
+      src: "icons/pwa-512x512.png",
+      sizes: "512x512",
+      type: "image/png",
+      purpose: "any",
+    },
+    {
+      src: "icons/maskable-icon-512x512.png",
+      sizes: "512x512",
+      type: "image/png",
+      purpose: "maskable",
+    },
+  ],
+};
 
 export default defineConfig({
   plugins: [
@@ -23,38 +56,7 @@ export default defineConfig({
         "icons/apple-touch-icon-180x180.png",
         "icon.svg",
       ],
-      manifest: {
-        name: "React PWA",
-        short_name: "RPWA",
-        description: "A high-performance PWA running everywhere",
-        theme_color: "#4f46e5",
-        background_color: "#ffffff",
-        display: "standalone",
-        icons: [
-          {
-            src: "icons/pwa-64x64.png",
-            sizes: "64x64",
-            type: "image/png",
-          },
-          {
-            src: "icons/pwa-192x192.png",
-            sizes: "192x192",
-            type: "image/png",
-          },
-          {
-            src: "icons/pwa-512x512.png",
-            sizes: "512x512",
-            type: "image/png",
-            purpose: "any",
-          },
-          {
-            src: "icons/maskable-icon-512x512.png",
-            sizes: "512x512",
-            type: "image/png",
-            purpose: "maskable",
-          },
-        ],
-      },
+      manifest: PWA_MANIFEST,
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
       },
@@ -62,6 +64,9 @@ export default defineConfig({
   ],
   worker: {
     format: "es",
-    plugins: () => [tsconfigPaths(), comlink()],
+    plugins: () => [
+      tsconfigPaths(),
+      comlink(),
+    ],
   },
 });
