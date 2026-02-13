@@ -1,11 +1,12 @@
 import { addRxPlugin, createRxDatabase, RxStorage } from "rxdb";
 import { getRxStorageDexie } from "rxdb/plugins/storage-dexie";
+import { RxDBMigrationPlugin } from "rxdb/plugins/migration-schema";
 import { RxDBDevModePlugin } from "rxdb/plugins/dev-mode";
 import { wrappedValidateAjvStorage } from "rxdb/plugins/validate-ajv";
 import { v7 as uuidv7 } from "uuid";
 import { z } from "zod";
 
-import { createRxSchema } from "./lib/create_rx_schema.ts";
+import { createRxMigration, createRxSchema } from "./lib/rx_schema.ts";
 import { addZodHooks } from "./lib/add_zod_hook.ts";
 import {
   ListMigrationSchema,
@@ -14,6 +15,8 @@ import {
 } from "./schemas/list.schema.ts";
 
 async function init(name: string) {
+  addRxPlugin(RxDBMigrationPlugin);
+
   let storage: RxStorage<any, any> = getRxStorageDexie();
 
   if (import.meta.env.DEV) {
@@ -28,7 +31,10 @@ async function init(name: string) {
   });
 
   await db.addCollections({
-    list: { schema: createRxSchema("list", ListSchema) },
+    list: {
+      schema: createRxSchema("list", ListSchema),
+      migrationStrategies: createRxMigration(ListSchema),
+    },
   });
 
   addZodHooks(db.list, ListSchemaLatest, ListMigrationSchema);
