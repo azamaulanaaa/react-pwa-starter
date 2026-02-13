@@ -1,14 +1,14 @@
 import { defineConfig } from "vite";
+import tsconfigPaths from "vite-tsconfig-paths";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react-swc";
 import tailwindcss from "@tailwindcss/vite";
 import { comlink } from "vite-plugin-comlink";
 import { VitePWA } from "vite-plugin-pwa";
 
-const SRC_PATH = new URL("./src", import.meta.url).pathname;
-
 export default defineConfig({
   plugins: [
+    tsconfigPaths(),
     tanstackRouter({
       target: "react",
       autoCodeSplitting: true,
@@ -62,9 +62,6 @@ export default defineConfig({
   ],
   worker: {
     format: "es",
-    plugins: () => [comlink()],
-  },
-  resolve: {
-    alias: { "@": SRC_PATH },
+    plugins: () => [tsconfigPaths(), comlink()],
   },
 });
