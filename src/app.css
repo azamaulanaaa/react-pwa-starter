@@ -1,9 +1,11 @@
 @import "tailwindcss";
 
-body {
-  position: relative;
-}
+@layer base {
+  body {
+    position: relative;
+  }
 
-.root {
-  isolation: isolate;
+  .root {
+    isolation: isolate;
+  }
 }
