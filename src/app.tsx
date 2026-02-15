@@ -1,4 +1,4 @@
-import { ReactNode, useCallback } from "react";
+import { ReactNode, useEffect } from "react";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 
 import "./app.css";
@@ -7,6 +7,7 @@ import { routeTree } from "./routeTree.gen.ts";
 
 import { useWorker, WorkerProvider } from "./component/worker_context.tsx";
 import { I18nProvider, useI18n } from "./component/i18n_context.tsx";
+import { useAppState } from "./state.ts";
 
 // Create a new router instance
 const router = createRouter({ routeTree });
@@ -29,6 +30,15 @@ function Loading() {
 function LoadingTrigger({ children }: { children: ReactNode }) {
   const worker = useWorker();
   const i18n = useI18n();
+  const language = useAppState((s) => s.value.language);
+
+  useEffect(() => {
+    if (!worker || !i18n) return;
+
+    syncZodLocale(language);
+    worker.setLanguage(language);
+    i18n.changeLanguage(language);
+  }, [language, worker, i18n]);
 
   if (!worker || !i18n) return <Loading />;
 
@@ -39,32 +49,14 @@ function LoadingTrigger({ children }: { children: ReactNode }) {
   );
 }
 
-function WrappedI18nProvider({ children }: { children: ReactNode }) {
-  const worker = useWorker();
-
-  const handleOnLanguageChange = useCallback((lng: string) => {
-    syncZodLocale(lng);
-
-    if (worker != null) {
-      worker.setLanguage(lng);
-    }
-  }, [worker]);
-
-  return (
-    <I18nProvider onLanguageChange={handleOnLanguageChange}>
-      {children}
-    </I18nProvider>
-  );
-}
-
 export function App() {
   return (
     <WorkerProvider>
-      <WrappedI18nProvider>
+      <I18nProvider>
         <LoadingTrigger>
           <RouterProvider router={router} />
         </LoadingTrigger>
-      </WrappedI18nProvider>
+      </I18nProvider>
     </WorkerProvider>
   );
 }
