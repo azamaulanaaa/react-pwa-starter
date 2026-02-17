@@ -30,7 +30,7 @@ function Loading() {
 function LoadingTrigger({ children }: { children: ReactNode }) {
   const worker = useWorker();
   const i18n = useI18n();
-  const language = useAppState((s) => s.value.language);
+  const language = useAppState((s) => s.language);
 
   useEffect(() => {
     if (!worker || !i18n) return;
