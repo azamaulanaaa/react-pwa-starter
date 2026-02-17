@@ -7,7 +7,7 @@ import { routeTree } from "./routeTree.gen.ts";
 
 import { useWorker, WorkerProvider } from "./component/worker_context.tsx";
 import { I18nProvider, useI18n } from "./component/i18n_context.tsx";
-import { useAppState } from "./state.ts";
+import { AppState, useAppState } from "./state.ts";
 
 // Create a new router instance
 const router = createRouter({ routeTree });
@@ -30,15 +30,31 @@ function Loading() {
 function LoadingTrigger({ children }: { children: ReactNode }) {
   const worker = useWorker();
   const i18n = useI18n();
-  const language = useAppState((s) => s.language);
 
-  useEffect(() => {
+  const changeLanguage = (language: AppState["language"]) => {
     if (!worker || !i18n) return;
 
     syncZodLocale(language);
     worker.setLanguage(language);
     i18n.changeLanguage(language);
-  }, [language, worker, i18n]);
+  };
+
+  useEffect(() => {
+    if (!worker || !i18n) return;
+
+    const currentLang = useAppState.getState().language;
+    changeLanguage(currentLang);
+
+    const unsubscribe = useAppState.subscribe((state, prevState) => {
+      if (state.language !== prevState.language) {
+        changeLanguage(state.language);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [worker, i18n]);
 
   if (!worker || !i18n) return <Loading />;
 
