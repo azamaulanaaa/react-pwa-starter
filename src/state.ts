@@ -4,7 +4,7 @@ import { persist } from "zustand/middleware";
 
 export const AppStateSchema = z.object({
   language: z.enum(["en"]).default("en"),
-  theme: z.enum(["light", "dark"]).default("light"),
+  theme: z.enum(["light", "dark", "system"]).default("system"),
 });
 
 type Setters<T> = {

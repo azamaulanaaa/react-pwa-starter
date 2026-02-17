@@ -1,4 +1,4 @@
-import { ReactNode, useEffect } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 
 import "./app.css";
@@ -8,6 +8,8 @@ import { routeTree } from "./routeTree.gen.ts";
 import { useWorker, WorkerProvider } from "./component/worker_context.tsx";
 import { I18nProvider, useI18n } from "./component/i18n_context.tsx";
 import { AppState, useAppState } from "./state.ts";
+import { cn } from "./lib/cn.ts";
+import { useSystemTheme } from "./hook/useSystemTheme.ts";
 
 // Create a new router instance
 const router = createRouter({ routeTree });
@@ -67,13 +69,21 @@ function LoadingTrigger({ children }: { children: ReactNode }) {
 }
 
 export function App() {
+  const theme = useAppState((state) => state.theme);
+  const systemTheme = useSystemTheme();
+
+  const isThemeDark = theme == "dark" ||
+    (theme == "system" && systemTheme == "dark");
+
   return (
-    <WorkerProvider>
-      <I18nProvider>
-        <LoadingTrigger>
-          <RouterProvider router={router} />
-        </LoadingTrigger>
-      </I18nProvider>
-    </WorkerProvider>
+    <div className={cn([isThemeDark, "dark"])}>
+      <WorkerProvider>
+        <I18nProvider>
+          <LoadingTrigger>
+            <RouterProvider router={router} />
+          </LoadingTrigger>
+        </I18nProvider>
+      </WorkerProvider>
+    </div>
   );
 }
