@@ -37,6 +37,7 @@ function LoadingTrigger({ children }: { children: ReactNode }) {
     syncZodLocale(language);
     worker.setLanguage(language);
     i18n.changeLanguage(language);
+    document.documentElement.lang = language;
   };
 
   useEffect(() => {
