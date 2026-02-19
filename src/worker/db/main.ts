@@ -3,7 +3,7 @@ import { getRxStorageDexie } from "rxdb/plugins/storage-dexie";
 import { RxDBMigrationPlugin } from "rxdb/plugins/migration-schema";
 import { RxDBDevModePlugin } from "rxdb/plugins/dev-mode";
 import { wrappedValidateAjvStorage } from "rxdb/plugins/validate-ajv";
-import { proxy } from "comlink";
+import { proxy, ProxyMarked } from "comlink";
 import { z } from "zod";
 
 import { createRxMigration, createRxSchema } from "./lib/rx_schema.ts";
@@ -91,7 +91,7 @@ export async function executeQuery<C extends CollectionName>(
 export async function observeQuery<C extends CollectionName>(
   collectionName: C,
   mangoQuery: CollectionMangoQuery<C>,
-  callback: (data: CollectionDocOutput<C>[]) => void,
+  callback: ((data: CollectionDocOutput<C>[]) => void) & ProxyMarked,
 ) {
   const db = await getDB();
 
