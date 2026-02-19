@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect } from "react";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 
 import "./app.css";
