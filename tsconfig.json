@@ -32,7 +32,6 @@
     /* --- Output & Paths --- */
     "noEmit": true,
     "paths": {
-      "*": ["./*"],
       "@/*": ["./src/*"]
     }
   },
