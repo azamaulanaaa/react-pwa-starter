@@ -1,28 +1,17 @@
 import { z } from "zod";
 
-import { BaseSchema } from "./base.schema.ts";
+import { RxCollectionDefinition } from "@/worker/db/lib/builder.ts";
 
-export const ListSchemaV0 = BaseSchema.extend({
-  version: z.literal(0),
+export const ListSchemaV0 = z.object({
   value: z.string(),
 });
 
-export const ListSchemaV1 = BaseSchema.extend({
-  version: z.literal(1),
+export const ListSchemaV1 = z.object({
   content: z.string(),
 });
 
-export const ListSchemaLatest = ListSchemaV1;
-
-export const ListSchema = z.discriminatedUnion("version", [
-  ListSchemaV0,
-  ListSchemaV1,
-]);
-
-export const ListMigrationSchema = z.discriminatedUnion("version", [
-  ListSchemaV0.transform((data) => ({
-    ...data,
-    version: 1 as const,
-    content: data.value,
-  })),
-]);
+export const ListCollectionBuilder = RxCollectionDefinition.create("list")
+  .initial(ListSchemaV0)
+  .addStep(ListSchemaV1, (prev) => ({
+    content: prev.value,
+  }));

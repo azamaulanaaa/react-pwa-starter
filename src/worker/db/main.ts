@@ -4,36 +4,26 @@ import { RxDBMigrationPlugin } from "rxdb/plugins/migration-schema";
 import { RxDBDevModePlugin } from "rxdb/plugins/dev-mode";
 import { wrappedValidateAjvStorage } from "rxdb/plugins/validate-ajv";
 import { proxy, ProxyMarked } from "comlink";
-import { z } from "zod";
+import z from "zod";
 
-import { createRxMigration, createRxSchema } from "./lib/rx_schema.ts";
-import { addZodHooks } from "./lib/add_zod_hook.ts";
+import { initializeCollection } from "./lib/builder.ts";
+import { ListCollectionBuilder } from "./schemas/list.schema.ts";
 
-import {
-  ListMigrationSchema,
-  ListSchema,
-  ListSchemaLatest,
-} from "./schemas/list.schema.ts";
-
-export const collectionsRegistry = {
-  list: {
-    rxSchema: ListSchema,
-    migrationSchema: ListMigrationSchema,
-    zodSchemaLatest: ListSchemaLatest,
-  },
+const builders = {
+  list: ListCollectionBuilder,
 } as const;
 
-export type CollectionName = keyof typeof collectionsRegistry;
+export type AppDocumentTypes = {
+  [K in keyof typeof builders]: z.infer<
+    ReturnType<(typeof builders)[K]["schema"]>
+  >;
+};
 
-export type CollectionDocInput<C extends CollectionName> = z.input<
-  typeof collectionsRegistry[C]["zodSchemaLatest"]
->;
-export type CollectionDocOutput<C extends CollectionName> = z.infer<
-  typeof collectionsRegistry[C]["zodSchemaLatest"]
->;
-
+export type CollectionName = keyof AppDocumentTypes;
+export type CollectionDocOutput<C extends CollectionName> = AppDocumentTypes[C];
+export type CollectionDocInput<C extends CollectionName> = AppDocumentTypes[C];
 export type CollectionMangoQuery<C extends CollectionName> = MangoQuery<
-  CollectionDocOutput<C>
+  AppDocumentTypes[C]
 >;
 
 async function init(name: string) {
@@ -51,23 +41,9 @@ async function init(name: string) {
     storage,
   });
 
-  const rxCollectionsConfig: any = {};
-  for (const [colName, config] of Object.entries(collectionsRegistry)) {
-    rxCollectionsConfig[colName] = {
-      schema: createRxSchema(colName, (config as any).rxSchema),
-      migrationStrategies: createRxMigration((config as any).rxSchema),
-    };
-  }
-
-  await db.addCollections(rxCollectionsConfig);
-
-  for (const [colName, config] of Object.entries(collectionsRegistry)) {
-    addZodHooks(
-      db[colName],
-      (config as any).zodSchemaLatest,
-      (config as any).migrationSchema,
-    );
-  }
+  await Promise.all(
+    Object.values(builders).map((builder) => initializeCollection(builder, db)),
+  );
 
   return db;
 }

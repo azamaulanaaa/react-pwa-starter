@@ -26,10 +26,11 @@ const Index = () => {
         "list",
         { selector: {} },
         proxy((data) => {
-          const transformed_data = data.map((item: any) => ({
-            ...item,
+          const transformed_data = data.map((item) => ({
+            id: item.id,
             created_at: new Date(item.created_at),
             modified_at: new Date(item.modified_at),
+            content: item.payload.v1.content,
           }));
           setItems(transformed_data);
         }),
@@ -49,11 +50,14 @@ const Index = () => {
     if (!worker) return;
 
     await worker.db.insert("list", {
-      version: 1,
       id: uuidv7(),
-      content: value.content,
       created_at: new Date().toISOString(),
       modified_at: new Date().toISOString(),
+      payload: {
+        "v1": {
+          content: value.content,
+        },
+      },
     });
   };
 
