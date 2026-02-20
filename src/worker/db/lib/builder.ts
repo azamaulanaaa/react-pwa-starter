@@ -93,16 +93,11 @@ export class RxCollectionDefinition<
     public readonly migrations: MigrationFn<any, any>[] = [],
   ) {}
 
-  static create(title: string) {
-    return new RxCollectionDefinition(title);
-  }
-
-  initial<S extends z.ZodObject>(schema: S) {
-    return new RxCollectionDefinition<S, readonly [S]>(
-      this.title,
-      [schema] as const,
-      [],
-    );
+  /**
+   * Entry point: Forces the user to provide the initial v0 schema immediately.
+   */
+  static define<S extends z.ZodObject<any>>(title: string, initialSchema: S) {
+    return new RxCollectionDefinition<S, readonly [S]>(title, [initialSchema]);
   }
 
   addStep<S extends z.ZodObject>(

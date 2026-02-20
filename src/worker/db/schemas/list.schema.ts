@@ -10,8 +10,10 @@ export const ListSchemaV1 = z.object({
   content: z.string(),
 });
 
-export const ListCollectionBuilder = RxCollectionDefinition.create("list")
-  .initial(ListSchemaV0)
+export const ListCollectionBuilder = RxCollectionDefinition.define(
+  "list",
+  ListSchemaV0,
+)
   .addStep(ListSchemaV1, (prev) => ({
     content: prev.value,
   }));

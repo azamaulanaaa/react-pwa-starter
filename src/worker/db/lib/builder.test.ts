@@ -79,8 +79,7 @@ describe("transformToRxJsonSchema", () => {
 
 describe("RxCollectionDefinition", () => {
   it("should maintain data integrity through a multi-step migration chain", () => {
-    const builder = RxCollectionDefinition.create("user_data")
-      .initial(MockSchemaV0)
+    const builder = RxCollectionDefinition.define("user_data", MockSchemaV0)
       .addStep(MockSchemaV1, (prev) => ({
         content: `Migrated: ${prev.value}`,
         is_active: true,
@@ -117,8 +116,7 @@ describe("RxCollectionDefinition", () => {
 
   it("should fail migration if the payload is missing the previous version's key", () => {
     const { migrationStrategies } = assembleCollectionConfig(
-      RxCollectionDefinition.create("fail_test")
-        .initial(MockSchemaV0)
+      RxCollectionDefinition.define("fail_test", MockSchemaV0)
         .addStep(MockSchemaV1, (prev) => ({
           content: prev.value,
           is_active: false,
@@ -135,8 +133,7 @@ describe("RxCollectionDefinition", () => {
 
   it("should correctly handle zod.parse() validation during migration", () => {
     const { migrationStrategies } = assembleCollectionConfig(
-      RxCollectionDefinition.create("type_safety")
-        .initial(MockSchemaV0)
+      RxCollectionDefinition.define("type_safety", MockSchemaV0)
         .addStep(MockSchemaV1, (prev) => ({
           content: prev.value,
           is_active: true,
