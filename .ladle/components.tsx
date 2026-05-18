@@ -13,7 +13,7 @@ function Loading() {
   );
 }
 
-function LoadingTrigger({ children }: { children: ReactNode }) {
+function AppInitializerGuard({ children }: { children: ReactNode }) {
   const i18n = useI18n();
 
   if (!i18n) return <Loading />;
@@ -34,9 +34,9 @@ export const Provider: GlobalProvider = ({
 
   return (
     <I18nProvider onLanguageChange={handleOnLanguageChange}>
-      <LoadingTrigger>
+      <AppInitializerGuard>
         {children}
-      </LoadingTrigger>
+      </AppInitializerGuard>
     </I18nProvider>
   );
 };

@@ -26,7 +26,7 @@ function Loading() {
   );
 }
 
-function LoadingTrigger({ children }: { children: ReactNode }) {
+function AppInitializerGuard({ children }: { children: ReactNode }) {
   const worker = useWorker();
   const i18n = useI18n();
 
@@ -61,9 +61,9 @@ export function App() {
   return (
     <WorkerProvider>
       <WrappedI18nProvider>
-        <LoadingTrigger>
+        <AppInitializerGuard>
           <RouterProvider router={router} />
-        </LoadingTrigger>
+        </AppInitializerGuard>
       </WrappedI18nProvider>
     </WorkerProvider>
   );
