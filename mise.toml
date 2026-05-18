@@ -1,0 +1,5 @@
+[tools]
+deno = "latest"
+node = "latest"
+"npm:prettier" = "latest"
+"npm:typescript-language-server" = "latest"
