@@ -1,5 +1,5 @@
 [tools]
 deno = "latest"
 node = "latest"
-"npm:prettier" = "latest"
+"npm:@fsouza/prettierd" = "latest"
 "npm:typescript-language-server" = "latest"
