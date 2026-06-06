@@ -1,12 +1,12 @@
 import { ReactNode, useCallback } from "react";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 
-import "./app.css";
-import { syncZodLocale } from "./lib/zod.ts";
-import { routeTree } from "./routeTree.gen.ts";
+import "@/app.css";
+import { syncZodLocale } from "@/lib/zod.ts";
+import { routeTree } from "@/routeTree.gen.ts";
 
-import { useWorker, WorkerProvider } from "./component/worker_context.tsx";
-import { I18nProvider, useI18n } from "./component/i18n_context.tsx";
+import { useWorker, WorkerProvider } from "@/component/worker_context.tsx";
+import { I18nProvider, useI18n } from "@/component/i18n_context.tsx";
 
 // Create a new router instance
 const router = createRouter({ routeTree });
