@@ -3,7 +3,7 @@ import type { Story, StoryDefault } from "@ladle/react";
 import { TextInput, TextInputProps } from "./index.tsx";
 
 export default {
-  title: "Text Input",
+  title: "Base / Text Input",
 } as StoryDefault;
 
 export const Base: Story<TextInputProps> = (props) => <TextInput {...props} />;
