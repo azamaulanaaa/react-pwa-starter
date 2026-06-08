@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect } from "react";
 
-import { useWorker } from "@/component/worker_context.tsx";
-import { Greeting, GreetingProps } from "@/component/form/greeting/index.tsx";
+import { useWorker } from "@/components/worker_context.tsx";
+import { Greeting, GreetingProps } from "@/components/form/greeting/index.tsx";
 
 export function Index() {
   const worker = useWorker();

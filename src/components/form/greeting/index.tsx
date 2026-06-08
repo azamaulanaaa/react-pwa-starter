@@ -1,10 +1,12 @@
 import { z } from "zod";
 import { AnyFieldApi, useForm } from "@tanstack/react-form";
-import { Field } from "@base-ui/react/field";
-import { Button } from "@base-ui/react/button";
 
-import { useTranslation } from "@/component/i18n_context.tsx";
+import { useTranslation } from "@/components/i18n_context.tsx";
+import { Form } from "src/components/ui/form.tsx";
+import { Field, FieldError, FieldLabel } from "@/components/ui/field.tsx";
 import { formGreetingSchema, useFormGreetingState } from "./state.ts";
+import { Input } from "src/components/ui/input.tsx";
+import { Button } from "@/components/ui/button.tsx";
 
 function FieldInfo({ field }: { field: AnyFieldApi }) {
   const { t } = useTranslation("ui");
@@ -48,36 +50,35 @@ export function Greeting(props: GreetingProps) {
   });
 
   return (
-    <form
+    <Form
       onSubmit={(e) => {
         e.preventDefault();
         e.stopPropagation();
         form.handleSubmit();
       }}
-      className="flex flex-row gap-2"
+      className="flex w-full max-w-64 flex-col gap-4"
     >
       <form.Field
         name="name"
         children={(field) => (
-          <Field.Root className="flex gap-1">
-            <Field.Label className="p-1">{t("name_label")}</Field.Label>
-            <Field.Control
+          <Field>
+            <FieldLabel>{t("name_label")}</FieldLabel>
+            <Input
               name={field.name}
               value={field.state.value}
               onBlur={field.handleBlur}
               onChange={(e) => field.handleChange(e.target.value)}
               placeholder={t("name_placeholder")}
-              className="border p-1"
             />
-            <Field.Error match={!field.state.meta.isValid}>
+            <FieldError match={!field.state.meta.isValid}>
               <FieldInfo field={field} />
-            </Field.Error>
-          </Field.Root>
+            </FieldError>
+          </Field>
         )}
       />
-      <Button type="submit" className="border p-1">
+      <Button type="submit">
         {t("submit_button")}
       </Button>
-    </form>
+    </Form>
   );
 }
