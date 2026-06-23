@@ -2,4 +2,6 @@
 deno = "latest"
 node = "latest"
 "npm:@fsouza/prettierd" = "latest"
+"npm:oxlint" = "latest"
+"npm:oxlint-tsgolint" = "latest"
 "npm:typescript-language-server" = "latest"
