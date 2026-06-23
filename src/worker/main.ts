@@ -1,4 +1,4 @@
-import {} from "@/lib/worker.ts";
+import "@/lib/worker.ts";
 
 export { setLanguage } from "./i18n.ts";
 

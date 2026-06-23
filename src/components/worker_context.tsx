@@ -1,7 +1,7 @@
 import { RemoteObject } from "comlink";
 import { createContext, ReactNode, useContext } from "react";
 
-import {} from "@/lib/worker.ts";
+import "@/lib/worker.ts";
 export type WorkerType = typeof import("@/worker/main.ts");
 
 const WorkerContext = createContext<null | RemoteObject<WorkerType>>(null);
