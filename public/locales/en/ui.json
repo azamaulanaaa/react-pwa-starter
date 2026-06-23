@@ -4,8 +4,5 @@
   "form_task_insert": "Insert",
   "list-task-action": "Action",
   "list-task-description": "Task Description",
-  "name_label": "Name",
-  "name_placeholder": "Enter your name...",
-  "submit_button": "Submit",
   "validating": "Checking..."
 }
