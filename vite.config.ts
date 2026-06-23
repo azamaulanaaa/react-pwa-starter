@@ -1,6 +1,6 @@
 import { BuildEnvironmentOptions, defineConfig } from "vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
-import react from "@vitejs/plugin-react-swc";
+import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { comlink } from "vite-plugin-comlink";
 import { VitePWA, type VitePWAOptions } from "vite-plugin-pwa";
