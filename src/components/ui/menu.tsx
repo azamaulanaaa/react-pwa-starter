@@ -79,7 +79,7 @@ export function MenuGroup(
   return <MenuPrimitive.Group data-slot="menu-group" {...props} />;
 }
 
-export function MenuItem({
+export function MenuLinkItem({
   className,
   inset,
   variant = "default",
@@ -313,7 +313,7 @@ export {
   MenuCreateHandle as DropdownMenuCreateHandle,
   MenuGroup as DropdownMenuGroup,
   MenuGroupLabel as DropdownMenuLabel,
-  MenuItem as DropdownMenuItem,
+  MenuLinkItem as DropdownMenuItem,
   MenuPopup as DropdownMenuContent,
   MenuPortal as DropdownMenuPortal,
   MenuPrimitive,
