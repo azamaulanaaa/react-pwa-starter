@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Allow: /assets/js/
+Allow: /assets/css/
+
+Disallow: /sw.js
+Disallow: /workbox-*.js
+Disallow: /manifest.webmanifest
