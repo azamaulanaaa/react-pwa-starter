@@ -3,30 +3,34 @@ import { useEffect, useState } from "react";
 
 import { FormTask, FormTaskProps } from "@/components/form/task/index.tsx";
 import { ListTask, type Task } from "@/components/list/task/index.tsx";
+import { useWorker } from "@/components/worker_context.tsx";
 
 function Index() {
+  const worker = useWorker();
   const [data, setData] = useState<Task[]>([]);
 
   useEffect(() => {
     document.title = "Home";
+    fetchData();
   }, []);
 
-  const handleOnSubmit: FormTaskProps["onSubmit"] = (value) => {
-    setData((data) => [...data, {
-      id: data.length.toString(),
-      description: value.task,
-      isDone: false,
-    }]);
+  const fetchData = () => {
+    worker?.db.listTasks().then((data) => setData(data ? data : []));
   };
 
-  const handleOnToggleDone = (id: string, isDone: boolean) => {
-    setData((data) =>
-      data.map((item) => item.id == id ? { ...item, isDone } : item)
-    );
+  const handleOnSubmit: FormTaskProps["onSubmit"] = async (value) => {
+    await worker?.db.addTask(value.task);
+    fetchData();
   };
 
-  const handleOnDelete = (id: string) => {
-    setData((data) => data.filter((item) => item.id != id));
+  const handleOnToggleDone = async (id: number, isDone: boolean) => {
+    await worker?.db.updateTaskIsDone(id, isDone);
+    fetchData();
+  };
+
+  const handleOnDelete = async (id: number) => {
+    await worker?.db.deleteTask(id);
+    fetchData();
   };
 
   return (

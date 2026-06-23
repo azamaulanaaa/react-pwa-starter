@@ -61,6 +61,8 @@ const VENDOR_GROUPS: Record<string, string[]> = {
   i18n: ["i18next", "i18next-browser-languagedetector", "i18next-http-backend"],
   // Utils (Small, frequently used)
   utils: ["zod", "zustand", "clsx", "tailwind-merge", "uuid"],
+  // dexie
+  dexie: ["dexie"],
 };
 
 /**

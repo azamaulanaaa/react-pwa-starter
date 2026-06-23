@@ -5,3 +5,6 @@ function markAsProxy<T>(lib: T): T & ProxyMarked {
 }
 
 export { setLanguage } from "./i18n.ts";
+
+import * as dbRaw from "./db.ts";
+export const db = markAsProxy(dbRaw);

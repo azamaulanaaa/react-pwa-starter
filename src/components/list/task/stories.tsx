@@ -10,13 +10,13 @@ export default {
 export const Base: Story<ListTaskProps> = (props) => {
   const [data, setData] = useState(props.data);
 
-  const handleOnToggleDone = (id: string, isDone: boolean) => {
+  const handleOnToggleDone = (id: number, isDone: boolean) => {
     setData((data) =>
       data.map((item) => item.id == id ? { ...item, isDone } : item)
     );
   };
 
-  const handleOnDelete = (id: string) => {
+  const handleOnDelete = (id: number) => {
     setData((data) => data.filter((item) => item.id != id));
   };
 
@@ -31,12 +31,12 @@ export const Base: Story<ListTaskProps> = (props) => {
 Base.args = {
   data: [
     {
-      id: "1",
+      id: 1,
       isDone: false,
       description: "Task #1",
     },
     {
-      id: "2",
+      id: 2,
       isDone: true,
       description: "Task #2",
     },

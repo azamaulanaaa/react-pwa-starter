@@ -27,21 +27,21 @@ import {
 
 declare module "@tanstack/react-table" {
   interface TableMeta<TData extends RowData> {
-    onToggleDone?: (id: string, isDone: boolean) => void;
-    onDelete?: (id: string) => void;
+    onToggleDone?: (id: number, isDone: boolean) => void | Promise<void>;
+    onDelete?: (id: number) => void | Promise<void>;
   }
 }
 
 export type Task = {
-  id: string;
+  id: number;
   isDone: boolean;
   description: string;
 };
 
 export type ListTaskProps = {
   data: Task[];
-  onToggleDone: (id: string, isDone: boolean) => void;
-  onDelete: (id: string) => void;
+  onToggleDone: (id: number, isDone: boolean) => void | Promise<void>;
+  onDelete: (id: number) => void | Promise<void>;
 };
 
 export function ListTask(props: ListTaskProps) {
