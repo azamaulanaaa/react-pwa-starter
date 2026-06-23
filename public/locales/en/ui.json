@@ -1,4 +1,7 @@
 {
+  "form_task_description_label": "Task",
+  "form_task_description_placeholder": "Task Description",
+  "form_task_insert": "Insert",
   "list-task-action": "Action",
   "list-task-description": "Task Description",
   "name_label": "Name",
