@@ -63,7 +63,7 @@ export function FormTask(props: FormTaskProps) {
       <form.Field
         name="task"
         children={(field) => (
-          <Field>
+          <Field className="w-full">
             <FieldLabel>{t("form_task_description_label")}</FieldLabel>
             <Input
               name={field.name}
