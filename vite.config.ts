@@ -1,11 +1,9 @@
-import { defineConfig } from "vite";
-import tsconfigPaths from "vite-tsconfig-paths";
+import { BuildEnvironmentOptions, defineConfig } from "vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react-swc";
 import tailwindcss from "@tailwindcss/vite";
 import { comlink } from "vite-plugin-comlink";
 import { VitePWA, type VitePWAOptions } from "vite-plugin-pwa";
-import type { OutputOptions } from "rollup";
 
 const PWA_MANIFEST: VitePWAOptions["manifest"] = {
   name: "React PWA",
@@ -65,37 +63,32 @@ const VENDOR_GROUPS: Record<string, string[]> = {
   dexie: ["dexie"],
 };
 
-/**
- * Custom chunk splitting strategy to group dependencies
- * and prevent waterfall loading.
- */
-const renderChunks = (id: string): string | undefined => {
-  if (id.includes("node_modules")) {
-    for (const [name, libs] of Object.entries(VENDOR_GROUPS)) {
-      if (libs.some((lib) => id.includes(`node_modules/${lib}/`))) {
-        return `vendor-${name}`;
-      }
-    }
-    // Fallback for all other node_modules
-    return "vendor-others";
-  }
-  return undefined;
-};
+const rolldownGroups = [
+  ...Object.entries(VENDOR_GROUPS).map(([name, libs]) => ({
+    name: `vendor-${name}`,
+    // Creates a regex like: /node_modules\/(react|react-dom|scheduler)\//
+    test: new RegExp(`node_modules\\/(${libs.join("|")})\\/`),
+  })),
+  // Catch-all for any other node_modules not specified above
+  {
+    name: "vendor-others",
+    test: /node_modules\//,
+  },
+];
 
-/**
- * Shared Rollup output options to ensure consistency
- * between Main Build and Workers.
- */
-const sharedOutputOptions: OutputOptions = {
-  manualChunks: renderChunks,
+const sharedOutputOptions: NonNullable<
+  BuildEnvironmentOptions["rolldownOptions"]
+>["output"] = {
   chunkFileNames: "assets/js/[name]-[hash].js",
   entryFileNames: "assets/js/[name]-[hash].js",
   assetFileNames: "assets/[ext]/[name]-[hash].[ext]",
+  codeSplitting: {
+    groups: rolldownGroups,
+  },
 };
 
 export default defineConfig({
   plugins: [
-    tsconfigPaths(),
     tanstackRouter({
       target: "react",
       autoCodeSplitting: true,
@@ -119,16 +112,18 @@ export default defineConfig({
   worker: {
     format: "es",
     plugins: () => [
-      tsconfigPaths(),
       comlink(),
     ],
-    rollupOptions: {
+    rolldownOptions: {
       output: sharedOutputOptions,
     },
   },
   build: {
-    rollupOptions: {
+    rolldownOptions: {
       output: sharedOutputOptions,
     },
+  },
+  resolve: {
+    tsconfigPaths: true,
   },
 });
