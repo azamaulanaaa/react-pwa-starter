@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { proxy } from "comlink";
 
 import { FormTask, FormTaskProps } from "@/components/form/task/index.tsx";
 import { ListTask, type Task } from "@/components/list/task/index.tsx";
@@ -20,9 +19,9 @@ function Index() {
 
     const setupSubscription = async () => {
       unsubscribeWorkerStream = await worker.db.subscribeToTasks(
-        proxy((freshData: Task[]) => {
+        (freshData: Task[]) => {
           setData(freshData || []);
-        }),
+        },
       );
 
       if (isCancelled) {

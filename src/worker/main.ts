@@ -1,10 +1,5 @@
-import type { ProxyMarked } from "comlink";
-
-function markAsProxy<T>(lib: T): T & ProxyMarked {
-  return lib as T & ProxyMarked;
-}
+import {} from "@/lib/worker.ts";
 
 export { setLanguage } from "./i18n.ts";
 
-import * as dbRaw from "./db.ts";
-export const db = markAsProxy(dbRaw);
+export * as db from "./db.ts";
