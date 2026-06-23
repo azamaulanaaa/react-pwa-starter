@@ -34,7 +34,7 @@ function Index() {
   };
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-8 m-4">
       <FormTask onSubmit={handleOnSubmit} />
       <ListTask
         data={data}
