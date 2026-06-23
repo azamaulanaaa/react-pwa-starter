@@ -1,4 +1,6 @@
-import { Dexie, type EntityTable } from "dexie";
+import { Dexie, type EntityTable, liveQuery } from "dexie";
+import { Observable } from "rxjs";
+import { proxy } from "comlink";
 
 export type Task = {
   id: number;
@@ -33,4 +35,23 @@ export async function listTasks() {
 
 export async function updateTaskIsDone(id: number, isDone: boolean) {
   await db.tasks.update(id, { isDone });
+}
+
+export function subscribeToTasks(callback: (tasks: Task[]) => void) {
+  const tasksObservable$ = new Observable<Task[]>((subscriber) => {
+    const observable = liveQuery(() => db.tasks.toArray());
+
+    const subscription = observable.subscribe({
+      next: (val) => subscriber.next(val),
+      error: (err) => subscriber.error(err),
+    });
+
+    return () => subscription.unsubscribe();
+  });
+
+  const sub = tasksObservable$.subscribe({
+    next: (data) => callback(data),
+  });
+
+  return proxy(() => sub.unsubscribe());
 }

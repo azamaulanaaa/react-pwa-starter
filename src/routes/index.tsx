@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { proxy } from "comlink";
 
 import { FormTask, FormTaskProps } from "@/components/form/task/index.tsx";
 import { ListTask, type Task } from "@/components/list/task/index.tsx";
@@ -11,26 +12,42 @@ function Index() {
 
   useEffect(() => {
     document.title = "Home";
-    fetchData();
-  }, []);
 
-  const fetchData = () => {
-    worker?.db.listTasks().then((data) => setData(data ? data : []));
-  };
+    if (!worker) return;
+
+    let unsubscribeWorkerStream: () => void;
+    let isCancelled = false;
+
+    const setupSubscription = async () => {
+      unsubscribeWorkerStream = await worker.db.subscribeToTasks(
+        proxy((freshData: Task[]) => {
+          setData(freshData || []);
+        }),
+      );
+
+      if (isCancelled) {
+        unsubscribeWorkerStream();
+      }
+    };
+
+    setupSubscription();
+
+    return () => {
+      isCancelled = true;
+      if (unsubscribeWorkerStream) unsubscribeWorkerStream();
+    };
+  }, [worker]);
 
   const handleOnSubmit: FormTaskProps["onSubmit"] = async (value) => {
     await worker?.db.addTask(value.task);
-    fetchData();
   };
 
   const handleOnToggleDone = async (id: number, isDone: boolean) => {
     await worker?.db.updateTaskIsDone(id, isDone);
-    fetchData();
   };
 
   const handleOnDelete = async (id: number) => {
     await worker?.db.deleteTask(id);
-    fetchData();
   };
 
   return (
