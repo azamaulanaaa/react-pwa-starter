@@ -40,9 +40,13 @@ export function FormTask(props: FormTaskProps) {
     validators: {
       onChange: formTaskSchema,
     },
-    onSubmit: async ({ value }) => {
+    onSubmit: async ({ value, formApi }) => {
       const zValue = formTaskSchema.parse(value);
       await props.onSubmit(zValue);
+
+      const resetValue = { task: "" };
+      formApi.reset(resetValue);
+      setValue(resetValue);
     },
     listeners: {
       onChange: ({ formApi }) => {
