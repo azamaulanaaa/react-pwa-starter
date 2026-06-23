@@ -1,6 +1,5 @@
 import { Dexie, type EntityTable, liveQuery } from "dexie";
 import { Observable } from "rxjs";
-import { proxy } from "comlink";
 
 export type Task = {
   id: number;
@@ -53,5 +52,5 @@ export function subscribeToTasks(callback: (tasks: Task[]) => void) {
     next: (data) => callback(data),
   });
 
-  return proxy(() => sub.unsubscribe());
+  return () => sub.unsubscribe();
 }
