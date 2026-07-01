@@ -10,3 +10,15 @@ export async function setLanguage(lang: string) {
   const i18n = await getI18n();
   await i18n.changeLanguage(lang);
 }
+
+export async function useTranslation(ns: string) {
+  const i18n = await getI18n();
+
+  const fixedT = i18n.getFixedT(null, ns);
+
+  const t = (key: string, options?: Record<string, string | number>) => {
+    return fixedT(key, options);
+  };
+
+  return { t, i18n };
+}
