@@ -6,12 +6,12 @@ export async function getI18n() {
   return await i18nPromise;
 }
 
-export async function setLanguage(lang: string) {
+export async function changeLanguage(lang: string) {
   const i18n = await getI18n();
   await i18n.changeLanguage(lang);
 }
 
-export async function useTranslation(ns: string) {
+export async function getT(ns: string) {
   const i18n = await getI18n();
 
   const fixedT = i18n.getFixedT(null, ns);

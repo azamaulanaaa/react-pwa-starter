@@ -43,7 +43,7 @@ function WrappedI18nProvider({ children }: { children: ReactNode }) {
 
   const handleOnLanguageChange = useCallback((lng: string) => {
     if (worker != null) {
-      worker.setLanguage(lng);
+      worker.i18n.changeLanguage(lng);
     }
   }, [worker]);
 
