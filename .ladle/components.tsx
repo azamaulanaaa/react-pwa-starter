@@ -3,7 +3,6 @@ import type { GlobalProvider } from "@ladle/react";
 
 import "./components.css";
 import { I18nProvider, useI18n } from "../src/components/i18n_context.tsx";
-import { syncZodLocale } from "../src/lib/zod.ts";
 import { cn } from "../src/lib/cn.ts";
 
 function Loading() {
@@ -30,14 +29,10 @@ export const Provider: GlobalProvider = ({
   children,
   globalState,
 }) => {
-  const handleOnLanguageChange = (lng: string) => {
-    syncZodLocale(lng);
-  };
-
   const isDarkMode = globalState.theme === "dark";
 
   return (
-    <I18nProvider onLanguageChange={handleOnLanguageChange}>
+    <I18nProvider>
       <AppInitializerGuard>
         <div className={cn({ "dark": isDarkMode })}>
           {children}

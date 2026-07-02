@@ -11,7 +11,7 @@ import { i18nreact } from "@/lib/i18n.ts";
 const i18nPromise = i18nreact("ui");
 
 export type I18nProviderProps = {
-  onLanguageChange: (lng: string) => void;
+  onLanguageChange?: (lng: string) => void;
   children: ReactNode;
 };
 
@@ -39,11 +39,15 @@ export function I18nProvider(
   useEffect(() => {
     if (!i18n) return;
 
-    onLanguageChange(i18n.language);
-    i18n.on("languageChanged", onLanguageChange);
+    if (onLanguageChange) {
+      onLanguageChange(i18n.language);
+      i18n.on("languageChanged", onLanguageChange);
+    }
 
     return () => {
-      i18n.off("languageChanged", onLanguageChange);
+      if (onLanguageChange) {
+        i18n.off("languageChanged", onLanguageChange);
+      }
     };
   }, [i18n, onLanguageChange]);
 

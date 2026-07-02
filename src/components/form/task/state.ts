@@ -1,15 +1,24 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { Schema } from "effect";
 
-import { z } from "zod";
+import { useTranslation } from "@/components/i18n_context.tsx";
 
-export const formTaskSchema = z.object({
-  task: z.string().min(1),
-});
+export const useFormTaskSchema = () => {
+  const { t } = useTranslation("ui");
 
-type formGreetingState = {
-  value: z.input<typeof formTaskSchema>;
-  setValue: (value: z.input<typeof formTaskSchema>) => void;
+  return Schema.standardSchemaV1(Schema.Struct({
+    task: Schema.String.pipe(
+      Schema.minLength(1, { message: () => t("form_task_error_task_empty") }),
+    ),
+  }));
+};
+
+export type formGreetingState = {
+  value: Schema.Schema.Type<ReturnType<typeof useFormTaskSchema>>;
+  setValue: (
+    value: Schema.Schema.Type<ReturnType<typeof useFormTaskSchema>>,
+  ) => void;
 };
 
 export const useFormTaskState = create<formGreetingState>()(
@@ -18,8 +27,7 @@ export const useFormTaskState = create<formGreetingState>()(
       value: {
         task: "",
       },
-      setValue: (value: z.input<typeof formTaskSchema>) =>
-        set({ value: value }),
+      setValue: (value) => set({ value: value }),
     }),
     {
       name: "form-task",

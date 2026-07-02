@@ -2,7 +2,6 @@ import { ReactNode, useCallback } from "react";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 
 import "@/app.css";
-import { syncZodLocale } from "@/lib/zod.ts";
 import { routeTree } from "@/routeTree.gen.ts";
 
 import { useWorker, WorkerProvider } from "@/components/worker_context.tsx";
@@ -43,8 +42,6 @@ function WrappedI18nProvider({ children }: { children: ReactNode }) {
   const worker = useWorker();
 
   const handleOnLanguageChange = useCallback((lng: string) => {
-    syncZodLocale(lng);
-
     if (worker != null) {
       worker.setLanguage(lng);
     }

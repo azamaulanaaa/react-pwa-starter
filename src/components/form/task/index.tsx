@@ -1,10 +1,11 @@
-import { z } from "zod";
 import { AnyFieldApi, useForm } from "@tanstack/react-form";
+import { Schema } from "effect";
 
 import { useTranslation } from "@/components/i18n_context.tsx";
 import { Form } from "src/components/ui/form.tsx";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field.tsx";
-import { formTaskSchema, useFormTaskState } from "./state.ts";
+
+import { useFormTaskSchema, useFormTaskState } from "./state.ts";
 import { Input } from "src/components/ui/input.tsx";
 import { Button } from "@/components/ui/button.tsx";
 
@@ -25,13 +26,14 @@ function FieldInfo({ field }: { field: AnyFieldApi }) {
 
 export type FormTaskProps = {
   onSubmit: (
-    value: z.infer<typeof formTaskSchema>,
+    value: Schema.Schema.Type<ReturnType<typeof useFormTaskSchema>>,
   ) => void | Promise<void>;
 };
 
 export function FormTask(props: FormTaskProps) {
   const { t } = useTranslation("ui");
 
+  const formTaskSchema = useFormTaskSchema();
   const value = useFormTaskState((s) => s.value);
   const setValue = useFormTaskState((s) => s.setValue);
 
@@ -41,8 +43,7 @@ export function FormTask(props: FormTaskProps) {
       onChange: formTaskSchema,
     },
     onSubmit: async ({ value, formApi }) => {
-      const zValue = formTaskSchema.parse(value);
-      await props.onSubmit(zValue);
+      await props.onSubmit(value);
 
       const resetValue = { task: "" };
       formApi.reset(resetValue);
