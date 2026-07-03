@@ -10,30 +10,41 @@ function Index() {
   const [data, setData] = useState<Task[]>([]);
 
   useEffect(() => {
-    document.title = "Home";
-
     if (!worker) return;
 
-    let unsubscribeWorkerStream: () => void;
+    let reader: ReadableStreamDefaultReader<Task[]> | null = null;
     let isCancelled = false;
 
-    const setupSubscription = async () => {
-      unsubscribeWorkerStream = await worker.db.subscribeToTasks(
-        (freshData: Task[]) => {
-          setData(freshData || []);
-        },
-      );
+    (async () => {
+      const webStream = await worker!.db.subscribeToTasks();
 
       if (isCancelled) {
-        unsubscribeWorkerStream();
+        webStream.cancel();
+        return;
       }
-    };
 
-    setupSubscription();
+      reader = webStream.getReader();
+
+      try {
+        while (!isCancelled) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          if (value) setData(value);
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          console.error("Error reading task stream:", error);
+        }
+      } finally {
+        if (reader) reader.releaseLock();
+      }
+    })();
 
     return () => {
       isCancelled = true;
-      if (unsubscribeWorkerStream) unsubscribeWorkerStream();
+      if (reader) {
+        reader.cancel();
+      }
     };
   }, [worker]);
 

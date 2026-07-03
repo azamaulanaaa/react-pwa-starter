@@ -1,5 +1,5 @@
 import { Dexie, type EntityTable, liveQuery } from "dexie";
-import { Data, Effect } from "effect";
+import { Data, Effect, Stream } from "effect";
 
 export type Task = {
   id: number;
@@ -55,21 +55,24 @@ export function updateTaskIsDone(
   });
 }
 
-export function subscribeToTasks(
-  callback: (tasks: Task[]) => void,
-) {
-  return Effect.sync(() => {
+export function subscribeToTasks(): Stream.Stream<Task[], DbError, never> {
+  return Stream.async<Task[], DbError, never>((emit) => {
     const observable = liveQuery(() => db.tasks.toArray());
 
     const subscription = observable.subscribe({
-      next: (tasks) => callback(tasks),
-      error: (err) => {
-        console.error("Dexie liveQuery stream failed:", err);
+      next: (tasks) => {
+        emit.single(tasks);
+      },
+      error: (error) => {
+        emit.fail(new DbError({ error }));
+      },
+      complete: () => {
+        emit.end();
       },
     });
 
-    return () => {
+    return Effect.sync(() => {
       subscription.unsubscribe();
-    };
+    });
   });
 }
