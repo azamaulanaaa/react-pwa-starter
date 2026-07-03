@@ -64,13 +64,9 @@ export function useTranslation(ns: string) {
     throw new Error("useTranslation must be used within a I18nProvider");
   }
 
-  const fixedT = context.getFixedT(null, ns);
+  const fixedT = context.getFixedT(ns);
 
-  const t = (key: string, options?: Record<string, string | number>) => {
-    return fixedT(key, options);
-  };
-
-  return { t, i18n: context };
+  return { t: fixedT, i18n: context };
 }
 
 export function useI18n() {

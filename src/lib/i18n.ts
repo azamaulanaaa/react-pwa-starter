@@ -2,6 +2,9 @@ import i18next, { InitOptions } from "i18next";
 import HttpBackend from "i18next-http-backend";
 import LanguageDetector from "i18next-browser-languagedetector";
 
+import nsUi from "public/locales/en/ui.json";
+import nsWorker from "public/locales/en/worker.json";
+
 const config: InitOptions<{ loadPath: string }> = {
   fallbackLng: "en",
   backend: {
@@ -29,4 +32,13 @@ export async function i18nreact(namespace: string | string[]) {
     .init({ ...config, ns: namespace });
 
   return i18n;
+}
+
+declare module "i18next" {
+  interface CustomTypeOptions {
+    resources: {
+      common: typeof nsUi;
+      home: typeof nsWorker;
+    };
+  }
 }
