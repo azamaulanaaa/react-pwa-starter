@@ -115,8 +115,8 @@ if (!Comlink.transferHandlers.has("EFFECT_PROXY")) {
   });
 }
 
-if (!Comlink.transferHandlers.has("AUTO_FUNCTION_PROXY")) {
-  Comlink.transferHandlers.set("AUTO_FUNCTION_PROXY", {
+if (!Comlink.transferHandlers.has("FUNCTION_PROXY")) {
+  Comlink.transferHandlers.set("FUNCTION_PROXY", {
     canHandle: (val): val is Function => typeof val === "function",
     serialize: (val) => {
       const { port1, port2 } = new MessageChannel();
