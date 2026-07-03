@@ -1,11 +1,15 @@
 import { Dexie, type EntityTable, liveQuery } from "dexie";
-import { Observable } from "rxjs";
+import { Data, Effect } from "effect";
 
 export type Task = {
   id: number;
   description: string;
   isDone: boolean;
 };
+
+export class DbError extends Data.TaggedError("app/worker/db")<{
+  readonly error: unknown;
+}> {}
 
 const db = new Dexie("main") as Dexie & {
   tasks: EntityTable<Task, "id">;
@@ -15,42 +19,57 @@ db.version(1).stores({
   tasks: "++id, description, isDone",
 });
 
-export async function addTask(description: string) {
-  let id = await db.tasks.add({
-    description,
-    isDone: false,
+export function addTask(description: string): Effect.Effect<Task, DbError> {
+  return Effect.tryPromise({
+    try: async () => {
+      const id = await db.tasks.add({ description, isDone: false });
+      const task = await db.tasks.get(id);
+      if (!task) throw new Error(`Task with id ${id} not found after creation`);
+      return task;
+    },
+    catch: (error) => new DbError({ error }),
   });
-
-  return await db.tasks.get(id)!;
 }
 
-export async function deleteTask(id: number) {
-  await db.tasks.delete(id);
+export function deleteTask(id: number): Effect.Effect<void, DbError> {
+  return Effect.tryPromise({
+    try: () => db.tasks.delete(id),
+    catch: (error) => new DbError({ error }),
+  });
 }
 
-export async function listTasks() {
-  return await db.tasks.toArray();
+export function listTasks(): Effect.Effect<Task[], DbError> {
+  return Effect.tryPromise({
+    try: () => db.tasks.toArray(),
+    catch: (error) => new DbError({ error }),
+  });
 }
 
-export async function updateTaskIsDone(id: number, isDone: boolean) {
-  await db.tasks.update(id, { isDone });
+export function updateTaskIsDone(
+  id: number,
+  isDone: boolean,
+): Effect.Effect<void, DbError> {
+  return Effect.tryPromise({
+    try: () => db.tasks.update(id, { isDone }),
+    catch: (error) => new DbError({ error }),
+  });
 }
 
-export function subscribeToTasks(callback: (tasks: Task[]) => void) {
-  const tasksObservable$ = new Observable<Task[]>((subscriber) => {
+export function subscribeToTasks(
+  callback: (tasks: Task[]) => void,
+) {
+  return Effect.sync(() => {
     const observable = liveQuery(() => db.tasks.toArray());
 
     const subscription = observable.subscribe({
-      next: (val) => subscriber.next(val),
-      error: (err) => subscriber.error(err),
+      next: (tasks) => callback(tasks),
+      error: (err) => {
+        console.error("Dexie liveQuery stream failed:", err);
+      },
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+    };
   });
-
-  const sub = tasksObservable$.subscribe({
-    next: (data) => callback(data),
-  });
-
-  return () => sub.unsubscribe();
 }
