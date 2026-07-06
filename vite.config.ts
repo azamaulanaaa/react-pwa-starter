@@ -52,7 +52,7 @@ const VENDOR_GROUPS: Record<string, string[]> = {
     "tiny-warning",
   ],
   // Animation & Icons (Heavy assets)
-  visuals: ["@base-ui", "motion", "lucide-react"],
+  visuals: ["tailwindcss", "@tailwindcss/vite", "@base-ui", "lucide-react"],
   // State & Logic
   tanstack: ["@tanstack"],
   // Internationalization
