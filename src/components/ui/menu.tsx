@@ -79,7 +79,7 @@ export function MenuGroup(
   return <MenuPrimitive.Group data-slot="menu-group" {...props} />;
 }
 
-export function MenuLinkItem({
+export function MenuItem({
   className,
   inset,
   variant = "default",
@@ -96,6 +96,31 @@ export function MenuLinkItem({
       )}
       data-inset={inset}
       data-slot="menu-item"
+      data-variant={variant}
+      {...props}
+    />
+  );
+}
+
+export function MenuLinkItem({
+  className,
+  inset,
+  variant = "default",
+  closeOnClick = true,
+  ...props
+}: MenuPrimitive.LinkItem.Props & {
+  inset?: boolean;
+  variant?: "default" | "destructive";
+}): React.ReactElement {
+  return (
+    <MenuPrimitive.LinkItem
+      className={cn(
+        "flex min-h-8 cursor-default select-none items-center gap-2 rounded-sm px-2 py-1 text-base text-foreground outline-none data-disabled:pointer-events-none data-highlighted:bg-accent data-inset:ps-8 data-[variant=destructive]:text-destructive-foreground data-highlighted:text-accent-foreground data-disabled:opacity-64 sm:min-h-7 sm:text-sm [&>svg:not([class*='opacity-'])]:opacity-80 [&>svg:not([class*='size-'])]:size-4.5 sm:[&>svg:not([class*='size-'])]:size-4 [&>svg]:pointer-events-none [&>svg]:-mx-0.5 [&>svg]:shrink-0",
+        className,
+      )}
+      closeOnClick={closeOnClick}
+      data-inset={inset}
+      data-slot="menu-link-item"
       data-variant={variant}
       {...props}
     />
@@ -313,7 +338,7 @@ export {
   MenuCreateHandle as DropdownMenuCreateHandle,
   MenuGroup as DropdownMenuGroup,
   MenuGroupLabel as DropdownMenuLabel,
-  MenuLinkItem as DropdownMenuItem,
+  MenuItem as DropdownMenuItem,
   MenuPopup as DropdownMenuContent,
   MenuPortal as DropdownMenuPortal,
   MenuPrimitive,
