@@ -5,6 +5,7 @@ import { createRoot } from "react-dom/client";
 import { registerSW } from "virtual:pwa-register";
 
 import { App } from "@/app.tsx";
+import "@/app.css";
 
 const updateSW = registerSW({
   onNeedRefresh() {

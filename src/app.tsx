@@ -1,7 +1,6 @@
 import { ReactNode, useCallback } from "react";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 
-import "@/app.css";
 import { routeTree } from "@/routeTree.gen.ts";
 
 import { useWorker, WorkerProvider } from "@/components/worker_context.tsx";
