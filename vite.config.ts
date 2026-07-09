@@ -4,6 +4,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { comlink } from "vite-plugin-comlink";
 import { VitePWA, type VitePWAOptions } from "vite-plugin-pwa";
+import { visualizer } from "rollup-plugin-visualizer";
 
 const PWA_MANIFEST: VitePWAOptions["manifest"] = {
   name: "React PWA",
@@ -117,6 +118,7 @@ export default defineConfig({
         globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
       },
     }),
+    visualizer(),
   ],
   worker: {
     format: "es",
