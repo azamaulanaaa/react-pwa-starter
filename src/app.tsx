@@ -1,10 +1,11 @@
-import { ReactNode, useCallback } from "react";
+import { ReactNode, useCallback, useEffect } from "react";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 
 import { routeTree } from "@/routeTree.gen.ts";
 
 import { useWorker, WorkerProvider } from "@/components/worker_context.tsx";
 import { I18nProvider, useI18n } from "@/components/i18n_context.tsx";
+import { useSystemDarkMode } from "@/hooks/use-system-dark-mode.ts";
 
 // Create a new router instance
 const router = createRouter({ routeTree });
@@ -54,6 +55,12 @@ function WrappedI18nProvider({ children }: { children: ReactNode }) {
 }
 
 export function App() {
+  const isDarkMode = useSystemDarkMode();
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", isDarkMode);
+  }, [isDarkMode]);
+
   return (
     <WorkerProvider>
       <WrappedI18nProvider>
