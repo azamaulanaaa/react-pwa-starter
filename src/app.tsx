@@ -6,6 +6,7 @@ import { routeTree } from "@/routeTree.gen.ts";
 import { useWorker, WorkerProvider } from "@/components/worker_context.tsx";
 import { I18nProvider, useI18n } from "@/components/i18n_context.tsx";
 import { useSystemDarkMode } from "@/hooks/use-system-dark-mode.ts";
+import { Spinner } from "@/components/ui/spinner.tsx";
 
 // Create a new router instance
 const router = createRouter({ routeTree });
@@ -20,7 +21,7 @@ declare module "@tanstack/react-router" {
 function Loading() {
   return (
     <div className="flex h-screen items-center justify-center">
-      <div className="animate-pulse text-lg font-medium">Loading...</div>
+      <Spinner />
     </div>
   );
 }
