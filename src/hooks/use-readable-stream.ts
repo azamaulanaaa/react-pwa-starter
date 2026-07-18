@@ -19,6 +19,12 @@ export function useReadableStreams<T, P>(
     return (initialValues as any)[key as any];
   };
 
+  const paramsSignature = JSON.stringify(params);
+  const streamFactoryRef = useRef(streamFactory);
+  useEffect(() => {
+    streamFactoryRef.current = streamFactory;
+  }, [streamFactory]);
+
   const [statesMap, setStatesMap] = useState<
     Map<P, StreamState<T | undefined>>
   >(() => {
@@ -34,7 +40,13 @@ export function useReadableStreams<T, P>(
   });
 
   const activeStreamsRef = useRef<
-    Map<P, { reader: ReadableStreamDefaultReader<T>; isCancelled: boolean }>
+    Map<
+      P,
+      {
+        reader: ReadableStreamDefaultReader<T>;
+        cancellationToken: { isCancelled: boolean };
+      }
+    >
   >(new Map());
 
   useEffect(() => {
@@ -43,7 +55,7 @@ export function useReadableStreams<T, P>(
 
     for (const [param, active] of activeStreams.entries()) {
       if (!currentParamsSet.has(param)) {
-        active.isCancelled = true;
+        active.cancellationToken.isCancelled = true;
         active.reader.cancel().catch((err) =>
           console.error(`Error details for cancelling stream:`, err)
         );
@@ -75,19 +87,11 @@ export function useReadableStreams<T, P>(
 
       (async () => {
         try {
-          const stream = await streamFactory(param);
+          const stream = await streamFactoryRef.current(param);
           if (cancellationToken.isCancelled) return;
 
           const reader = stream.getReader();
-          activeStreams.set(param, {
-            reader,
-            get isCancelled() {
-              return cancellationToken.isCancelled;
-            },
-            set isCancelled(val) {
-              cancellationToken.isCancelled = val;
-            },
-          });
+          activeStreams.set(param, { reader, cancellationToken });
 
           while (true) {
             const { value, done } = await reader.read();
@@ -129,7 +133,19 @@ export function useReadableStreams<T, P>(
         }
       })();
     });
-  }, [streamFactory, params]);
+  }, [paramsSignature]);
+
+  useEffect(() => {
+    return () => {
+      for (const [_param, active] of activeStreamsRef.current.entries()) {
+        active.cancellationToken.isCancelled = true;
+        active.reader.cancel().catch((err) =>
+          console.error("Error cancelling stream on unmount:", err)
+        );
+      }
+      activeStreamsRef.current.clear();
+    };
+  }, []);
 
   return statesMap;
 }
