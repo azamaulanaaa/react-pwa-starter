@@ -6,17 +6,17 @@ import { ListTask, type Task } from "@/components/list/task/index.tsx";
 import { useWorker } from "@/components/worker_context.tsx";
 
 function Index() {
-  const worker = useWorker();
+  const worker = useWorker()!;
   const [data, setData] = useState<Task[]>([]);
 
   useEffect(() => {
-    if (!worker) return;
-
     let reader: ReadableStreamDefaultReader<Task[]> | null = null;
     let isCancelled = false;
 
     (async () => {
-      const webStream = await worker!.db.subscribeToTasks();
+      const webStream = await worker!.db.task.stream({
+        direction: "next",
+      });
 
       if (isCancelled) {
         webStream.cancel();
@@ -49,15 +49,17 @@ function Index() {
   }, [worker]);
 
   const handleOnSubmit: FormTaskProps["onSubmit"] = async (value) => {
-    await worker?.db.addTask(value.task);
+    await worker.db.task.insertOne({ description: value.task, is_done: false });
   };
 
-  const handleOnToggleDone = async (id: number, isDone: boolean) => {
-    await worker?.db.updateTaskIsDone(id, isDone);
+  const handleOnToggleDone = async (id: string, is_done: boolean) => {
+    await worker.db.task.updateById(id, {
+      is_done,
+    });
   };
 
-  const handleOnDelete = async (id: number) => {
-    await worker?.db.deleteTask(id);
+  const handleOnDelete = async (id: string) => {
+    await worker.db.task.deleteById(id);
   };
 
   return (

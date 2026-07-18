@@ -27,21 +27,21 @@ import {
 
 declare module "@tanstack/react-table" {
   interface TableMeta<TData extends RowData> {
-    onToggleDone?: (id: number, isDone: boolean) => void | Promise<void>;
-    onDelete?: (id: number) => void | Promise<void>;
+    onToggleDone?: (id: string, is_done: boolean) => void | Promise<void>;
+    onDelete?: (id: string) => void | Promise<void>;
   }
 }
 
 export type Task = {
-  id: number;
-  isDone: boolean;
+  id: string;
+  is_done: boolean;
   description: string;
 };
 
 export type ListTaskProps = {
   data: Task[];
-  onToggleDone: (id: number, isDone: boolean) => void | Promise<void>;
-  onDelete: (id: number) => void | Promise<void>;
+  onToggleDone: (id: string, is_done: boolean) => void | Promise<void>;
+  onDelete: (id: string) => void | Promise<void>;
 };
 
 export function ListTask(props: ListTaskProps) {
@@ -49,11 +49,11 @@ export function ListTask(props: ListTaskProps) {
 
   const columns: ColumnDef<Task>[] = useMemo(() => [
     {
-      accessorKey: "isDone",
+      accessorKey: "is_done",
       cell: ({ row }) => {
         return (
           <Checkbox
-            checked={row.getValue("isDone")}
+            checked={row.getValue("is_done")}
             onCheckedChange={(checked) =>
               table.options.meta?.onToggleDone?.(row.original.id, !!checked)}
           />
