@@ -131,9 +131,15 @@ if (!Comlink.transferHandlers.has(NAME_EFFECT)) {
         >
       >(port);
       return (async () => {
-        const result = await proxyFunc();
-        if (!result.success) throw new Error(`[Worker Error]\n${result.error}`);
-        return result.value;
+        try {
+          const result = await proxyFunc();
+          if (!result.success) {
+            throw new Error(`[Worker Error]\n${result.error}`);
+          }
+          return result.value;
+        } finally {
+          port.close();
+        }
       })();
     },
   });
