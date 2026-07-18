@@ -1,5 +1,5 @@
 import * as Comlink from "comlink";
-import { Effect, Stream } from "effect";
+import { Cause, Chunk, Effect, Stream } from "effect";
 
 export type SyncRemoteProxy<T> = {
   [K in keyof T]: T[K] extends (...args: infer Args) => infer Ret ? (
@@ -12,6 +12,48 @@ export type SyncRemoteProxy<T> = {
     : Promise<T[K]>;
 };
 
+function flattenTaggedError(err: any): string {
+  if (!err || typeof err !== "object") return String(err);
+
+  const tags: string[] = [];
+  let current = err;
+  let message = "";
+
+  // Travel down the nested error chain
+  while (current && typeof current === "object") {
+    if (current._tag) {
+      tags.push(current._tag);
+    }
+
+    if (typeof current.error === "string") {
+      message = current.error;
+      break;
+    } else if (current.message) {
+      message = current.message;
+      break;
+    } else if (current.error && typeof current.error === "object") {
+      current = current.error; // Move deeper down the rabbit hole
+    } else {
+      message = JSON.stringify(current);
+      break;
+    }
+  }
+
+  const tagPrefix = tags.length ? `[${tags.join(" -> ")}] ` : "";
+  return `${tagPrefix}${message}`;
+}
+
+function formatEffectError(cause: Cause.Cause<unknown>): string {
+  const failures = Chunk.toReadonlyArray(Cause.failures(cause));
+
+  if (failures.length === 0) {
+    return Cause.pretty(cause) || "An unexpected worker defect occurred.";
+  }
+
+  const topError = failures[0];
+  return flattenTaggedError(topError);
+}
+
 if (!Comlink.transferHandlers.has("EFFECT_STREAM_PROXY")) {
   Comlink.transferHandlers.set("EFFECT_STREAM_PROXY", {
     canHandle: (val): val is Stream.Stream<any, any, any> =>
@@ -19,78 +61,56 @@ if (!Comlink.transferHandlers.has("EFFECT_STREAM_PROXY")) {
       (typeof val === "object" || typeof val === "function") &&
       Stream.StreamTypeId in val,
 
-    serialize: (streamInstance: Stream.Stream<any, any, never>) => {
+    serialize: <A, E>(streamInstance: Stream.Stream<A, E, never>) => {
       const { port1, port2 } = new MessageChannel();
-      const asyncIterable = Stream.toAsyncIterable(streamInstance);
+      const iterator = Stream.toAsyncIterable(streamInstance)
+        [Symbol.asyncIterator]();
 
-      const streamController = {
-        async getReader() {
-          const iterator = asyncIterable[Symbol.asyncIterator]();
-
-          const iteratorController = {
-            async next() {
-              const result = await iterator.next();
-              return { value: result.value, done: result.done };
-            },
-            async return() {
-              if (typeof iterator.return === "function") {
-                await iterator.return();
-              }
-              return { value: undefined, done: true };
-            },
-          };
-
-          const { port1: iterPort1, port2: iterPort2 } = new MessageChannel();
-          Comlink.expose(iteratorController, iterPort1);
-          return Comlink.transfer(iterPort2, [iterPort2]);
+      const remoteIterator = {
+        async next() {
+          try {
+            return await iterator.next();
+          } catch (err) {
+            throw new Error(flattenTaggedError(err));
+          }
+        },
+        async return() {
+          if (typeof iterator.return === "function") await iterator.return();
+          return { value: undefined, done: true };
         },
       };
 
-      Comlink.expose(streamController, port1);
+      Comlink.expose(remoteIterator, port1);
       return [port2, [port2]];
     },
-
     deserialize: (port: MessagePort) => {
-      const remoteController = Comlink.wrap<
-        { getReader(): Promise<MessagePort> }
-      >(port);
-      let iterPort: MessagePort | null = null;
-      let remoteIterator: any = null;
+      const remoteIterator = Comlink.wrap<{
+        next(): Promise<IteratorResult<any>>;
+        return(): Promise<IteratorResult<any>>;
+      }>(port);
 
       return new ReadableStream({
-        async start(controller) {
-          try {
-            iterPort = await remoteController.getReader();
-            remoteIterator = Comlink.wrap<{
-              next(): Promise<IteratorResult<any>>;
-              return(): Promise<IteratorResult<any>>;
-            }>(iterPort);
-          } catch (err) {
-            controller.error(err);
-          }
-        },
         async pull(controller) {
-          if (!remoteIterator) return;
           try {
             const { value, done } = await remoteIterator.next();
             if (done) {
               controller.close();
-              if (iterPort) iterPort.close();
+              port.close();
             } else {
               controller.enqueue(value);
             }
           } catch (err) {
             controller.error(err);
-            if (iterPort) iterPort.close();
+            port.close();
           }
         },
         async cancel() {
           try {
-            if (remoteIterator) await remoteIterator.return();
+            await remoteIterator.return();
           } catch (err) {
             console.error("Failed to cleanly cancel remote stream scope:", err);
           } finally {
-            if (iterPort) iterPort.close();
+            port.close();
           }
         },
       });
@@ -100,17 +120,43 @@ if (!Comlink.transferHandlers.has("EFFECT_STREAM_PROXY")) {
 
 if (!Comlink.transferHandlers.has("EFFECT_PROXY")) {
   Comlink.transferHandlers.set("EFFECT_PROXY", {
-    canHandle: (val): val is Effect.Effect<any, any, never> =>
+    canHandle: (val): val is Effect.Effect<unknown, unknown, never> =>
       Effect.isEffect(val),
-    serialize: (effectInstance: Effect.Effect<any, any, never>) => {
+
+    serialize: <A, E>(effectInstance: Effect.Effect<A, E, never>) => {
       const { port1, port2 } = new MessageChannel();
-      const executionPromise = () => Effect.runPromise(effectInstance);
+
+      const executionPromise = () =>
+        Effect.runPromise(
+          effectInstance.pipe(
+            Effect.matchCause({
+              onFailure: (cause) => ({
+                success: false,
+                error: formatEffectError(cause),
+              }),
+              onSuccess: (value) => ({ success: true, value }),
+            }),
+          ),
+        );
+
       Comlink.expose(executionPromise, port1);
       return [port2, [port2]];
     },
+
     deserialize: (port: MessagePort) => {
-      const proxyFunc = Comlink.wrap<() => Promise<any>>(port);
-      return proxyFunc();
+      const proxyFunc = Comlink.wrap<
+        () => Promise<
+          { success: true; value: any } | { success: false; error: string }
+        >
+      >(port);
+
+      return (async () => {
+        const result = await proxyFunc();
+        if (!result.success) {
+          throw new Error(`[Worker Error]\n${result.error}`);
+        }
+        return result.value;
+      })();
     },
   });
 }
