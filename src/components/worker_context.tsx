@@ -1,7 +1,7 @@
 import { createContext, ReactNode, useContext } from "react";
 
-import "@/lib/worker.ts";
-import { type SyncRemoteProxy } from "@/lib/worker.ts";
+import "@/lib/comlink/index.ts";
+import { type SyncRemoteProxy } from "@/lib/comlink/index.ts";
 export type WorkerType = typeof import("@/worker/main.ts");
 
 const WorkerContext = createContext<null | SyncRemoteProxy<WorkerType>>(null);
