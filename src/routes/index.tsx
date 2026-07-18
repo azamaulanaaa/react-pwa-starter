@@ -1,52 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
 
 import { FormTask, FormTaskProps } from "@/components/form/task/index.tsx";
-import { ListTask, type Task } from "@/components/list/task/index.tsx";
+import { ListTask } from "@/components/list/task/index.tsx";
 import { useWorker } from "@/components/worker_context.tsx";
+import { useReadableStreams } from "@/hooks/use-readable-stream.ts";
 
 function Index() {
   const worker = useWorker()!;
-  const [data, setData] = useState<Task[]>([]);
 
-  useEffect(() => {
-    let reader: ReadableStreamDefaultReader<Task[]> | null = null;
-    let isCancelled = false;
+  const streams = useReadableStreams(
+    (direction: "next" | "prev") => worker.db.task.stream({ direction }),
+    ["next"],
+  );
 
-    (async () => {
-      const webStream = await worker!.db.task.stream({
-        direction: "next",
-      });
-
-      if (isCancelled) {
-        webStream.cancel();
-        return;
-      }
-
-      reader = webStream.getReader();
-
-      try {
-        while (!isCancelled) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          if (value) setData(value);
-        }
-      } catch (error) {
-        if (!isCancelled) {
-          console.error("Error reading task stream:", error);
-        }
-      } finally {
-        if (reader) reader.releaseLock();
-      }
-    })();
-
-    return () => {
-      isCancelled = true;
-      if (reader) {
-        reader.cancel();
-      }
-    };
-  }, [worker]);
+  const flatData = streams.values().map((state) => state.data || []).toArray()
+    .flat();
 
   const handleOnSubmit: FormTaskProps["onSubmit"] = async (value) => {
     await worker.db.task.insertOne({ description: value.task, is_done: false });
@@ -66,7 +34,7 @@ function Index() {
     <div className="flex flex-col gap-8 m-4">
       <FormTask onSubmit={handleOnSubmit} />
       <ListTask
-        data={data}
+        data={flatData}
         onToggleDone={handleOnToggleDone}
         onDelete={handleOnDelete}
       />
