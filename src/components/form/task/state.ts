@@ -14,14 +14,14 @@ export const useFormTaskSchema = () => {
   }));
 };
 
-export type formGreetingState = {
+export type formTaskState = {
   value: Schema.Schema.Type<ReturnType<typeof useFormTaskSchema>>;
   setValue: (
     value: Schema.Schema.Type<ReturnType<typeof useFormTaskSchema>>,
   ) => void;
 };
 
-export const useFormTaskState = create<formGreetingState>()(
+export const useFormTaskState = create<formTaskState>()(
   persist(
     (set, _get) => ({
       value: {
