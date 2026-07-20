@@ -2,8 +2,8 @@ import { ReactNode } from "react";
 import type { GlobalProvider } from "@ladle/react";
 
 import "./components.css";
-import { I18nProvider, useI18n } from "../src/components/i18n_context.tsx";
-import { cn } from "../src/lib/cn.ts";
+import { I18nProvider, useI18n } from '@/components/i18n_context.tsx';
+import { cn } from '@/lib/cn.ts';
 
 function Loading() {
   return (
