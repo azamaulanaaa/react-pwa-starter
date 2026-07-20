@@ -1,10 +1,4 @@
 [tools]
-bun = "latest"
 deno = "latest"
 node = "latest"
-"npm:@fsouza/prettierd" = "latest"
-"npm:@tailwindcss/language-server" = "latest"
-"npm:oxlint" = "latest"
-"npm:oxlint-tsgolint" = "latest"
 "npm:shadcn" = "latest"
-"npm:typescript-language-server" = "latest"

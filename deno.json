@@ -1,0 +1,23 @@
+{
+  "nodeModulesDir": "auto",
+  "fmt": {
+    "useTabs": false,
+    "lineWidth": 80,
+    "indentWidth": 2,
+    "semiColons": true,
+    "exclude": [
+      "src/routeTree.gen.ts"
+    ]
+  },
+  "lint": {
+    "rules": {
+      "tags": ["recommended"],
+      "include": [
+        "no-unused-vars"
+      ]
+    },
+    "exclude": [
+      "src/routeTree.gen.ts"
+    ]
+  }
+}
