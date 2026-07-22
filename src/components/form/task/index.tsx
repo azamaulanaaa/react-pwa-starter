@@ -34,13 +34,12 @@ export function FormTask(props: FormTaskProps) {
   const { t } = useTranslation("ui");
 
   const formTaskSchema = useFormTaskSchema();
-  const value = useFormTaskState((s) => s.value);
-  const setValue = useFormTaskState((s) => s.setValue);
+  const [value, setValue] = useFormTaskState();
 
   const form = useForm({
     defaultValues: value,
     validators: {
-      onChange: formTaskSchema,
+      onChange: Schema.standardSchemaV1(formTaskSchema),
     },
     onSubmit: async ({ value, formApi }) => {
       await props.onSubmit(value);

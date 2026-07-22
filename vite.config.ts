@@ -68,7 +68,7 @@ const VENDOR_GROUPS: Record<string, string[]> = {
   // Internationalization
   i18n: ["i18next", "i18next-browser-languagedetector", "i18next-http-backend"],
   // Utils (Small, frequently used)
-  utils: ["effect", "zustand", "cnfast", "uuid"],
+  utils: ["effect", "cnfast", "uuid"],
   // dexie
   dexie: ["dexie"],
 };
