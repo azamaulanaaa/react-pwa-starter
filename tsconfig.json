@@ -23,7 +23,7 @@
     "allowImportingTsExtensions": true,
     "isolatedModules": true,
     "forceConsistentCasingInFileNames": true,
-    "types": ["bun", "deno", "vite/client", "vite-plugin-comlink/client"],
+    "types": ["@types/bun", "@types/deno", "vite/client", "vite-plugin-comlink/client"],
     /* --- JS Package Interop --- */
     "allowJs": true, /* Allows TS to "see" your JS dependencies */
     "checkJs": false, /* Prevents TS from checking errors inside JS files */
