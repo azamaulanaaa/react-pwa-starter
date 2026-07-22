@@ -2,12 +2,12 @@ import { AnyFieldApi, useForm } from "@tanstack/react-form";
 import { Schema } from "effect";
 
 import { useTranslation } from "@/components/i18n_context.tsx";
-import { Form } from "src/components/ui/form.tsx";
+import { Form } from "@/components/ui/form.tsx";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field.tsx";
+import { Input } from "@/components/ui/input.tsx";
+import { Button } from "@/components/ui/button.tsx";
 
 import { useFormTaskSchema, useFormTaskState } from "./state.ts";
-import { Input } from "src/components/ui/input.tsx";
-import { Button } from "@/components/ui/button.tsx";
 
 function FieldInfo({ field }: { field: AnyFieldApi }) {
   const { t } = useTranslation("ui");
@@ -64,9 +64,8 @@ export function FormTask(props: FormTaskProps) {
       }}
       className="flex w-full flex-row gap-4 place-items-center"
     >
-      <form.Field
-        name="task"
-        children={(field) => (
+      <form.Field name="task">
+        {(field) => (
           <Field className="w-full">
             <FieldLabel>{t("form_task_description_label")}</FieldLabel>
             <Input
@@ -81,7 +80,7 @@ export function FormTask(props: FormTaskProps) {
             </FieldError>
           </Field>
         )}
-      />
+      </form.Field>
       <Button type="submit">
         {t("form_task_insert")}
       </Button>
