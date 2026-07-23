@@ -14,8 +14,8 @@ body {
 }
 
 @theme inline {
-  --font-sans: 'Inter', sans-serif;
-  --font-heading: 'Inter', sans-serif;
+  --font-sans: 'Inter Variable', sans-serif;
+  --font-heading: 'Inter Variable', sans-serif;
   --font-mono: 'Geist Mono', monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
