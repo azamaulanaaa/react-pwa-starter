@@ -1,9 +1,8 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import type { GlobalProvider } from "@ladle/react";
 
 import "./components.css";
-import { I18nProvider, useI18n } from '@/components/i18n_context.tsx';
-import { cn } from '@/lib/cn.ts';
+import { I18nProvider, useI18n } from "@/components/i18n_context.tsx";
 
 function Loading() {
   return (
@@ -31,12 +30,14 @@ export const Provider: GlobalProvider = ({
 }) => {
   const isDarkMode = globalState.theme === "dark";
 
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", isDarkMode);
+  }, [isDarkMode]);
+
   return (
     <I18nProvider>
       <AppInitializerGuard>
-        <div className={cn({ "dark": isDarkMode })}>
-          {children}
-        </div>
+        {children}
       </AppInitializerGuard>
     </I18nProvider>
   );
