@@ -46,8 +46,8 @@ export type Id = Schema.Schema.Type<typeof IdSchema>;
 
 export const BaseSchema = Schema.Struct({
   id: IdSchema,
-  created_at: Schema.NonNegativeInt,
-  modified_at: Schema.NonNegativeInt,
+  created_at: Schema.DateFromSelf,
+  modified_at: Schema.DateFromSelf,
 });
 export type Base = Schema.Schema.Type<typeof BaseSchema>;
 
@@ -185,7 +185,7 @@ function generateCrud<
           Effect.mapError((error) => new DbError({ error })),
         );
 
-        const now = Date.now();
+        const now = new Date();
         const finalId = vPropery.id ?? idFactory();
 
         yield* Effect.tryPromise({
