@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 export interface StreamState<T> {
-  data: T;
+  data: T | undefined;
   error: Error | null;
   loading: boolean;
 }
@@ -9,93 +9,57 @@ export interface StreamState<T> {
 export function useReadableStreams<T, P>(
   streamFactory: (param: P) => Promise<ReadableStream<T>>,
   params: P[],
-  initialValues?: (P extends PropertyKey ? Record<P, T> : never) | Map<P, T>,
-): Map<P, StreamState<T | undefined>> {
-  const getInitialValue = (key: P): T | undefined => {
-    if (!initialValues) return undefined;
-    if (initialValues instanceof Map) {
-      return initialValues.get(key);
-    }
-    return (initialValues as any)[key as any];
-  };
+): Map<P, StreamState<T>> {
+  const [statesMap, setStatesMap] = useState<Map<P, StreamState<T>>>(() =>
+    new Map()
+  );
 
-  const paramsSignature = JSON.stringify(params);
-  const streamFactoryRef = useRef(streamFactory);
   useEffect(() => {
-    streamFactoryRef.current = streamFactory;
-  }, [streamFactory]);
+    const controllers = new Map<P, AbortController>();
 
-  const [statesMap, setStatesMap] = useState<
-    Map<P, StreamState<T | undefined>>
-  >(() => {
-    const initialMap = new Map<P, StreamState<T | undefined>>();
-    params.forEach((param) => {
-      initialMap.set(param, {
-        data: getInitialValue(param),
-        error: null,
-        loading: true,
-      });
+    setStatesMap((prev) => {
+      const oldParams = new Set(prev.keys());
+      const newParams = new Set(params);
+
+      const removedParams = oldParams.difference(newParams);
+
+      if (removedParams.size == 0) return prev;
+
+      const next = new Map(prev);
+      removedParams.forEach((param) => next.delete(param));
+
+      return next;
     });
-    return initialMap;
-  });
-
-  const activeStreamsRef = useRef<
-    Map<
-      P,
-      {
-        reader: ReadableStreamDefaultReader<T>;
-        cancellationToken: { isCancelled: boolean };
-      }
-    >
-  >(new Map());
-
-  useEffect(() => {
-    const currentParamsSet = new Set(params);
-    const activeStreams = activeStreamsRef.current;
-
-    for (const [param, active] of activeStreams.entries()) {
-      if (!currentParamsSet.has(param)) {
-        active.cancellationToken.isCancelled = true;
-        active.reader.cancel().catch((err) =>
-          console.error(`Error details for cancelling stream:`, err)
-        );
-        activeStreams.delete(param);
-
-        setStatesMap((prev) => {
-          const next = new Map(prev);
-          next.delete(param);
-          return next;
-        });
-      }
-    }
 
     params.forEach((param) => {
-      if (activeStreams.has(param)) return;
+      const controller = new AbortController();
+      controllers.set(param, controller);
 
       setStatesMap((prev) => {
-        if (prev.has(param)) return prev;
         const next = new Map(prev);
+        const existing = prev.get(param);
         next.set(param, {
-          data: getInitialValue(param),
+          data: existing?.data,
           error: null,
           loading: true,
         });
         return next;
       });
 
-      const cancellationToken = { isCancelled: false };
-
       (async () => {
         try {
-          const stream = await streamFactoryRef.current(param);
-          if (cancellationToken.isCancelled) return;
+          const stream = await streamFactory(param);
+          if (controller.signal.aborted) return;
 
           const reader = stream.getReader();
-          activeStreams.set(param, { reader, cancellationToken });
 
-          while (true) {
+          controller.signal.addEventListener("abort", () => {
+            reader.cancel().catch(() => {});
+          });
+
+          while (!controller.signal.aborted) {
             const { value, done } = await reader.read();
-            if (done || cancellationToken.isCancelled) break;
+            if (controller.signal.aborted) break;
 
             if (value !== undefined) {
               setStatesMap((prev) => {
@@ -104,27 +68,18 @@ export function useReadableStreams<T, P>(
                 return next;
               });
             }
-          }
 
-          if (!cancellationToken.isCancelled) {
-            setStatesMap((prev) => {
-              const next = new Map(prev);
-              const current = next.get(param);
-              if (current) next.set(param, { ...current, loading: false });
-              return next;
-            });
+            if (done) break;
           }
         } catch (err) {
-          if (!cancellationToken.isCancelled) {
-            const errorInstance = err instanceof Error
-              ? err
-              : new Error(String(err));
+          if (!controller.signal.aborted) {
+            const error = err instanceof Error ? err : new Error(String(err));
             setStatesMap((prev) => {
               const next = new Map(prev);
               const current = next.get(param);
               next.set(param, {
                 data: current?.data,
-                error: errorInstance,
+                error,
                 loading: false,
               });
               return next;
@@ -133,19 +88,11 @@ export function useReadableStreams<T, P>(
         }
       })();
     });
-  }, [paramsSignature]);
 
-  useEffect(() => {
     return () => {
-      for (const [_param, active] of activeStreamsRef.current.entries()) {
-        active.cancellationToken.isCancelled = true;
-        active.reader.cancel().catch((err) =>
-          console.error("Error cancelling stream on unmount:", err)
-        );
-      }
-      activeStreamsRef.current.clear();
+      controllers.forEach((controller) => controller.abort());
     };
-  }, []);
+  }, [params, streamFactory]);
 
   return statesMap;
 }
