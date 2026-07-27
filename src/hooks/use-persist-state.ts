@@ -1,8 +1,8 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
-  useState,
   useSyncExternalStore,
 } from "react";
 
@@ -12,97 +12,63 @@ const eventTarget = new EventTarget();
 export function usePersistState<T extends Record<string, unknown>>(
   name: string,
   defaultValue: T,
-  debounceMs: number = 500,
 ) {
-  const finalName = PREFIX_NAME + name;
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const finalNameRef = useRef(PREFIX_NAME + name);
   const defaultValueRef = useRef(defaultValue);
 
-  const computeValue = useCallback(
-    (raw: string | null): T => {
-      if (raw === null) {
-        return defaultValueRef.current;
-      }
-      try {
-        return JSON.parse(raw);
-      } catch {
-        return defaultValueRef.current;
-      }
-    },
-    [],
-  );
+  const computeValue = useCallback((raw: string | null): T => {
+    if (raw === null) return defaultValueRef.current;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return defaultValueRef.current;
+    }
+  }, []);
 
   const subscribe = useCallback(
     (callback: () => void) => {
       const handleStorage = (e: StorageEvent) => {
-        if (e.key === finalName || e.key === null) {
+        if (e.key === finalNameRef.current || e.key === null) {
           callback();
         }
       };
 
       // deno-lint-ignore no-window no-window-prefix
       window.addEventListener("storage", handleStorage);
-      eventTarget.addEventListener(finalName, callback);
+      eventTarget.addEventListener(finalNameRef.current, callback);
 
       return () => {
         // deno-lint-ignore no-window no-window-prefix
         window.removeEventListener("storage", handleStorage);
-        eventTarget.removeEventListener(finalName, callback);
+        eventTarget.removeEventListener(finalNameRef.current, callback);
       };
     },
-    [finalName],
+    [],
   );
 
   const getSnapshot = useCallback(() => {
     try {
-      return localStorage.getItem(finalName);
+      return localStorage.getItem(finalNameRef.current);
     } catch {
       return null;
     }
-  }, [finalName]);
-
-  const getServerSnapshot = useCallback(() => null, []);
+  }, []);
 
   const rawStorageValue = useSyncExternalStore(
     subscribe,
     getSnapshot,
-    getServerSnapshot,
+    () => null,
   );
 
-  const [localValue, setLocalValue] = useState<T>(() =>
-    computeValue(rawStorageValue)
+  const persistedValue = useMemo(
+    () => computeValue(rawStorageValue),
+    [rawStorageValue, computeValue],
   );
 
-  const latestLocalValueRef = useRef(localValue);
+  const latestLocalValueRef = useRef(persistedValue);
   useEffect(() => {
-    latestLocalValueRef.current = localValue;
-  }, [localValue]);
-
-  const isDebouncingRef = useRef(false);
-  const baselineValueRef = useRef<T>(computeValue(rawStorageValue));
-
-  useEffect(() => {
-    if (!isDebouncingRef.current) {
-      const externalVal = computeValue(rawStorageValue);
-      setLocalValue(externalVal);
-      baselineValueRef.current = externalVal;
-    }
-  }, [rawStorageValue, computeValue]);
-
-  const saveToStorage = useCallback(
-    (value: T) => {
-      try {
-        localStorage.setItem(finalName, JSON.stringify(value));
-        baselineValueRef.current = value;
-        eventTarget.dispatchEvent(new Event(finalName));
-      } catch (error) {
-        console.error(`Error persisting key "${finalName}":`, error);
-      } finally {
-        isDebouncingRef.current = false;
-      }
-    },
-    [finalName],
-  );
+    latestLocalValueRef.current = persistedValue;
+  }, [persistedValue]);
 
   const setPersistedValue = useCallback(
     (newValue: T | ((prev: T) => T)) => {
@@ -110,74 +76,15 @@ export function usePersistState<T extends Record<string, unknown>>(
         ? (newValue as (prev: T) => T)(latestLocalValueRef.current)
         : newValue;
 
-      latestLocalValueRef.current = nextValue;
-      setLocalValue(nextValue);
-
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
+      try {
+        localStorage.setItem(finalNameRef.current, JSON.stringify(nextValue));
+        eventTarget.dispatchEvent(new Event(finalNameRef.current));
+      } catch (error) {
+        console.error(`Error persisting key "${finalNameRef.current}":`, error);
       }
-
-      if (isEqual(nextValue, baselineValueRef.current)) {
-        isDebouncingRef.current = false;
-        return;
-      }
-
-      isDebouncingRef.current = true;
-      timeoutRef.current = setTimeout(() => {
-        saveToStorage(nextValue);
-        timeoutRef.current = null;
-      }, debounceMs);
     },
-    [debounceMs, saveToStorage],
+    [],
   );
 
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
-
-        if (!isEqual(latestLocalValueRef.current, baselineValueRef.current)) {
-          saveToStorage(latestLocalValueRef.current);
-        } else {
-          isDebouncingRef.current = false;
-        }
-      }
-    };
-  }, [saveToStorage]);
-
-  return [localValue, setPersistedValue] as const;
-}
-
-function isEqual<T extends Record<string, unknown>>(
-  objA: T,
-  objB: T,
-): boolean {
-  if (Object.is(objA, objB)) return true;
-
-  if (
-    typeof objA !== "object" ||
-    objA === null ||
-    typeof objB !== "object" ||
-    objB === null
-  ) {
-    return false;
-  }
-
-  const keysA = Object.keys(objA);
-  const keysB = Object.keys(objB);
-
-  if (keysA.length !== keysB.length) return false;
-
-  for (const key of keysA) {
-    if (
-      !Object.prototype.hasOwnProperty.call(objB, key) ||
-      !Object.is(objA[key], objB[key])
-    ) {
-      return false;
-    }
-  }
-
-  return true;
+  return [persistedValue, setPersistedValue] as const;
 }
