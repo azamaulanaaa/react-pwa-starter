@@ -16,8 +16,8 @@ export function usePersistState<T extends Record<string, unknown>>(
 ) {
   const finalName = PREFIX_NAME + name;
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   const defaultValueRef = useRef(defaultValue);
+
   const computeValue = useCallback(
     (raw: string | null): T => {
       if (raw === null) {
@@ -73,8 +73,14 @@ export function usePersistState<T extends Record<string, unknown>>(
     computeValue(rawStorageValue)
   );
 
+  const latestLocalValueRef = useRef(localValue);
+  useEffect(() => {
+    latestLocalValueRef.current = localValue;
+  }, [localValue]);
+
   const isDebouncingRef = useRef(false);
   const baselineValueRef = useRef<T>(computeValue(rawStorageValue));
+
   useEffect(() => {
     if (!isDebouncingRef.current) {
       const externalVal = computeValue(rawStorageValue);
@@ -100,37 +106,31 @@ export function usePersistState<T extends Record<string, unknown>>(
 
   const setPersistedValue = useCallback(
     (newValue: T | ((prev: T) => T)) => {
-      setLocalValue((prev) => {
-        const nextValue = typeof newValue === "function"
-          ? (newValue as (prev: T) => T)(prev)
-          : newValue;
+      const nextValue = typeof newValue === "function"
+        ? (newValue as (prev: T) => T)(latestLocalValueRef.current)
+        : newValue;
 
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-          timeoutRef.current = null;
-        }
+      latestLocalValueRef.current = nextValue;
+      setLocalValue(nextValue);
 
-        if (isEqual(nextValue, baselineValueRef.current)) {
-          isDebouncingRef.current = false;
-          return nextValue;
-        }
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
 
-        isDebouncingRef.current = true;
-        timeoutRef.current = setTimeout(() => {
-          saveToStorage(nextValue);
-          timeoutRef.current = null;
-        }, debounceMs);
+      if (isEqual(nextValue, baselineValueRef.current)) {
+        isDebouncingRef.current = false;
+        return;
+      }
 
-        return nextValue;
-      });
+      isDebouncingRef.current = true;
+      timeoutRef.current = setTimeout(() => {
+        saveToStorage(nextValue);
+        timeoutRef.current = null;
+      }, debounceMs);
     },
     [debounceMs, saveToStorage],
   );
-
-  const latestLocalValueRef = useRef(localValue);
-  useEffect(() => {
-    latestLocalValueRef.current = localValue;
-  }, [localValue]);
 
   useEffect(() => {
     return () => {
