@@ -50,7 +50,7 @@ export function ListTask(props: ListTaskProps) {
   const columns: ColumnDef<Task>[] = useMemo(() => [
     {
       accessorKey: "is_done",
-      cell: ({ row }) => {
+      cell: ({ row, table }) => {
         return (
           <Checkbox
             checked={row.getValue("is_done")}
@@ -70,7 +70,7 @@ export function ListTask(props: ListTaskProps) {
     },
     {
       accessorKey: "id",
-      cell: ({ row }) => (
+      cell: ({ row, table }) => (
         <Tooltip>
           <TooltipTrigger
             render={

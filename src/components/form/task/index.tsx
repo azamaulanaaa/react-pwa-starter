@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { AnyFieldApi, useForm } from "@tanstack/react-form";
 import { Schema } from "effect";
 
@@ -7,7 +8,19 @@ import { Field, FieldError, FieldLabel } from "@/components/ui/field.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { Button } from "@/components/ui/button.tsx";
 
-import { useFormTaskSchema, useFormTaskState } from "./state.ts";
+const useFormTaskSchema = () => {
+  const { t } = useTranslation("ui");
+
+  return Schema.mutable(Schema.Struct({
+    task: Schema.String.pipe(
+      Schema.nonEmptyString({ message: () => t("form_task_error_task_empty") }),
+    ),
+  }));
+};
+
+export type FormTaskValue = Schema.Schema.Type<
+  ReturnType<typeof useFormTaskSchema>
+>;
 
 function FieldInfo({ field }: { field: AnyFieldApi }) {
   const { t } = useTranslation("ui");
@@ -25,32 +38,32 @@ function FieldInfo({ field }: { field: AnyFieldApi }) {
 }
 
 export type FormTaskProps = {
+  defaultValues?: FormTaskValue;
+  onChange?: (
+    value: FormTaskValue,
+  ) => void;
   onSubmit: (
-    value: Schema.Schema.Type<ReturnType<typeof useFormTaskSchema>>,
+    value: FormTaskValue,
   ) => void | Promise<void>;
 };
 
 export function FormTask(props: FormTaskProps) {
   const { t } = useTranslation("ui");
 
+  const defaultValues = useRef(props.defaultValues);
   const formTaskSchema = useFormTaskSchema();
-  const [value, setValue] = useFormTaskState();
 
   const form = useForm({
-    defaultValues: value,
+    defaultValues: defaultValues.current,
     validators: {
       onChange: Schema.standardSchemaV1(formTaskSchema),
     },
-    onSubmit: async ({ value, formApi }) => {
+    onSubmit: async ({ value }) => {
       await props.onSubmit(value);
-
-      const resetValue = { task: "" };
-      formApi.reset(resetValue);
-      setValue(resetValue);
     },
     listeners: {
       onChange: ({ formApi }) => {
-        setValue(formApi.state.values);
+        props.onChange?.(formApi.state.values);
       },
     },
   });
