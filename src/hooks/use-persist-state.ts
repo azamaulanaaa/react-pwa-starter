@@ -9,17 +9,25 @@ import {
 const PREFIX_NAME = "state-";
 const eventTarget = new EventTarget();
 
-export function usePersistState<T extends Record<string, unknown>>(
+export type usePersistStateOptions<T> = {
+  serializer: (value: T) => string;
+  deserializer: (value: string) => T;
+};
+
+export function usePersistState<T>(
   name: string,
   defaultValue: T,
+  options?: usePersistStateOptions<T>,
 ) {
   const finalNameRef = useRef(PREFIX_NAME + name);
   const defaultValueRef = useRef(defaultValue);
+  const serializerRef = useRef(options?.serializer ?? JSON.stringify);
+  const deserializerRef = useRef(options?.deserializer ?? JSON.parse);
 
   const computeValue = useCallback((raw: string | null): T => {
     if (raw === null) return defaultValueRef.current;
     try {
-      return JSON.parse(raw);
+      return deserializerRef.current(raw);
     } catch {
       return defaultValueRef.current;
     }
@@ -77,7 +85,10 @@ export function usePersistState<T extends Record<string, unknown>>(
         : newValue;
 
       try {
-        localStorage.setItem(finalNameRef.current, JSON.stringify(nextValue));
+        localStorage.setItem(
+          finalNameRef.current,
+          serializerRef.current(nextValue),
+        );
         eventTarget.dispatchEvent(new Event(finalNameRef.current));
       } catch (error) {
         console.error(`Error persisting key "${finalNameRef.current}":`, error);
