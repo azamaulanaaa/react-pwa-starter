@@ -1,5 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { Fragment, useCallback, useEffect, useState } from "react";
+import {
+  createFileRoute,
+  Link,
+  Outlet,
+  useMatches,
+} from "@tanstack/react-router";
 import { House } from "lucide-react";
 
 import {
@@ -17,10 +22,19 @@ import {
 } from "@/components/ui/sidebar.tsx";
 import { useTranslation } from "@/components/context/i18n.tsx";
 import { useConfig } from "@/components/context/config.tsx";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb.tsx";
 
 function Page() {
   const { t } = useTranslation("ui");
   const { config, updateConfig } = useConfig();
+  const matches = useMatches();
 
   const [isSidebarOpen, setLocalIsSidebarOpen] = useState(config.isSidebarOpen);
   const setIsSidebarOpen = useCallback(
@@ -41,6 +55,24 @@ function Page() {
     // deno-lint-ignore no-window no-window-prefix
     return () => window.removeEventListener("focus", handleFocus);
   }, [isSidebarOpen, updateConfig]);
+
+  const breadcrumbs = matches
+    .filter((match) => match.staticData?.breadcrumb)
+    .filter((match, index, array) => {
+      const nextMatch = array[index + 1];
+      return !nextMatch || nextMatch.pathname !== match.pathname;
+    })
+    .map((match) => {
+      const { breadcrumb } = match.staticData;
+      const label = (typeof breadcrumb === "function")
+        ? breadcrumb(match)
+        : breadcrumb;
+
+      return {
+        title: label,
+        path: match.pathname,
+      };
+    });
 
   return (
     <div className="h-screen w-full bg-background text-foreground">
@@ -77,8 +109,40 @@ function Page() {
           </SidebarContent>
         </Sidebar>
         <SidebarInset>
-          <div className="flex h-12 items-center border-b px-4">
-            <SidebarTrigger />
+          <div className="flex flex-row h-12 items-center border-b px-4">
+            <div className="flex gap-2 items-center">
+              <SidebarTrigger />
+              <Breadcrumb>
+                <BreadcrumbList>
+                  {breadcrumbs.map((crumb, index) => {
+                    const isLast = index === breadcrumbs.length - 1;
+
+                    return (
+                      <Fragment key={crumb.path}>
+                        {isLast
+                          ? (
+                            <BreadcrumbItem>
+                              <BreadcrumbPage>
+                                {crumb.title}
+                              </BreadcrumbPage>
+                            </BreadcrumbItem>
+                          )
+                          : (
+                            <BreadcrumbItem>
+                              <BreadcrumbLink render={<Link to={crumb.path} />}>
+                                {crumb.title}
+                              </BreadcrumbLink>
+                            </BreadcrumbItem>
+                          )}
+                        {!isLast && <BreadcrumbSeparator />}
+                      </Fragment>
+                    );
+                  })}
+                </BreadcrumbList>
+              </Breadcrumb>
+            </div>
+            <div>
+            </div>
           </div>
           <main className="p-2">
             <Outlet />
@@ -91,4 +155,7 @@ function Page() {
 
 export const Route = createFileRoute("/_dashboard")({
   component: Page,
+  staticData: {
+    breadcrumb: "Dashboard",
+  },
 });
