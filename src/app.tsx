@@ -1,4 +1,4 @@
-import { ReactNode, useCallback, useEffect } from "react";
+import { ReactNode, useEffect } from "react";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 
 import { routeTree } from "@/routeTree.gen.ts";
@@ -7,6 +7,7 @@ import { useWorker, WorkerProvider } from "@/components/worker_context.tsx";
 import { I18nProvider, useI18n } from "@/components/i18n_context.tsx";
 import { useSystemDarkMode } from "@/hooks/use-system-dark-mode.ts";
 import { Spinner } from "@/components/ui/spinner.tsx";
+import { useHtmlLang } from "@/hooks/use-html-lang.ts";
 
 // Create a new router instance
 const router = createRouter({ routeTree });
@@ -39,36 +40,21 @@ function AppInitializerGuard({ children }: { children: ReactNode }) {
   );
 }
 
-function WrappedI18nProvider({ children }: { children: ReactNode }) {
-  const worker = useWorker();
-
-  const handleOnLanguageChange = useCallback((lng: string) => {
-    if (worker != null) {
-      worker.i18n.changeLanguage(lng);
-    }
-  }, [worker]);
-
-  return (
-    <I18nProvider onLanguageChange={handleOnLanguageChange}>
-      {children}
-    </I18nProvider>
-  );
-}
-
 export function App() {
   const isDarkMode = useSystemDarkMode();
+  const locale = useHtmlLang();
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", isDarkMode);
   }, [isDarkMode]);
 
   return (
-    <WorkerProvider>
-      <WrappedI18nProvider>
+    <WorkerProvider locale={locale}>
+      <I18nProvider locale={locale}>
         <AppInitializerGuard>
           <RouterProvider router={router} />
         </AppInitializerGuard>
-      </WrappedI18nProvider>
+      </I18nProvider>
     </WorkerProvider>
   );
 }

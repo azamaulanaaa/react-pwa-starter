@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext } from "react";
+import { createContext, ReactNode, useContext, useEffect } from "react";
 
 import "@/lib/comlink/index.ts";
 import { type SyncRemoteProxy } from "@/lib/comlink/index.ts";
@@ -11,10 +11,21 @@ const worker = new ComlinkWorker(
   { type: "module" },
 ) as unknown as SyncRemoteProxy<WorkerType>;
 
-export const WorkerProvider = ({ children }: { children: ReactNode }) => {
+export type WorkerProviderProps = {
+  children: ReactNode;
+  locale: string;
+};
+
+export const WorkerProvider = (props: WorkerProviderProps) => {
+  useEffect(() => {
+    if (!worker) return;
+
+    worker.i18n.changeLanguage(props.locale);
+  }, [worker, props.locale]);
+
   return (
     <WorkerContext.Provider value={worker}>
-      {children}
+      {props.children}
     </WorkerContext.Provider>
   );
 };

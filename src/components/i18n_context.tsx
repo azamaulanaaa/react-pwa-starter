@@ -6,54 +6,43 @@ import {
   useState,
 } from "react";
 
-import { i18nreact } from "@/lib/i18n.ts";
+import { i18nbase } from "@/lib/i18n.ts";
 
-const i18nPromise = i18nreact("ui");
+const i18nPromise = i18nbase("ui");
 
 export type I18nProviderProps = {
-  onLanguageChange?: (lng: string) => void;
   children: ReactNode;
+  locale: string;
 };
 
 const I18nContext = createContext<null | Awaited<typeof i18nPromise>>(null);
 
 export function I18nProvider(
-  { onLanguageChange, children }: I18nProviderProps,
+  props: I18nProviderProps,
 ) {
   const [i18n, setI18n] = useState<null | Awaited<typeof i18nPromise>>(null);
 
   useEffect(() => {
     let isMounted = true;
 
-    i18nPromise.then((instance) => {
+    (async () => {
+      const i18n = await i18nPromise;
       if (isMounted) {
-        setI18n(instance);
+        if (i18n.language != props.locale) {
+          i18n.changeLanguage(props.locale);
+        }
+        setI18n(i18n);
       }
-    });
+    })();
 
     return () => {
       isMounted = false;
     };
   }, []);
 
-  useEffect(() => {
-    if (!i18n) return;
-
-    if (onLanguageChange) {
-      onLanguageChange(i18n.language);
-      i18n.on("languageChanged", onLanguageChange);
-    }
-
-    return () => {
-      if (onLanguageChange) {
-        i18n.off("languageChanged", onLanguageChange);
-      }
-    };
-  }, [i18n, onLanguageChange]);
-
   return (
     <I18nContext.Provider value={i18n}>
-      {children}
+      {props.children}
     </I18nContext.Provider>
   );
 }

@@ -3,6 +3,7 @@ import type { GlobalProvider } from "@ladle/react";
 
 import "./components.css";
 import { I18nProvider, useI18n } from "@/components/i18n_context.tsx";
+import { useHtmlLang } from "@/hooks/use-html-lang.ts";
 
 function Loading() {
   return (
@@ -29,13 +30,14 @@ export const Provider: GlobalProvider = ({
   globalState,
 }) => {
   const isDarkMode = globalState.theme === "dark";
+  const locale = useHtmlLang();
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", isDarkMode);
   }, [isDarkMode]);
 
   return (
-    <I18nProvider>
+    <I18nProvider locale={locale}>
       <AppInitializerGuard>
         {children}
       </AppInitializerGuard>
