@@ -2,8 +2,9 @@ import { ReactNode, useEffect } from "react";
 import type { GlobalProvider } from "@ladle/react";
 
 import "./components.css";
-import { I18nProvider, useI18n } from "@/components/context/i18n.tsx";
 import { useHtmlLang } from "@/hooks/use-html-lang.ts";
+import { I18nProvider, useI18n } from "@/components/context/i18n.tsx";
+import { IntlProvider, useIntl } from "@/components/context/intl.tsx";
 
 function Loading() {
   return (
@@ -15,8 +16,11 @@ function Loading() {
 
 function AppInitializerGuard({ children }: { children: ReactNode }) {
   const i18n = useI18n();
+  const intl = useIntl();
 
-  if (!i18n) return <Loading />;
+  const isLoading = !i18n || !intl;
+
+  if (isLoading) return <Loading />;
 
   return (
     <>
@@ -38,9 +42,11 @@ export const Provider: GlobalProvider = ({
 
   return (
     <I18nProvider locale={locale}>
-      <AppInitializerGuard>
-        {children}
-      </AppInitializerGuard>
+      <IntlProvider locale={locale}>
+        <AppInitializerGuard>
+          {children}
+        </AppInitializerGuard>
+      </IntlProvider>
     </I18nProvider>
   );
 };

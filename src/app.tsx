@@ -5,6 +5,7 @@ import { routeTree } from "@/routeTree.gen.ts";
 
 import { useWorker, WorkerProvider } from "@/components/context/worker.tsx";
 import { I18nProvider, useI18n } from "@/components/context/i18n.tsx";
+import { IntlProvider, useIntl } from "@/components/context/intl.tsx";
 import { useSystemDarkMode } from "@/hooks/use-system-dark-mode.ts";
 import { Spinner } from "@/components/ui/spinner.tsx";
 import { useHtmlLang } from "@/hooks/use-html-lang.ts";
@@ -30,8 +31,11 @@ function Loading() {
 function AppInitializerGuard({ children }: { children: ReactNode }) {
   const worker = useWorker();
   const i18n = useI18n();
+  const intl = useIntl();
 
-  if (!worker || !i18n) return <Loading />;
+  const isLoading = !worker || !i18n || !intl;
+
+  if (isLoading) return <Loading />;
 
   return (
     <>
@@ -51,9 +55,11 @@ export function App() {
   return (
     <WorkerProvider locale={locale}>
       <I18nProvider locale={locale}>
-        <AppInitializerGuard>
-          <RouterProvider router={router} />
-        </AppInitializerGuard>
+        <IntlProvider locale={locale}>
+          <AppInitializerGuard>
+            <RouterProvider router={router} />
+          </AppInitializerGuard>
+        </IntlProvider>
       </I18nProvider>
     </WorkerProvider>
   );
