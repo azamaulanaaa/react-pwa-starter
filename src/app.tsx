@@ -3,8 +3,8 @@ import { createRouter, RouterProvider } from "@tanstack/react-router";
 
 import { routeTree } from "@/routeTree.gen.ts";
 
-import { useWorker, WorkerProvider } from "@/components/worker_context.tsx";
-import { I18nProvider, useI18n } from "@/components/i18n_context.tsx";
+import { useWorker, WorkerProvider } from "@/components/context/worker.tsx";
+import { I18nProvider, useI18n } from "@/components/context/i18n.tsx";
 import { useSystemDarkMode } from "@/hooks/use-system-dark-mode.ts";
 import { Spinner } from "@/components/ui/spinner.tsx";
 import { useHtmlLang } from "@/hooks/use-html-lang.ts";

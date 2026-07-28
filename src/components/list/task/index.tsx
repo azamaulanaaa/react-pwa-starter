@@ -8,7 +8,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 
-import { useTranslation } from "@/components/i18n_context.tsx";
+import { useTranslation } from "@/components/context/i18n.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Checkbox } from "@/components/ui/checkbox.tsx";
 import {

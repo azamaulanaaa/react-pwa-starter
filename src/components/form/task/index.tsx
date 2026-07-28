@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { AnyFieldApi, useForm } from "@tanstack/react-form";
 import { Schema } from "effect";
 
-import { useTranslation } from "@/components/i18n_context.tsx";
+import { useTranslation } from "@/components/context/i18n.tsx";
 import { Form } from "@/components/ui/form.tsx";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field.tsx";
 import { Input } from "@/components/ui/input.tsx";

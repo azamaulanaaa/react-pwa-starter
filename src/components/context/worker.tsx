@@ -7,7 +7,7 @@ export type WorkerType = typeof import("@/worker/main.ts");
 const WorkerContext = createContext<null | SyncRemoteProxy<WorkerType>>(null);
 
 const worker = new ComlinkWorker(
-  new URL("../worker/main.ts", import.meta.url),
+  new URL("../../worker/main.ts", import.meta.url),
   { type: "module" },
 ) as unknown as SyncRemoteProxy<WorkerType>;
 

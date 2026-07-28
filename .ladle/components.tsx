@@ -2,7 +2,7 @@ import { ReactNode, useEffect } from "react";
 import type { GlobalProvider } from "@ladle/react";
 
 import "./components.css";
-import { I18nProvider, useI18n } from "@/components/i18n_context.tsx";
+import { I18nProvider, useI18n } from "@/components/context/i18n.tsx";
 import { useHtmlLang } from "@/hooks/use-html-lang.ts";
 
 function Loading() {
