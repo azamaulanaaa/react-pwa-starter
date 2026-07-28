@@ -169,7 +169,7 @@ function generateCrud<
             table.update(vId as any, (old) => {
               if (!old) return;
               Object.assign(old, vProperty, {
-                modified_at: Date.now(),
+                modified_at: new Date(),
               });
             }),
           catch: (error) => new DbError({ error }),
