@@ -1,7 +1,8 @@
-import { Fragment, useCallback, useEffect, useState } from "react";
+import { ElementType, Fragment, useCallback, useEffect, useState } from "react";
 import {
   createFileRoute,
   Link,
+  LinkProps,
   Outlet,
   useMatches,
 } from "@tanstack/react-router";
@@ -30,6 +31,30 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb.tsx";
+
+type SidebarLinkProps = LinkProps & {
+  icon: ElementType;
+  label: string;
+};
+
+export function SidebarLink({
+  icon: Icon,
+  label,
+  ...props
+}: SidebarLinkProps) {
+  return (
+    <SidebarMenuItem>
+      <Link {...props}>
+        {({ isActive }) => (
+          <SidebarMenuButton isActive={isActive} tooltip={label}>
+            <Icon />
+            <span>{label}</span>
+          </SidebarMenuButton>
+        )}
+      </Link>
+    </SidebarMenuItem>
+  );
+}
 
 function Page() {
   const { t } = useTranslation("ui");
@@ -95,14 +120,11 @@ function Page() {
             <SidebarGroup>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      tooltip={t("layout_menu_home")}
-                    >
-                      <House />
-                      <span>{t("layout_menu_home")}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  <SidebarLink
+                    icon={House}
+                    label={t("layout_menu_home")}
+                    to="/"
+                  />
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
