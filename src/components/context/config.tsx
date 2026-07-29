@@ -9,6 +9,7 @@ import {
 export type Config = {
   theme: "light" | "dark" | "system";
   locale: string | null;
+  isSidebarOpen: boolean;
 };
 
 export type ConfigContextType = {

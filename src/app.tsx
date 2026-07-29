@@ -25,6 +25,7 @@ declare module "@tanstack/react-router" {
 const DEFAULT_CONFIG: Config = {
   theme: "system",
   locale: null,
+  isSidebarOpen: true,
 };
 
 function Loading() {
