@@ -39,50 +39,65 @@ const PWA_MANIFEST: VitePWAOptions["manifest"] = {
   ],
 };
 
+/**
+ * Manual chunking strategies for vendor dependencies.
+ * Grouping is optimized for SPA initial boot performance:
+ * - Core React and Router run first for immediate navigation.
+ * - Heavy data/UI libraries (Effect, TanStack Form/Table) load on demand.
+ * - Non-JS assets (like Fontsource CSS) bundle directly into CSS assets.
+ */
 const VENDOR_GROUPS: Record<string, string[]> = {
-  // Core UI & Framework
+  // Core UI runtime required on initial application boot
   react: ["react", "react-dom", "scheduler"],
-  // Router
+  // Client-side router & navigation primitives (loaded before page views)
   router: [
     "@tanstack/router-core",
     "@tanstack/react-router",
+    "@tanstack/react-router-devtools",
     "@tanstack/react-store",
     "@tanstack/history",
     "isbot",
     "tiny-invariant",
     "tiny-warning",
   ],
-  // Animation & Icons (Heavy assets)
+  // Data management & form/table logic (separated from router to defer loading)
+  "tanstack-ui": [
+    "@tanstack/react-form",
+    "@tanstack/react-table",
+    "@tanstack/form-core",
+    "@tanstack/table-core",
+  ],
+  // UI design system components, icons, and class utility helpers
   visuals: [
-    "tailwindcss",
-    "@tailwindcss/vite",
     "@base-ui",
     "lucide-react",
     "class-variance-authority",
-    "clsx",
-    "tailwind-merge",
-    "geist",
+    "cnfast",
+    "react-day-picker",
+    "tw-animate-css",
   ],
-  // State & Logic
-  tanstack: ["@tanstack"],
-  // Internationalization
-  i18n: ["i18next", "i18next-browser-languagedetector", "i18next-http-backend"],
-  // Utils (Small, frequently used)
-  utils: ["effect", "cnfast", "uuid"],
-  // dexie
-  dexie: ["dexie"],
+  // Functional effect system (heavy runtime split into its own chunk)
+  effect: ["effect"],
+  // Internationalization framework & translation backends
+  i18n: ["i18next", "i18next-http-backend"],
+  // Client-side IndexedDB storage engine
+  database: ["dexie"],
+  // Web Worker RPC bridge
+  worker: ["comlink", "vite-plugin-comlink"],
+  // Service Worker & PWA lifecycle helpers
+  pwa: ["workbox-window"],
 };
 
 const rolldownGroups = [
   ...Object.entries(VENDOR_GROUPS).map(([name, libs]) => ({
     name: `vendor-${name}`,
-    // Creates a regex like: /node_modules\/(react|react-dom|scheduler)\//
-    test: new RegExp(`node_modules\\/(${libs.join("|")})\\/`),
+    // Matches node_modules/<lib>/ cross-platform across Windows (\) and POSIX (/)
+    test: new RegExp(`node_modules[\\\\/](?:${libs.join("|")})[\\\\/]`),
   })),
-  // Catch-all for any other node_modules not specified above
+  // Fallback chunk for any unmapped third-party dependencies
   {
     name: "vendor-others",
-    test: /node_modules\//,
+    test: /node_modules[\\/]/,
   },
 ];
 
@@ -125,9 +140,6 @@ export default defineConfig({
     plugins: () => [
       comlink(),
     ],
-    rolldownOptions: {
-      output: sharedOutputOptions,
-    },
   },
   build: {
     rolldownOptions: {
