@@ -9,7 +9,7 @@ import { IntlProvider, useIntl } from "@/components/context/intl.tsx";
 import { type Config, ConfigProvider } from "@/components/context/config.tsx";
 import { usePersistState } from "@/hooks/use-persist-state.ts";
 import { useSystemDarkMode } from "@/hooks/use-system-dark-mode.ts";
-import { useHtmlLang } from "@/hooks/use-html-lang.ts";
+import { useNavigatorLanguage } from "@/hooks/use-navigator-language.ts";
 import { Spinner } from "@/components/ui/spinner.tsx";
 
 // Create a new router instance
@@ -59,7 +59,7 @@ export function App() {
   );
 
   const isSystemDarkMode = useSystemDarkMode();
-  const systemLocale = useHtmlLang();
+  const systemLocale = useNavigatorLanguage();
 
   const locale = useMemo(() => config.locale ?? systemLocale, [
     config.locale,

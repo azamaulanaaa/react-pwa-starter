@@ -2,7 +2,7 @@ import { ReactNode, useEffect } from "react";
 import type { GlobalProvider } from "@ladle/react";
 
 import "./components.css";
-import { useHtmlLang } from "@/hooks/use-html-lang.ts";
+import { useNavigatorLanguage } from "@/hooks/use-navigator-language.ts";
 import { I18nProvider, useI18n } from "@/components/context/i18n.tsx";
 import { IntlProvider, useIntl } from "@/components/context/intl.tsx";
 
@@ -34,7 +34,7 @@ export const Provider: GlobalProvider = ({
   globalState,
 }) => {
   const isDarkMode = globalState.theme === "dark";
-  const locale = useHtmlLang();
+  const locale = useNavigatorLanguage();
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", isDarkMode);
