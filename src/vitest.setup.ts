@@ -13,13 +13,13 @@ vi.stubGlobal("fetch", async (url: string) => {
 
     // Runtime-specific reading
     if (typeof (globalThis as any).Deno !== "undefined") {
-      content = await Deno.readTextFile(fileUrl);
+      content = await Deno.readTextFile(fileUrl.toString());
     } else if (typeof (globalThis as any).Bun !== "undefined") {
       content = await Bun.file(fileUrl).text();
     } else {
       // Node fallback (using dynamic import to avoid crashes in non-node)
       const { readFileSync } = await import("node:fs");
-      content = readFileSync(fileUrl, "utf-8");
+      content = readFileSync(fileUrl.toString(), "utf-8");
     }
 
     return new Response(content, {
