@@ -8,7 +8,7 @@ import {
 
 export type Config = {
   theme: "light" | "dark" | "system";
-  locale: string | null;
+  locale: string;
   isSidebarOpen: boolean;
 };
 

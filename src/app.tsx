@@ -24,7 +24,7 @@ declare module "@tanstack/react-router" {
 
 const DEFAULT_CONFIG: Config = {
   theme: "system",
-  locale: null,
+  locale: "",
   isSidebarOpen: true,
 };
 
@@ -61,7 +61,13 @@ export function App() {
   const isSystemDarkMode = useSystemDarkMode();
   const systemLocale = useNavigatorLanguage();
 
-  const locale = useMemo(() => config.locale ?? systemLocale, [
+  const locale = useMemo(() => {
+    if (config.locale === "") {
+      return systemLocale;
+    }
+
+    return config.locale;
+  }, [
     config.locale,
     systemLocale,
   ]);
