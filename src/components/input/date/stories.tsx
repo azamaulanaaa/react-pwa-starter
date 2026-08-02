@@ -81,3 +81,58 @@ export const CustomWidthAndStyle: Story<InputDateProps> = (props) => {
     />
   );
 };
+
+export const WithLocale: Story<InputDateProps> = (props) => {
+  const [date, setDate] = useState<Date | undefined>(
+    props.value ?? new Date(2026, 6, 22),
+  );
+
+  return (
+    <div className="flex flex-col gap-4 w-72">
+      <div>
+        <label className="text-xs text-muted-foreground block mb-1">
+          Indonesian Locale (id) → dd-mm-yyyy
+        </label>
+        <InputDate
+          {...props}
+          locale="id"
+          value={date}
+          onChange={(newDate) => {
+            setDate(newDate);
+            props.onChange?.(newDate);
+          }}
+        />
+      </div>
+
+      <div>
+        <label className="text-xs text-muted-foreground block mb-1">
+          US Locale (en-US) → mm-dd-yyyy
+        </label>
+        <InputDate
+          {...props}
+          locale="en-US"
+          value={date}
+          onChange={(newDate) => {
+            setDate(newDate);
+            props.onChange?.(newDate);
+          }}
+        />
+      </div>
+
+      <div>
+        <label className="text-xs text-muted-foreground block mb-1">
+          German Locale (de-DE) → dd-mm-yyyy
+        </label>
+        <InputDate
+          {...props}
+          locale="de-DE"
+          value={date}
+          onChange={(newDate) => {
+            setDate(newDate);
+            props.onChange?.(newDate);
+          }}
+        />
+      </div>
+    </div>
+  );
+};
