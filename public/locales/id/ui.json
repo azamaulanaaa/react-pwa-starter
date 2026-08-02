@@ -1,0 +1,22 @@
+{
+  "form_task_description_label": "Deskripsi Tugas",
+  "form_task_description_placeholder": "Deskripsi Tugas",
+  "form_task_error_task_empty": "Deskripsi tugas tidak boleh kosong",
+  "form_task_insert": "Masukkan",
+  "list-task-action": "Aksi",
+  "list-task-description": "Deskripsi Tugas",
+  "validating": "Memeriksa...",
+  "form_setting_theme_label": "Tema",
+  "form_setting_theme_select_label_system": "Sistem",
+  "form_setting_theme_select_label_light": "Terang",
+  "form_setting_theme_select_label_dark": "Gelap",
+  "form_setting_locale_label": "Lokalisasi",
+  "form_setting_locale_select_label_system": "[Sistem]",
+  "form_setting_locale_select_label_en_us": "Bahasa Inggris (AS)",
+  "form_setting_locale_select_label_id_id": "Indonesia (ID)",
+  "form_setting_submit_button": "Simpan",
+  "form_setting_validating": "Memvalidasi...",
+  "layout_menu_home": "Beranda",
+  "layout_menu_setting": "Pengaturan",
+  "page_dashboard_setting_title": "Pengaturan"
+}

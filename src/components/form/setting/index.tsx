@@ -24,6 +24,7 @@ export function useFormSettingSchema() {
     locale: Schema.Union(
       Schema.Literal(""),
       Schema.Literal("en-US"),
+      Schema.Literal("id-ID"),
     ),
   }));
 }
@@ -59,6 +60,7 @@ function useSelectLocaleValues(): Record<FormSettingValue["locale"], string> {
   return {
     "": t("form_setting_locale_select_label_system"),
     "en-US": t("form_setting_locale_select_label_en_us"),
+    "id-ID": t("form_setting_locale_select_label_id_id"),
   };
 }
 
