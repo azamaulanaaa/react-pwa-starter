@@ -15,5 +15,7 @@
   "form_setting_locale_select_label_en_us": "English (US)",
   "form_setting_submit_button": "Save",
   "form_setting_validating": "Validating...",
-  "layout_menu_home": "Home"
+  "layout_menu_home": "Home",
+  "layout_menu_setting": "Setting",
+  "page_dashboard_setting_title": "Setting"
 }

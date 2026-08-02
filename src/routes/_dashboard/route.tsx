@@ -6,7 +6,7 @@ import {
   Outlet,
   useMatches,
 } from "@tanstack/react-router";
-import { House } from "lucide-react";
+import { House, Settings } from "lucide-react";
 
 import {
   Sidebar,
@@ -124,6 +124,11 @@ function Page() {
                     icon={House}
                     label={t("layout_menu_home")}
                     to="/"
+                  />
+                  <SidebarLink
+                    icon={Settings}
+                    label={t("layout_menu_setting")}
+                    to="/setting"
                   />
                 </SidebarMenu>
               </SidebarGroupContent>
