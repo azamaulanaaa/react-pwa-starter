@@ -53,7 +53,7 @@ export function useTranslation(ns: string) {
     throw new Error("useTranslation must be used within a I18nProvider");
   }
 
-  const fixedT = context.getFixedT(ns);
+  const fixedT = context.getFixedT(null, ns as any);
 
   return { t: fixedT, i18n: context };
 }
