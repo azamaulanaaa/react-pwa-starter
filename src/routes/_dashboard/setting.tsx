@@ -13,6 +13,7 @@ import {
   FormSettingValue,
 } from "@/components/form/setting/index.tsx";
 import { useConfig } from "@/components/context/config.tsx";
+import { toastManager } from "@/components/ui/toast.tsx";
 
 function Page() {
   const { t } = useTranslation();
@@ -23,9 +24,15 @@ function Page() {
     locale: config.locale,
   }), [config]);
 
-  const handleOnChange = useCallback((value: FormSettingValue) => {
+  const handleOnSubmit = useCallback((value: FormSettingValue) => {
     updateConfig(value);
+    toastManager.add({
+      description: t("page_dashboard_setting_toast_saved_description"),
+      title: t("page_dashboard_setting_toast_saved_title"),
+      type: "success",
+    });
   }, [updateConfig]);
+
   return (
     <Card>
       <CardHeader>
@@ -34,7 +41,7 @@ function Page() {
       <CardPanel>
         <FormSetting
           defaultValue={defaultValue as any}
-          onSubmit={handleOnChange}
+          onSubmit={handleOnSubmit}
         />
       </CardPanel>
     </Card>

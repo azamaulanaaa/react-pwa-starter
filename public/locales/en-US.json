@@ -18,5 +18,7 @@
   "form_setting_validating": "Validating...",
   "layout_menu_home": "Home",
   "layout_menu_setting": "Setting",
-  "page_dashboard_setting_title": "Setting"
+  "page_dashboard_setting_title": "Setting",
+  "page_dashboard_setting_toast_saved_title": "Settings saved",
+  "page_dashboard_setting_toast_saved_description": "Your settings have been updated."
 }

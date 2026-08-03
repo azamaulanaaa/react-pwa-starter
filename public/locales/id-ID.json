@@ -18,5 +18,7 @@
   "form_setting_validating": "Memvalidasi...",
   "layout_menu_home": "Beranda",
   "layout_menu_setting": "Pengaturan",
-  "page_dashboard_setting_title": "Pengaturan"
+  "page_dashboard_setting_title": "Pengaturan",
+  "page_dashboard_setting_toast_saved_description": "Pengaturan telah diperbarui.",
+  "page_dashboard_setting_toast_saved_title": "Pengaturan tersimpan"
 }
