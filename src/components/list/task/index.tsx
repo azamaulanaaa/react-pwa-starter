@@ -8,7 +8,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 
-import { useTranslation } from "@/components/context/i18n.tsx";
+import { useTranslation } from "@/components/context/translation.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Checkbox } from "@/components/ui/checkbox.tsx";
 import {
@@ -45,7 +45,7 @@ export type ListTaskProps = {
 };
 
 export function ListTask(props: ListTaskProps) {
-  const { t } = useTranslation("ui");
+  const { t } = useTranslation();
 
   const columns: ColumnDef<Task>[] = useMemo(() => [
     {

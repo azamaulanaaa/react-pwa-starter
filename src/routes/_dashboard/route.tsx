@@ -21,7 +21,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar.tsx";
-import { useTranslation } from "@/components/context/i18n.tsx";
+import { useTranslation } from "@/components/context/translation.tsx";
 import { useConfig } from "@/components/context/config.tsx";
 import {
   Breadcrumb,
@@ -57,7 +57,7 @@ export function SidebarLink({
 }
 
 function Page() {
-  const { t } = useTranslation("ui");
+  const { t } = useTranslation();
   const { config, updateConfig } = useConfig();
   const matches = useMatches();
 

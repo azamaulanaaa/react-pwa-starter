@@ -78,14 +78,14 @@ const VENDOR_GROUPS: Record<string, string[]> = {
   ],
   // Functional effect system (heavy runtime split into its own chunk)
   effect: ["effect"],
-  // Internationalization framework & translation backends
-  i18n: ["i18next", "i18next-http-backend"],
   // Client-side IndexedDB storage engine
   database: ["dexie"],
   // Web Worker RPC bridge
   worker: ["comlink", "vite-plugin-comlink"],
   // Service Worker & PWA lifecycle helpers
   pwa: ["workbox-window"],
+  // Utilites
+  util: ["micromustache"],
 };
 
 const rolldownGroups = [

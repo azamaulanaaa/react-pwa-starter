@@ -2,14 +2,14 @@ import { useRef } from "react";
 import { AnyFieldApi, useForm } from "@tanstack/react-form";
 import { Schema } from "effect";
 
-import { useTranslation } from "@/components/context/i18n.tsx";
+import { useTranslation } from "@/components/context/translation.tsx";
 import { Form } from "@/components/ui/form.tsx";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { Button } from "@/components/ui/button.tsx";
 
 const useFormTaskSchema = () => {
-  const { t } = useTranslation("ui");
+  const { t } = useTranslation();
 
   return Schema.mutable(Schema.Struct({
     task: Schema.String.pipe(
@@ -23,7 +23,7 @@ export type FormTaskValue = Schema.Schema.Type<
 >;
 
 function FieldInfo({ field }: { field: AnyFieldApi }) {
-  const { t } = useTranslation("ui");
+  const { t } = useTranslation();
 
   return (
     <>
@@ -48,7 +48,7 @@ export type FormTaskProps = {
 };
 
 export function FormTask(props: FormTaskProps) {
-  const { t } = useTranslation("ui");
+  const { t } = useTranslation();
 
   const defaultValues = useRef(props.defaultValues);
   const formTaskSchema = useFormTaskSchema();

@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 
-import { useTranslation } from "@/components/context/i18n.tsx";
+import { useTranslation } from "@/components/context/translation.tsx";
 import {
   Card,
   CardHeader,
@@ -15,7 +15,7 @@ import {
 import { useConfig } from "@/components/context/config.tsx";
 
 function Page() {
-  const { t } = useTranslation("ui");
+  const { t } = useTranslation();
   const { config, updateConfig } = useConfig();
 
   const defaultValue = useMemo(() => ({

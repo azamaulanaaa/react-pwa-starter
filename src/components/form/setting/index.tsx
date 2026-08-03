@@ -2,7 +2,7 @@ import { useEffect, useMemo } from "react";
 import { Schema } from "effect";
 import { AnyFieldApi, useForm } from "@tanstack/react-form";
 
-import { useTranslation } from "@/components/context/i18n.tsx";
+import { useTranslation } from "@/components/context/translation.tsx";
 import { Form } from "@/components/ui/form.tsx";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field.tsx";
 import {
@@ -45,7 +45,7 @@ export const FormSettingDefaultValue: FormSettingValue = {
 };
 
 function useSelectThemeValues(): Record<FormSettingValue["theme"], string> {
-  const { t } = useTranslation("ui");
+  const { t } = useTranslation();
 
   return {
     "system": t("form_setting_theme_select_label_system"),
@@ -55,7 +55,7 @@ function useSelectThemeValues(): Record<FormSettingValue["theme"], string> {
 }
 
 function useSelectLocaleValues(): Record<FormSettingValue["locale"], string> {
-  const { t } = useTranslation("ui");
+  const { t } = useTranslation();
 
   return {
     "": t("form_setting_locale_select_label_system"),
@@ -65,7 +65,7 @@ function useSelectLocaleValues(): Record<FormSettingValue["locale"], string> {
 }
 
 export function FormSetting(props: FormSettingProps) {
-  const { t } = useTranslation("ui");
+  const { t } = useTranslation();
   const schema = useFormSettingSchema();
   const standard_schema = useMemo(() => Schema.standardSchemaV1(schema), [
     schema,
@@ -169,7 +169,7 @@ export function FormSetting(props: FormSettingProps) {
 }
 
 function FieldInfo({ field }: { field: AnyFieldApi }) {
-  const { t } = useTranslation("ui");
+  const { t } = useTranslation();
 
   return (
     <>

@@ -1,33 +1,11 @@
-import { ReactNode, useEffect } from "react";
+import { useEffect } from "react";
 import type { GlobalProvider } from "@ladle/react";
 
 import "./components.css";
 import { useNavigatorLanguage } from "@/hooks/use-navigator-language.ts";
-import { I18nProvider, useI18n } from "@/components/context/i18n.tsx";
-import { IntlProvider, useIntl } from "@/components/context/intl.tsx";
-
-function Loading() {
-  return (
-    <div className="flex h-screen items-center justify-center">
-      <div className="animate-pulse text-lg font-medium">Loading...</div>
-    </div>
-  );
-}
-
-function AppInitializerGuard({ children }: { children: ReactNode }) {
-  const i18n = useI18n();
-  const intl = useIntl();
-
-  const isLoading = !i18n || !intl;
-
-  if (isLoading) return <Loading />;
-
-  return (
-    <>
-      {children}
-    </>
-  );
-}
+import { TranslationProvider } from "@/components/context/translation.tsx";
+import { IntlProvider } from "@/components/context/intl.tsx";
+import dictionary from "../public/locales/en-US.json" with { type: "json" };
 
 export const Provider: GlobalProvider = ({
   children,
@@ -41,12 +19,13 @@ export const Provider: GlobalProvider = ({
   }, [isDarkMode]);
 
   return (
-    <I18nProvider locale={locale}>
+    <TranslationProvider
+      dictionary={dictionary}
+      fallbackDictionary={dictionary}
+    >
       <IntlProvider locale={locale}>
-        <AppInitializerGuard>
-          {children}
-        </AppInitializerGuard>
+        {children}
       </IntlProvider>
-    </I18nProvider>
+    </TranslationProvider>
   );
 };

@@ -1,16 +1,15 @@
-import { ReactNode, useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 
 import { routeTree } from "@/routeTree.gen.ts";
 
-import { useWorker, WorkerProvider } from "@/components/context/worker.tsx";
-import { I18nProvider, useI18n } from "@/components/context/i18n.tsx";
-import { IntlProvider, useIntl } from "@/components/context/intl.tsx";
 import { type Config, ConfigProvider } from "@/components/context/config.tsx";
+import { TranslationProvider } from "@/components/context/translation.tsx";
+import { WorkerProvider } from "@/components/context/worker.tsx";
+import { IntlProvider } from "@/components/context/intl.tsx";
 import { usePersistState } from "@/hooks/use-persist-state.ts";
 import { useSystemDarkMode } from "@/hooks/use-system-dark-mode.ts";
 import { useNavigatorLanguage } from "@/hooks/use-navigator-language.ts";
-import { Spinner } from "@/components/ui/spinner.tsx";
 
 // Create a new router instance
 const router = createRouter({ routeTree });
@@ -27,30 +26,6 @@ const DEFAULT_CONFIG: Config = {
   locale: "",
   isSidebarOpen: true,
 };
-
-function Loading() {
-  return (
-    <div className="flex h-screen items-center justify-center">
-      <Spinner />
-    </div>
-  );
-}
-
-function AppInitializerGuard({ children }: { children: ReactNode }) {
-  const worker = useWorker();
-  const i18n = useI18n();
-  const intl = useIntl();
-
-  const isLoading = !worker || !i18n || !intl;
-
-  if (isLoading) return <Loading />;
-
-  return (
-    <>
-      {children}
-    </>
-  );
-}
 
 export function App() {
   const [config, setConfig] = usePersistState<Config>(
@@ -78,17 +53,34 @@ export function App() {
     document.documentElement.classList.toggle("dark", isDarkMode);
   }, [config.theme, isSystemDarkMode]);
 
+  const [dictionary, setDictionary] = useState({});
+  const [fallbackDictionary, setFallbackDictionary] = useState({});
+
+  useEffect(() => {
+    if (locale === "") return;
+    fetch(`/locales/${locale}.json`).then((res) => res.json()).then(
+      setDictionary,
+    ).catch(console.error);
+  }, [locale]);
+
+  useEffect(() => {
+    fetch(`/locales/en-US.json`).then((res) => res.json()).then(
+      setFallbackDictionary,
+    ).catch(console.error);
+  }, []);
+
   return (
     <ConfigProvider config={config} setConfig={setConfig}>
-      <WorkerProvider locale={locale}>
-        <I18nProvider locale={locale}>
+      <TranslationProvider
+        dictionary={dictionary}
+        fallbackDictionary={fallbackDictionary}
+      >
+        <WorkerProvider>
           <IntlProvider locale={locale}>
-            <AppInitializerGuard>
-              <RouterProvider router={router} />
-            </AppInitializerGuard>
+            <RouterProvider router={router} />
           </IntlProvider>
-        </I18nProvider>
-      </WorkerProvider>
+        </WorkerProvider>
+      </TranslationProvider>
     </ConfigProvider>
   );
 }

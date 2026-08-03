@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext, useEffect } from "react";
+import { createContext, ReactNode, useContext } from "react";
 
 import "@/lib/comlink/index.ts";
 import { type SyncRemoteProxy } from "@/lib/comlink/index.ts";
@@ -13,16 +13,9 @@ const worker = new ComlinkWorker(
 
 export type WorkerProviderProps = {
   children: ReactNode;
-  locale: string;
 };
 
 export const WorkerProvider = (props: WorkerProviderProps) => {
-  useEffect(() => {
-    if (!worker) return;
-
-    worker.i18n.changeLanguage(props.locale);
-  }, [worker, props.locale]);
-
   return (
     <WorkerContext.Provider value={worker}>
       {props.children}
@@ -32,6 +25,10 @@ export const WorkerProvider = (props: WorkerProviderProps) => {
 
 export const useWorker = () => {
   const context = useContext(WorkerContext);
+
+  if (!context) {
+    throw new Error("useWorker must be used within a WorkerProvider");
+  }
 
   return context;
 };
