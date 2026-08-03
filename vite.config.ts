@@ -130,7 +130,7 @@ export default defineConfig({
       ],
       manifest: PWA_MANIFEST,
       workbox: {
-        globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,json,woff2}"],
       },
     }),
     visualizer(),
