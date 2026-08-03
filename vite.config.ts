@@ -67,6 +67,10 @@ const VENDOR_GROUPS: Record<string, string[]> = {
     "@tanstack/form-core",
     "@tanstack/table-core",
   ],
+  // Query
+  "query": [
+    "@tanstack/query-core",
+  ],
   // UI design system components, icons, and class utility helpers
   visuals: [
     "@base-ui",
