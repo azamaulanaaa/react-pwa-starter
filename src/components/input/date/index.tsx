@@ -1,7 +1,12 @@
-import { type FocusEvent, useEffect, useRef, useState } from "react";
-import type * as React from "react";
+import {
+  type ChangeEvent,
+  type FocusEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { CalendarIcon } from "lucide-react";
-import type { Locale } from "react-day-picker";
 
 import { cn } from "@/lib/cn.ts";
 import { Button } from "@/components/ui/button.tsx";
@@ -19,131 +24,79 @@ import {
 import { useFormatters } from "./use-formatters.ts";
 
 export type DateFormat = "yyyy-mm-dd" | "dd-mm-yyyy" | "mm-dd-yyyy";
-
 const SEPARATOR = "-";
 
-/**
- * Derives the date format ("yyyy-mm-dd" | "dd-mm-yyyy" | "mm-dd-yyyy") from a locale.
- * Uses Intl.DateTimeFormat to detect whether year, month, or day comes first.
- */
-function deriveDateFormatFromLocale(localeProp?: string | Locale): DateFormat {
-  let localeCode = "en-US";
-  if (typeof localeProp === "string") {
-    localeCode = localeProp;
-  } else if (
-    localeProp &&
-    typeof localeProp === "object" &&
-    "code" in localeProp
-  ) {
-    localeCode = (localeProp as { code?: string }).code || "en-US";
-  }
-
+/** Derives the date format string based on local ordering rules */
+function deriveDateFormatFromLocale(locale: string): DateFormat {
   try {
-    const dtf = new Intl.DateTimeFormat(localeCode, {
+    const parts = new Intl.DateTimeFormat(locale, {
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
-    });
-    const parts = dtf.formatToParts(new Date(2026, 11, 22));
-    const firstType = parts.find(
-      (p) => p.type === "year" || p.type === "month" || p.type === "day",
+    }).formatToParts(new Date());
+
+    const firstType = parts.find((p) =>
+      ["year", "month", "day"].includes(p.type)
     )?.type;
 
-    if (firstType === "year") {
-      return "yyyy-mm-dd";
-    }
-    if (firstType === "month") {
-      return "mm-dd-yyyy";
-    }
-    if (firstType === "day") {
-      return "dd-mm-yyyy";
-    }
+    if (firstType === "month") return "mm-dd-yyyy";
+    if (firstType === "day") return "dd-mm-yyyy";
   } catch {
-    // fallback
+    // Fallback if invalid locale string
   }
-
   return "yyyy-mm-dd";
 }
 
 function formatDate(date: Date | undefined, format: DateFormat): string {
-  if (!date) return "";
-  const year = String(date.getFullYear());
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
+  if (!date || isNaN(date.getTime())) return "";
 
-  switch (format) {
-    case "dd-mm-yyyy":
-      return `${day}${SEPARATOR}${month}${SEPARATOR}${year}`;
-    case "mm-dd-yyyy":
-      return `${month}${SEPARATOR}${day}${SEPARATOR}${year}`;
-    case "yyyy-mm-dd":
-    default:
-      return `${year}${SEPARATOR}${month}${SEPARATOR}${day}`;
-  }
+  const y = String(date.getFullYear());
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+
+  return format === "dd-mm-yyyy"
+    ? `${d}${SEPARATOR}${m}${SEPARATOR}${y}`
+    : format === "mm-dd-yyyy"
+    ? `${m}${SEPARATOR}${d}${SEPARATOR}${y}`
+    : `${y}${SEPARATOR}${m}${SEPARATOR}${d}`;
 }
 
 function parseDate(dateStr: string, format: DateFormat): Date | undefined {
   if (!dateStr || dateStr.length !== 10) return undefined;
 
-  let year: number;
-  let month: number;
-  let day: number;
+  const match = dateStr.match(/^(\d{2,4})-(\d{2})-(\d{2,4})$/);
+  if (!match) return undefined;
+
+  let y = 0, m = 0, d = 0;
 
   if (format === "dd-mm-yyyy") {
-    const match = dateStr.match(/^(\d{2})-(\d{2})-(\d{4})$/);
-    if (!match) return undefined;
-    day = parseInt(match[1], 10);
-    month = parseInt(match[2], 10) - 1;
-    year = parseInt(match[3], 10);
+    [, d, m, y] = match.map(Number);
   } else if (format === "mm-dd-yyyy") {
-    const match = dateStr.match(/^(\d{2})-(\d{2})-(\d{4})$/);
-    if (!match) return undefined;
-    month = parseInt(match[1], 10) - 1;
-    day = parseInt(match[2], 10);
-    year = parseInt(match[3], 10);
+    [, m, d, y] = match.map(Number);
   } else {
-    // yyyy-mm-dd
-    const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (!match) return undefined;
-    year = parseInt(match[1], 10);
-    month = parseInt(match[2], 10) - 1;
-    day = parseInt(match[3], 10);
+    [, y, m, d] = match.map(Number);
   }
 
-  const date = new Date(year, month, day);
-  if (
-    date.getFullYear() === year &&
-    date.getMonth() === month &&
-    date.getDate() === day
-  ) {
-    return date;
-  }
-
-  return undefined;
+  const date = new Date(y, m - 1, d);
+  return date.getFullYear() === y && date.getMonth() === m - 1 &&
+      date.getDate() === d
+    ? date
+    : undefined;
 }
 
-/**
- * Formats a raw digit string into the specified date format as the user types.
- */
+/** Formats a digit sequence into date pattern masks */
 function formatRawDigits(digits: string, format: DateFormat): string {
-  const cleaned = digits.replace(/[^\d]/g, "");
-  const parts: string[] = [];
+  const clean = digits.replace(/\D/g, "");
+  const isYearFirst = format === "yyyy-mm-dd";
 
-  if (format === "dd-mm-yyyy" || format === "mm-dd-yyyy") {
-    if (cleaned.length > 0) parts.push(cleaned.slice(0, 2));
-    if (cleaned.length > 2) parts.push(cleaned.slice(2, 4));
-    if (cleaned.length > 4) parts.push(cleaned.slice(4, 8));
-  } else {
-    // yyyy-mm-dd
-    if (cleaned.length > 0) parts.push(cleaned.slice(0, 4));
-    if (cleaned.length > 4) parts.push(cleaned.slice(4, 6));
-    if (cleaned.length > 6) parts.push(cleaned.slice(6, 8));
-  }
+  const slices = isYearFirst
+    ? [clean.slice(0, 4), clean.slice(4, 6), clean.slice(6, 8)]
+    : [clean.slice(0, 2), clean.slice(2, 4), clean.slice(4, 8)];
 
-  return parts.join(SEPARATOR);
+  return slices.filter(Boolean).join(SEPARATOR);
 }
 
-export type InputDateProps = {
+export interface InputDateProps {
   name?: string;
   value?: Date;
   onChange?: (date: Date | undefined) => void;
@@ -152,7 +105,7 @@ export type InputDateProps = {
   disabled?: boolean;
   readOnly?: boolean;
   locale?: string;
-};
+}
 
 export function InputDate({
   name,
@@ -164,17 +117,20 @@ export function InputDate({
   readOnly = false,
   locale = "en-US",
 }: InputDateProps) {
-  const dateFormat = deriveDateFormatFromLocale(locale);
+  const dateFormat = useMemo(() => deriveDateFormatFromLocale(locale), [
+    locale,
+  ]);
   const formatters = useFormatters(locale);
 
-  const [inputValue, setInputValue] = useState<string>(
-    formatDate(value, dateFormat),
+  const [inputValue, setInputValue] = useState(() =>
+    formatDate(value, dateFormat)
   );
-  const [month, setMonth] = useState<Date>(value || new Date());
+  const [month, setMonth] = useState<Date>(() => value || new Date());
   const [isOpen, setIsOpen] = useState(false);
-  const lastValidValueRef = useRef<string>(formatDate(value, dateFormat));
-  const cursorPosRef = useRef<number | null>(null);
 
+  const lastValidValueRef = useRef<string>(formatDate(value, dateFormat));
+
+  // Sync state with incoming external `value` or `locale` change
   useEffect(() => {
     const formatted = formatDate(value, dateFormat);
     setInputValue(formatted);
@@ -182,25 +138,9 @@ export function InputDate({
     if (value) setMonth(value);
   }, [value, dateFormat]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value;
-    const prevCursor = e.target.selectionStart ?? raw.length;
-
-    const digitsOnly = raw.replace(/[^\d]/g, "");
-    const formatted = formatRawDigits(digitsOnly, dateFormat);
-
-    // Auto-insert dash cursor adjustment
-    if (digitsOnly.length > prevCursor) {
-      if (dateFormat === "dd-mm-yyyy" || dateFormat === "mm-dd-yyyy") {
-        if (digitsOnly.length === 2 || digitsOnly.length === 4) {
-          cursorPosRef.current = prevCursor + 1;
-        }
-      } else {
-        if (digitsOnly.length === 4 || digitsOnly.length === 6) {
-          cursorPosRef.current = prevCursor + 1;
-        }
-      }
-    }
+    const formatted = formatRawDigits(raw, dateFormat);
 
     setInputValue(formatted);
 
@@ -213,49 +153,34 @@ export function InputDate({
       lastValidValueRef.current = "";
       onChange?.(undefined);
     }
-
-    requestAnimationFrame(() => {
-      const input = e.target as HTMLInputElement;
-      if (cursorPosRef.current !== null) {
-        const pos = Math.min(cursorPosRef.current, formatted.length);
-        input.setSelectionRange(pos, pos);
-        cursorPosRef.current = null;
-      }
-    });
   };
 
   const handleSelect = (selectedDate: Date | undefined) => {
+    const formatted = formatDate(selectedDate, dateFormat);
+    setInputValue(formatted);
+    lastValidValueRef.current = formatted;
+
     if (selectedDate) {
-      onChange?.(selectedDate);
-      const formatted = formatDate(selectedDate, dateFormat);
-      setInputValue(formatted);
-      lastValidValueRef.current = formatted;
       setMonth(selectedDate);
-    } else {
-      setInputValue("");
-      lastValidValueRef.current = "";
-      onChange?.(undefined);
     }
+    onChange?.(selectedDate);
   };
 
   const handleInputBlur = (e: FocusEvent<HTMLInputElement>) => {
     const val = e.target.value;
-    if (val.length > 0 && val.length < 10) {
-      setInputValue(lastValidValueRef.current);
-    } else if (val.length === 10 && !parseDate(val, dateFormat)) {
+    const isValid = val.length === 10 && parseDate(val, dateFormat);
+
+    // Reset back to last valid formatted date on invalid entries
+    if (val.length > 0 && !isValid) {
       setInputValue(lastValidValueRef.current);
     }
 
-    if (!isOpen) {
-      onBlur?.();
-    }
+    if (!isOpen) onBlur?.();
   };
 
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
-    if (!open) {
-      onBlur?.();
-    }
+    if (!open) onBlur?.();
   };
 
   return (
@@ -283,9 +208,7 @@ export function InputDate({
         <InputGroupAddon>
           <PopoverTrigger
             aria-label="Toggle calendar popover"
-            render={
-              <Button aria-label="Select date" size="icon-xs" variant="ghost" />
-            }
+            render={<Button size="icon-xs" variant="ghost" />}
           >
             <CalendarIcon aria-hidden="true" />
           </PopoverTrigger>
@@ -298,6 +221,7 @@ export function InputDate({
           onMonthChange={setMonth}
           onSelect={handleSelect}
           selected={value}
+          mode="single"
         />
       </PopoverPopup>
     </Popover>
