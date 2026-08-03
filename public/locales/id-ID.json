@@ -11,7 +11,7 @@
   "form_setting_theme_select_label_light": "Terang",
   "form_setting_theme_select_label_dark": "Gelap",
   "form_setting_locale_label": "Lokalisasi",
-  "form_setting_locale_select_label_system": "[Sistem]",
+  "form_setting_locale_select_label_system": "Sistem",
   "form_setting_locale_select_label_en_us": "Bahasa Inggris (AS)",
   "form_setting_locale_select_label_id_id": "Indonesia (ID)",
   "form_setting_submit_button": "Simpan",
