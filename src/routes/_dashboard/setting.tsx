@@ -31,7 +31,7 @@ function Page() {
       title: t("page_dashboard_setting_toast_saved_title"),
       type: "success",
     });
-  }, [updateConfig]);
+  }, [updateConfig, t]);
 
   return (
     <Card>
