@@ -1,5 +1,6 @@
 import { useMemo, useRef } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { v7 as randomUUID } from "uuid";
 
 import { FormTask, FormTaskValue } from "@/components/form/task/index.tsx";
 import { ListTask } from "@/components/list/task/index.tsx";
@@ -17,7 +18,7 @@ function Index() {
   const setDebouncedState = useDebouncedCallback(setState, 500);
 
   const streamFactory = useRef(
-    () => worker.db.task.stream({ direction: "next" }),
+    () => worker.db.task.watch({ direction: "next" }),
   );
   const streamParams = useRef([null]);
   const streams = useReadableStreams(
@@ -33,17 +34,22 @@ function Index() {
   );
 
   const handleOnSubmit = async (value: FormTaskValue) => {
-    await worker.db.task.insertOne({ description: value.task, is_done: false });
+    await worker.db.task.set(randomUUID(), {
+      description: value.task,
+      is_done: false,
+    });
   };
 
   const handleOnToggleDone = async (id: string, is_done: boolean) => {
-    await worker.db.task.updateById(id, {
+    const task = await worker.db.task.get(id);
+    await worker.db.task.set(id, {
+      ...task,
       is_done,
     });
   };
 
   const handleOnDelete = async (id: string) => {
-    await worker.db.task.deleteById(id);
+    await worker.db.task.delete(id);
   };
 
   return (

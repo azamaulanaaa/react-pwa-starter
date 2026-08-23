@@ -1,5 +1,6 @@
 import { Schema } from "effect";
-import { BaseSchema, createTableModule } from "@/worker/db/factory.ts";
+import { createTableModule } from "@/worker/db/factory.ts";
+import { BaseSchema } from "@/worker/db/schema.ts";
 
 const TaskSchema = BaseSchema.pipe(Schema.extend(Schema.Struct({
   description: Schema.NonEmptyString,

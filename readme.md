@@ -1,6 +1,6 @@
 # React PWA Starter
 
-A batteries-included, TypeScript-first starter for building fast, offline-capable React applications with Vite. It combines a modern stack (Vite + React 19 + TypeScript) with PWA support, a Comlink web worker layer, i18n, and client-side persistence (Dexie), so you can bootstrap production-ready apps quickly.
+A batteries-included, TypeScript-first starter for building fast, offline-capable React applications with Vite. It combines a modern stack (Vite + React 19 + TypeScript) with PWA support, a Comlink web worker layer, i18n, and client-side persistence (oxkv), so you can bootstrap production-ready apps quickly.
 
 ## Why use this starter?
 
@@ -18,7 +18,7 @@ A batteries-included, TypeScript-first starter for building fast, offline-capabl
 - Vite + TypeScript 6/7 + React 19
 - Progressive Web App (service worker via vite-plugin-pwa + workbox-window)
 - Comlink-powered Web Worker (worker isolation + API surface)
-- Dexie (IndexedDB) for offline-first persistence
+- oxkv (WASM key-value store) for offline-first persistence
 - i18next for translations with language sync
 - TanStack Router (routeTree generated) for type-safe routing
 - Tailwind CSS 4 + utility-first styling
@@ -49,7 +49,7 @@ npm run dev           # start dev server (Vite)
 - `@tailwindcss/vite` — Tailwind CSS 4 integration
 - `vite-plugin-pwa`, `workbox-window` — PWA/service worker
 - `comlink`, `vite-plugin-comlink` — worker communication
-- `dexie` — IndexedDB helper for offline persistence
+- `oxkv` — WASM key-value store for offline persistence
 - `i18next`, `i18next-browser-languagedetector`, `i18next-http-backend` — translations
 - `@tanstack/react-router`, `@tanstack/react-form`, `@tanstack/react-table` — data management & routing
 - `@base-ui/react` — unstyled, accessible components
@@ -70,7 +70,7 @@ npm run dev           # start dev server (Vite)
 ## Workers and offline persistence
 
 - The app creates a Comlink worker with isolated worker API surface.
-- Long-running or blocking operations are routed through the worker; db.ts provides a Dexie schema for offline data.
+- Long-running or blocking operations are routed through the worker; src/worker/db provides an oxkv-backed store with schema validation for offline data.
 
 ## Persistent state management
 

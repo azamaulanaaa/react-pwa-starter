@@ -83,8 +83,8 @@ const VENDOR_GROUPS: Record<string, string[]> = {
   ],
   // Functional effect system (heavy runtime split into its own chunk)
   effect: ["effect"],
-  // Client-side IndexedDB storage engine
-  database: ["dexie"],
+  // Client-side storage engine (WASM key-value store)
+  database: ["oxkv"],
   // Web Worker RPC bridge
   worker: ["comlink", "vite-plugin-comlink"],
   // Service Worker & PWA lifecycle helpers
