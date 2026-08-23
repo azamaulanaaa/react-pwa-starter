@@ -95,6 +95,27 @@ export const createTableModule =
     };
   };
 
+export function exportStore(
+  store: BTreeStore,
+): Effect.Effect<Uint8Array, DbError> {
+  return Effect.tryPromise({
+    try: () => store.save() as Promise<Uint8Array>,
+    catch: (error) => new DbError({ error }),
+  });
+}
+
+export function hydrateStore(
+  store: BTreeStore,
+  snapshot: Uint8Array,
+): Effect.Effect<void, DbError> {
+  return Effect.asVoid(
+    Effect.tryPromise({
+      try: () => store.load(snapshot),
+      catch: (error) => new DbError({ error }),
+    }),
+  );
+}
+
 export type DatabaseConfig = {
   events?: EventBus;
   hydrate?: (store: BTreeStore) => Effect.Effect<void, DbError>;
