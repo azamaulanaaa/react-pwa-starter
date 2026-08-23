@@ -1,21 +1,14 @@
-import { readFileSync } from "node:fs";
+import "fake-indexeddb/auto";
 import { MessageChannel } from "node:worker_threads";
 import { beforeAll, describe, expect, it } from "vitest";
-import initOxkv from "oxkv";
 
 import "@/lib/comlink/index.ts";
 import * as Comlink from "comlink";
 import { dbMain } from "@/worker/db/index.ts";
-
-const wasmUrl = new URL(
-  "../../../node_modules/oxkv/oxkv_bg.wasm",
-  import.meta.url,
-);
+import { setupOxkv } from "@/worker/db/oxkv-wasm.ts";
 
 describe("comlink bridge", () => {
-  beforeAll(async () => {
-    await initOxkv(readFileSync(wasmUrl) satisfies BufferSource);
-  });
+  beforeAll(setupOxkv);
 
   it("set over comlink-style endpoint", async () => {
     const { port1, port2 } = new MessageChannel();

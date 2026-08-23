@@ -1,6 +1,6 @@
 import { Chunk, Effect, Option, Schema, Stream } from "effect";
 
-import type { ChangeBus } from "@/worker/db/change-bus.ts";
+import type { ChangeBus, DbEvent } from "@/worker/db/change-bus.ts";
 import { DbError } from "@/worker/db/error.ts";
 import { decodeFx, decodeUnknownFx } from "@/worker/db/helpers.ts";
 import {
@@ -16,6 +16,7 @@ type TableDeps<Name extends string, A extends Base, I> = {
   schema: Schema.Schema<A, I, never>;
   kv: KvApi;
   subscribe: ChangeBus["subscribe"];
+  emit: (event: DbEvent) => Effect.Effect<void, DbError>;
 };
 
 export function createTableApi<Name extends string, A extends Base, I>({
@@ -23,6 +24,7 @@ export function createTableApi<Name extends string, A extends Base, I>({
   schema,
   kv,
   subscribe,
+  emit,
 }: TableDeps<Name, A, I>) {
   const putSchema = Schema.typeSchema(schema).pipe(
     Schema.omit("id", "created_at", "modified_at"),
@@ -118,12 +120,20 @@ export function createTableApi<Name extends string, A extends Base, I>({
         };
 
         yield* kv.set(key, doc);
+
+        yield* emit({ kind: "set", table: tableName, id: decodedId, doc });
       }),
     delete: (id: string) =>
       Effect.gen(function* () {
         const decodedId = yield* decodeId(id);
 
-        return yield* kv.delete(keys.of(decodedId));
+        const removed = yield* kv.delete(keys.of(decodedId));
+
+        if (removed) {
+          yield* emit({ kind: "delete", table: tableName, id: decodedId });
+        }
+
+        return removed;
       }),
     watch: (args: ListParams) =>
       Stream.unwrap(

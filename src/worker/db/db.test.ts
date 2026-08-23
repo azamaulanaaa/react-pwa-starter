@@ -1,18 +1,16 @@
-import { readFileSync } from "node:fs";
+import "fake-indexeddb/auto";
 import { beforeAll, describe, expect, it } from "vitest";
-import { Chunk, Effect, Stream } from "effect";
-import initOxkv from "oxkv";
+import { Chunk, Effect, Schema, Stream } from "effect";
 import { v7 as randomUUID } from "uuid";
 
 import { dbMain, type Task } from "@/worker/db/index.ts";
 import { createChangeBus } from "@/worker/db/change-bus.ts";
+import type { DbEvent } from "@/worker/db/factory.ts";
+import { createDatabase, createTableModule } from "@/worker/db/factory.ts";
 import { createKvApi } from "@/worker/db/kv.ts";
+import { setupOxkv } from "@/worker/db/oxkv-wasm.ts";
+import { BaseSchema } from "@/worker/db/schema.ts";
 import { openStore } from "@/worker/db/store.ts";
-
-const wasmUrl = new URL(
-  "../../../node_modules/oxkv/oxkv_bg.wasm",
-  import.meta.url,
-);
 
 function run<A>(effect: Effect.Effect<A, unknown, never>): Promise<A> {
   return Effect.runPromise(effect);
@@ -36,9 +34,7 @@ async function firstTwoChunks(
 }
 
 describe("dbMain.task", () => {
-  beforeAll(async () => {
-    await initOxkv(readFileSync(wasmUrl) satisfies BufferSource);
-  });
+  beforeAll(setupOxkv);
 
   it("inserts, reads, updates, deletes", async () => {
     const id = randomUUID();
@@ -158,9 +154,7 @@ describe("kv api", () => {
     bus: createChangeBus(),
   });
 
-  beforeAll(async () => {
-    await initOxkv(readFileSync(wasmUrl) satisfies BufferSource);
-  });
+  beforeAll(setupOxkv);
 
   it("gets, sets and checks raw keys", async () => {
     expect(await run(kvApi.exists("kv:missing"))).toBe(false);
@@ -289,5 +283,42 @@ describe("kv api", () => {
     }));
 
     expect(entries.some((entry) => entry.key === "docs:visible")).toBe(true);
+  });
+});
+
+describe("db event bus", () => {
+  beforeAll(setupOxkv);
+
+  it("publishes set and delete events to subscribers in order", async () => {
+    const collected: DbEvent[] = [];
+
+    const CollectorTable = createTableModule({
+      name: "collector",
+      schema: BaseSchema.pipe(
+        Schema.extend(Schema.Struct({ description: Schema.NonEmptyString })),
+      ),
+    })({
+      extensions: (ctx) => {
+        ctx.onEvent((event) =>
+          Effect.sync(() => {
+            collected.push(event);
+          }),
+        );
+        return {};
+      },
+    });
+
+    const db = createDatabase("events-test", { collector: CollectorTable });
+
+    const id = randomUUID();
+    await run(db.collector.set(id, { description: "watched" }));
+
+    expect(collected).toEqual([
+      { kind: "set", table: "collector", id, doc: expect.anything() },
+    ]);
+
+    await run(db.collector.delete(id));
+
+    expect(collected.map((event) => event.kind)).toEqual(["set", "delete"]);
   });
 });
