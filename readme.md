@@ -1,36 +1,53 @@
-# React PWA Starter
+# React Starter Kit
 
-A batteries-included, TypeScript-first starter for building fast, offline-capable React applications with Vite. It combines a modern stack (Vite + React 19 + TypeScript) with PWA support, a Comlink web worker layer, i18n, and client-side persistence (oxkv), so you can bootstrap production-ready apps quickly.
+A batteries-included, TypeScript-first starter kit for building fast,
+offline-capable React applications with Vite. It combines a modern stack (Vite
+8 + React 19 + TypeScript) with PWA support, a Comlink web worker layer backed
+by an offline database and file store, i18n, and a large prebuilt UI component
+library, so you can bootstrap production-ready apps quickly.
 
-## Why use this starter?
+## Why use this starter kit?
 
-- Instant PWA behavior with service-worker lifecycle helpers and a smooth "new
-  content available" UX.
-- Worker-first patterns (Comlink) for costly work and offline data sync.
-- Ready-made i18n and Effect-ts Schema integration for validation + localized
-  error messages.
-- Opinionated, extensible structure for routes, components, and features.
-- Custom persistent state hook with debouncing (localStorage-backed).
-- Built-in dark mode and readable stream support.
+- Instant PWA behavior with auto-updating service worker.
+- Worker-first architecture: all data access lives in a Comlink-exposed worker
+  (database + file system), keeping the UI thread responsive.
+- Offline-first persistence through oxkv (WASM key-value store) with Effect
+  Schema validation and cross-tab synchronization.
+- Chunked file upload/storage engine built into the worker (`src/worker/fs`)
+  with a ready-made `useUploader` hook.
+- Ready-made i18n (en-US, id-ID) and Effect Schema integration for validation +
+  localized error messages.
+- Large prebuilt UI kit (Base UI based) plus reusable form/table/input
+  components with Ladle stories.
+- Library of primitive hooks (debounce, persist state, media query, dark mode,
+  readable streams, infinite scroll, ...) under `src/hooks`.
 
 ## Features
 
-- Vite + TypeScript 6/7 + React 19
-- Progressive Web App (service worker via vite-plugin-pwa + workbox-window)
-- Comlink-powered Web Worker (worker isolation + API surface)
+- Vite 8 (Rolldown) + TypeScript 6/7 + React 19
+- Progressive Web App (service worker via vite-plugin-pwa + workbox-window,
+  auto-update)
+- Comlink-powered Web Worker that works as both Dedicated and SharedWorker
+  (single shared instance across tabs)
 - oxkv (WASM key-value store) for offline-first persistence
-- i18next for translations with language sync
-- TanStack Router (routeTree generated) for type-safe routing
+- Cross-tab data sync via change bus / peer sync (`src/worker/db-fs`)
+- Chunked file storage API with strict part-size validation
+- Custom translation layer (micromustache templates) with en-US/id-ID locales
+  plus Intl-based number/date/currency formatting
+- TanStack Router (file-based routes, auto code splitting), Form, Table, and
+  query-core
 - Tailwind CSS 4 + utility-first styling
-- Testing with Vitest
-- Story-like component preview via Ladle
+- Testing with Vitest 4 (fake-indexeddb included)
+- Component preview via Ladle
 - Dark mode support
+- Vendor chunk splitting strategy for optimized initial load
 
 ## Quick start
 
 ### Prerequisites
 
-- Node 18+ (or your preferred modern Node), Bun, or Deno
+- Node (managed via [mise](https://mise.jdx.dev/); see `mise.toml`) — Deno is
+  also used for formatting/linting
 - Git
 
 ### Install and run locally
@@ -42,78 +59,163 @@ npm install
 npm run dev           # start dev server (Vite)
 ```
 
+### Scripts
+
+| Script            | Description                               |
+| ----------------- | ----------------------------------------- |
+| `npm run dev`     | Start the Vite dev server                 |
+| `npm run build`   | Production build (with bundle visualizer) |
+| `npm run preview` | Preview the production build              |
+| `npm run check`   | Type-check with TypeScript                |
+| `npm run test`    | Run tests with Vitest                     |
+| `npm run ladle`   | Serve Ladle component previews            |
+
+Formatting and linting are handled by Deno (`deno fmt`, `deno lint`, configured
+in `deno.json`).
+
 ## Notable dependencies
 
 - `react`, `react-dom` — UI (v19)
-- `vite`, `@vitejs/plugin-react` — build/dev (v8+, TypeScript support)
+- `vite`, `@vitejs/plugin-react` — build/dev (v8, Rolldown-based)
 - `@tailwindcss/vite` — Tailwind CSS 4 integration
 - `vite-plugin-pwa`, `workbox-window` — PWA/service worker
 - `comlink`, `vite-plugin-comlink` — worker communication
 - `oxkv` — WASM key-value store for offline persistence
-- `i18next`, `i18next-browser-languagedetector`, `i18next-http-backend` — translations
-- `@tanstack/react-router`, `@tanstack/react-form`, `@tanstack/react-table` — data management & routing
+- `unstorage` (IndexedDB driver) — storage utilities used by the worker file
+  store
+- `effect` — schema validation, streams, and error handling (v3.22+)
+- `micromustache` — mustache-style interpolation for translations
+- `@tanstack/react-router`, `@tanstack/react-form`, `@tanstack/react-table`,
+  `@tanstack/query-core` — routing & data management
 - `@base-ui/react` — unstyled, accessible components
-- `effect` — schema validation and error handling (v3.22+)
-- `tailwindcss` — styling (v4)
+- `class-variance-authority`, `cnfast`, `tailwindcss` — styling utilities
 - `vitest` — test runner
-- `@types/node`, `@types/bun`, `@types/deno` — type support for Node.js, Bun, and Deno development tooling
+- `@ladle/react` — component preview
+- `uuid` — UUID v7 generation
+- `@types/node`, `@types/bun`, `@types/deno` — type support for Node.js, Bun,
+  and Deno development tooling
+
+## Project structure
+
+```
+src/
+├── routes/            # TanStack Router file-based routes (_dashboard layout)
+├── components/
+│   ├── ui/            # Prebuilt Base UI component kit (~55 components)
+│   ├── input/         # Date picker and formatted inputs
+│   ├── table/         # Generic table wrapper
+│   ├── form/          # Ready-made forms (task, setting)
+│   ├── list/          # List components (task)
+│   ├── context/       # Providers: config, intl, translation, worker
+│   └── image/         # Image preview
+├── hooks/
+│   ├── engines/       # Higher-level hooks: use-infinite-scroll, use-uploader
+│   └── primitives/    # Small composable hooks (debounce, persist state,
+│                      # media query, dark mode, streams, ...)
+├── lib/               # Comlink helpers, cn, misc utilities
+└── worker/
+    ├── main.ts        # Worker entry: exposes { db, fs } via Comlink
+    ├── db/            # Database layer: tables, schema, change bus, oxkv
+    ├── db-fs/         # DB-backed file system + cross-tab peer sync
+    └── fs/            # Chunked file storage (multi-part uploads)
+```
 
 ## Service worker & update UX
 
-- The app uses registerSW (virtual:pwa-register). When a new release is
-  available the onNeedRefresh callback shows a confirm prompt; if the user
-  accepts, the page reloads to activate the new SW.
+- The service worker is registered via `virtual:pwa-register` in `src/main.tsx`;
+  when new content is available the user is prompted to reload.
 - For production deployments make sure the site is served over HTTPS and the
   build assets are deployed in a manner compatible with your SW's precaching
   strategy.
 
-## Workers and offline persistence
+## Worker: database and offline persistence
 
-- The app creates a Comlink worker with isolated worker API surface.
-- Long-running or blocking operations are routed through the worker; src/worker/db provides an oxkv-backed store with schema validation for offline data.
+- `src/worker/main.ts` exposes `{ db, fs }` over Comlink. It detects whether it
+  runs as a SharedWorker or a Dedicated worker:
+  - As a SharedWorker, every tab connects to one shared instance through its own
+    MessagePort.
+  - As a Dedicated worker, each tab gets its own instance, and changes are kept
+    in sync across tabs via the change bus / peer sync layer
+    (`src/worker/db-fs`).
+- The database layer (`src/worker/db`) provides typed tables with Effect Schema
+  validation on top of the oxkv WASM store, plus watch/stream APIs for reactive
+  queries.
+- The file system layer (`src/worker/fs`) stores files in chunks (multi-part
+  uploads) with strict part-size validation rules.
 
 ## Persistent state management
 
-- The project includes a custom `usePersistState` hook for localStorage-backed state persistence.
-- State updates are debounced (default 500ms) before persisting to localStorage.
+- The project includes a custom `usePersistState` hook for localStorage-backed
+  state persistence.
+- State updates can be debounced (e.g. via `useDebouncedCallback`, default
+  500ms) before persisting to localStorage.
 
-## Schema validation with Effect-ts
+## Schema validation with Effect
 
-- The project uses Effect-ts Schema (v3.22+) for type-safe validation.
+- The project uses Effect Schema for type-safe validation of documents, uploads,
+  and hook state, including localized error messages.
 
 ## Internationalization
 
-- The project uses i18next with custom language detection via `useHtmlLang` hook.
+- Translations use a custom lightweight layer (`TranslationProvider` in
+  `src/components/context/translation.tsx`) with micromustache templates instead
+  of a heavy framework.
+- Dictionaries live in `public/locales` (`en-US.json`, `id-ID.json`) and are
+  fetched at runtime; `en-US` is the fallback dictionary.
+- The active locale comes from user config or browser language detection via the
+  `useNavigatorLanguage` hook.
+- The `IntlProvider` context exposes localized number, currency, percent, date,
+  and relative-time formatting plus parsing helpers.
 
 ## Dark mode
 
-- Dark mode is fully supported with theme detection via `useSystemDarkMode`
-  hook.
-- Detects system preference using `prefers-color-scheme` media query.
-- Supports manual toggling and persists user preference.
+- Dark mode is supported with theme detection via the `useSystemDarkMode` hook
+  (prefers-color-scheme media query).
+- Theme and locale preferences are managed by the config context and editable
+  from the settings page.
 
 ## Testing
 
-- Vitest is configured and a setup file exists at `src/vitest.setup.ts`.
+- Vitest 4 is configured with a setup file at `src/vitest.setup.ts`
+  (fake-indexeddb is used for storage-related tests).
+- Tests live next to their modules (e.g. `src/worker/db/*.test.ts`).
 - Run tests with `npm run test`.
+
+## Component previews (Ladle)
+
+- Components ship with `stories.tsx` files served by Ladle (`.ladle/` contains
+  configuration).
+- Run `npm run ladle` to browse them.
 
 ## Bundle Analysis
 
-- Vite Visualizer (rollup-plugin-visualizer) is included for bundle size analysis.
+- rollup-plugin-visualizer is included for bundle size analysis.
 - Run `npm run build` and check the generated report to optimize your bundle.
+- Vendor dependencies are grouped into dedicated chunks (react, router,
+  tanstack-ui, effect, database, worker, pwa, ...); see `VENDOR_GROUPS` in
+  `vite.config.ts`.
 
 ## Development tips
 
-- Routes are generated into routeTree.gen.ts. Add or update route modules under `src/routes` and regenerate the tree.
-- Use the WorkerProvider wrapper to access worker methods. Keep heavy logic inside the worker to keep the UI responsive.
-- For new translations add keys and run npm run i18n to extract strings, then provide translations for desired locales.
-- Use path aliases (@/) for cleaner imports throughout your codebase.
+- Routes are generated into `routeTree.gen.ts`. Add route modules under
+  `src/routes`; the tree regenerates automatically (TanStack Router vite plugin
+  with auto code splitting).
+- Use the `WorkerProvider` context to access the worker API (`db`, `fs`). Keep
+  heavy logic inside the worker to keep the UI responsive.
+- Build new features from the primitive hooks in `src/hooks/primitives`; compose
+  them into engine hooks in `src/hooks/engines`.
+- Use path aliases (`@/`) for cleaner imports throughout your codebase.
+- Tooling is pinned via `mise.toml` (Node, Deno, Tailwind language server,
+  shadcn CLI).
 
 ## Deployment recommendations
 
-- Build static assets (`npm run build`) and deploy to any static host that supports HTTPS (Netlify, Vercel, GitHub Pages with HTTPS, S3 + CloudFront).
-- Ensure service worker scope and asset serving headers are configured correctly so precaching works as expected.
-- The project is built for browser environments; Node.js, Bun, and Deno support is provided through type definitions for development tooling.
+- Build static assets (`npm run build`) and deploy to any static host that
+  supports HTTPS (Netlify, Vercel, GitHub Pages with HTTPS, S3 + CloudFront).
+- Ensure service worker scope and asset serving headers are configured correctly
+  so precaching works as expected.
+- The project is built for browser environments; Node.js, Bun, and Deno support
+  is provided through type definitions for development tooling.
 
 ## Contributing
 
@@ -121,12 +223,13 @@ Contributions are welcome. Suggested workflow:
 
 - Fork and create a feature branch.
 - Keep changes small and focused; update or add tests where relevant.
-- Run the test suite and the dev server to verify behavior:
+- Verify before opening a PR:
   - npm install
-  - npm run dev
+  - npm run check
+  - deno fmt && deno lint
   - npm run test
 - Add a meaningful PR description describing the change and why it helps.
 
 ## License
 
-MIT - See LICENSE file for details.
+MIT.
