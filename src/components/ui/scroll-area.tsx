@@ -3,26 +3,34 @@ import { ScrollArea as ScrollAreaPrimitive } from "@base-ui/react/scroll-area";
 
 import { cn } from "@/lib/cn.ts";
 
-export function ScrollArea({
+export type ScrollAreaProps = ScrollAreaPrimitive.Root.Props & {
+  scrollFade?: boolean;
+  scrollbarGutter?: boolean;
+  fill?: boolean;
+  clampContentMinWidth?: boolean;
+  onScroll?: React.UIEventHandler<HTMLDivElement>;
+  viewportRef?: React.Ref<HTMLDivElement>;
+};
+
+export const ScrollArea = ({
   className,
   children,
   scrollFade = false,
   scrollbarGutter = false,
   fill = false,
   clampContentMinWidth = true,
+  onScroll,
+  viewportRef,
   ...props
-}: ScrollAreaPrimitive.Root.Props & {
-  scrollFade?: boolean;
-  scrollbarGutter?: boolean;
-  fill?: boolean;
-  clampContentMinWidth?: boolean;
-}): React.ReactElement {
+}: ScrollAreaProps): React.ReactElement => {
   return (
     <ScrollAreaPrimitive.Root
       className={cn("size-full min-h-0", className)}
       {...props}
     >
       <ScrollAreaPrimitive.Viewport
+        ref={viewportRef}
+        onScroll={onScroll}
         className={cn(
           "h-full rounded-[inherit] outline-none transition-shadows focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background data-has-overflow-y:overscroll-y-contain data-has-overflow-x:overscroll-x-contain",
           scrollFade &&
@@ -45,7 +53,7 @@ export function ScrollArea({
       <ScrollAreaPrimitive.Corner data-slot="scroll-area-corner" />
     </ScrollAreaPrimitive.Root>
   );
-}
+};
 
 export function ScrollBar({
   className,
