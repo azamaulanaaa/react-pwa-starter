@@ -66,7 +66,7 @@ export function ListTask(props: ListTaskProps) {
       cell: ({ row }) => (
         <p className="text-foreground">{row.getValue("description")}</p>
       ),
-      header: () => t("list-task-description"),
+      header: () => t("list_task_description"),
     },
     {
       accessorKey: "id",
@@ -87,7 +87,7 @@ export function ListTask(props: ListTaskProps) {
           <TooltipPopup>Delete</TooltipPopup>
         </Tooltip>
       ),
-      header: () => t("list-task-action"),
+      header: () => t("list_task_action"),
     },
   ], [t]);
 

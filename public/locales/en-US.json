@@ -13,12 +13,12 @@
   "form_task_description_placeholder": "Task Description",
   "form_task_error_task_empty": "Task description cannot be empty",
   "form_task_insert": "Insert",
+  "form_task_validating": "Checking...",
   "layout_menu_home": "Home",
   "layout_menu_setting": "Setting",
-  "list-task-action": "Action",
-  "list-task-description": "Task Description",
+  "list_task_action": "Action",
+  "list_task_description": "Task Description",
   "page_dashboard_setting_title": "Setting",
   "page_dashboard_setting_toast_saved_description": "Your settings have been updated.",
-  "page_dashboard_setting_toast_saved_title": "Settings saved",
-  "validating": "Checking..."
+  "page_dashboard_setting_toast_saved_title": "Settings saved"
 }

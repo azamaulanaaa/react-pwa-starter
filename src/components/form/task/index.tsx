@@ -32,7 +32,7 @@ function FieldInfo({ field }: { field: AnyFieldApi }) {
           <em key={err.message}>{err.message}</em>
         ))
         : null}
-      {field.state.meta.isValidating ? t("validating") : null}
+      {field.state.meta.isValidating ? t("form_task_validating") : null}
     </>
   );
 }
