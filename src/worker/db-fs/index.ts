@@ -3,8 +3,12 @@ import { BTreeStore, type BTreeStore as BTreeStoreType } from "oxkv";
 import type { FsError } from "@/worker/fs/error.ts";
 import { type FileData, fs } from "@/worker/fs/index.ts";
 import { DbError } from "@/worker/db/error.ts";
+import type {
+  DbEvent,
+  EventBus,
+  TableModule,
+} from "@/worker/db/factory.ts";
 import { exportStore, hydrateStore } from "@/worker/db/factory.ts";
-import type { EventBus, TableModule } from "@/worker/db/factory.ts";
 import type { Id } from "@/worker/db/schema.ts";
 
 const lift = <A>(
@@ -81,6 +85,33 @@ export type DbFs = {
     store: BTreeStoreType,
   ) => Effect.Effect<void, DbError>;
 };
+
+export type PeerSync = {
+  publish: (event: DbEvent) => void;
+  subscribe: (handler: (event: DbEvent) => void) => () => void;
+};
+
+export function createPeerSync(root = "db/main"): PeerSync {
+  if (typeof BroadcastChannel === "undefined") {
+    return {
+      publish: () => {},
+      subscribe: () => () => {},
+    };
+  }
+
+  const channel = new BroadcastChannel(`db-fs:${root}`);
+
+  return {
+    publish: (event) => channel.postMessage(event),
+    subscribe: (handler) => {
+      channel.onmessage = (message) => handler(message.data as DbEvent);
+
+      return () => {
+        channel.onmessage = null;
+      };
+    },
+  };
+}
 
 export function createDbFs(
   tables: Record<string, TableModule<string, any>>,

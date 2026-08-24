@@ -29,7 +29,9 @@ export type ApiFunction<Args extends any[], A, E> = (
 
 type ModuleContext = {
   kv: KvApi;
+  open: () => Promise<BTreeStore>;
   subscribe: ChangeBus["subscribe"];
+  notify: ChangeBus["notify"];
   emit: (event: DbEvent) => Effect.Effect<void, DbError>;
   onEvent: (handler: EventHandler) => () => void;
 };
@@ -119,6 +121,7 @@ export function hydrateStore(
 export type DatabaseConfig = {
   events?: EventBus;
   hydrate?: (store: BTreeStore) => Effect.Effect<void, DbError>;
+  setup?: (ctx: ModuleContext) => void;
 };
 
 export function createDatabase<
@@ -163,10 +166,14 @@ export function createDatabase<
 
   const ctx: ModuleContext = {
     kv: createKvApi({ open, bus }),
+    open,
     subscribe: bus.subscribe,
+    notify: bus.notify,
     emit: events.emit,
     onEvent: events.subscribe,
   };
+
+  config.setup?.(ctx);
 
   return Object.fromEntries(
     Object.values(tables).map((mod) => [mod.name, mod.api(ctx)]),
