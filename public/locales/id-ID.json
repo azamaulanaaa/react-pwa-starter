@@ -13,12 +13,14 @@
   "form_task_description_placeholder": "Deskripsi Tugas",
   "form_task_error_task_empty": "Deskripsi tugas tidak boleh kosong",
   "form_task_insert": "Masukkan",
-  "form_task_validating": "Memeriksa...",
   "layout_menu_home": "Beranda",
   "layout_menu_setting": "Pengaturan",
   "list_task_action": "Aksi",
   "list_task_description": "Deskripsi Tugas",
   "page_dashboard_setting_title": "Pengaturan",
   "page_dashboard_setting_toast_saved_description": "Pengaturan telah diperbarui.",
-  "page_dashboard_setting_toast_saved_title": "Pengaturan tersimpan"
+  "page_dashboard_setting_toast_saved_title": "Pengaturan tersimpan",
+  "table_generic_empty": "Tidak Ada Data",
+  "table_generic_select_all_row": "Pilih Semua",
+  "table_generic_select_row": "Pilih #{{id}}"
 }
