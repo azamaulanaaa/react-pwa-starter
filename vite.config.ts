@@ -79,7 +79,6 @@ const VENDOR_GROUPS: Record<string, string[]> = {
     "class-variance-authority",
     "cnfast",
     "react-day-picker",
-    "tw-animate-css",
   ],
   // Functional effect system (heavy runtime split into its own chunk)
   effect: ["effect"],
