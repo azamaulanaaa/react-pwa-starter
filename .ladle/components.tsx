@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import type { GlobalProvider } from "@ladle/react";
 
 import "./components.css";
-import { useNavigatorLanguage } from "@/hooks/use-navigator-language.ts";
+import { useNavigatorLanguage } from "@/hooks/primitives/use-navigator-language.ts";
 import { TranslationProvider } from "@/components/context/translation.tsx";
 import { IntlProvider } from "@/components/context/intl.tsx";
 import dictionary from "../public/locales/en-US.json" with { type: "json" };

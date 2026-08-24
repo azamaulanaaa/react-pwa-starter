@@ -5,9 +5,9 @@ import { v7 as randomUUID } from "uuid";
 import { FormTask, FormTaskValue } from "@/components/form/task/index.tsx";
 import { ListTask } from "@/components/list/task/index.tsx";
 import { useWorker } from "@/components/context/worker.tsx";
-import { useReadableStreams } from "@/hooks/use-readable-stream.ts";
-import { usePersistState } from "@/hooks/use-persist-state.ts";
-import { useDebouncedCallback } from "@/hooks/use-debounce.ts";
+import { useReadableStreams } from "@/hooks/primitives/use-readable-stream.ts";
+import { usePersistState } from "@/hooks/primitives/use-persist-state.ts";
+import { useDebouncedCallback } from "@/hooks/primitives/use-debounce.ts";
 
 function Index() {
   const worker = useWorker()!;

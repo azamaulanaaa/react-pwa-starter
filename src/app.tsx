@@ -7,9 +7,9 @@ import { type Config, ConfigProvider } from "@/components/context/config.tsx";
 import { TranslationProvider } from "@/components/context/translation.tsx";
 import { WorkerProvider } from "@/components/context/worker.tsx";
 import { IntlProvider } from "@/components/context/intl.tsx";
-import { usePersistState } from "@/hooks/use-persist-state.ts";
-import { useSystemDarkMode } from "@/hooks/use-system-dark-mode.ts";
-import { useNavigatorLanguage } from "@/hooks/use-navigator-language.ts";
+import { usePersistState } from "@/hooks/primitives/use-persist-state.ts";
+import { useSystemDarkMode } from "@/hooks/primitives/use-system-dark-mode.ts";
+import { useNavigatorLanguage } from "@/hooks/primitives/use-navigator-language.ts";
 
 // Create a new router instance
 const router = createRouter({ routeTree });
