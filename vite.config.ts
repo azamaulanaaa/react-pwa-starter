@@ -5,6 +5,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { comlink } from "vite-plugin-comlink";
 import { VitePWA, type VitePWAOptions } from "vite-plugin-pwa";
 import { visualizer } from "rollup-plugin-visualizer";
+import pkg from "./package.json";
 
 const PWA_MANIFEST: VitePWAOptions["manifest"] = {
   name: "React PWA",
@@ -117,6 +118,9 @@ const sharedOutputOptions: NonNullable<
 };
 
 export default defineConfig({
+  define: {
+    __APP_NAME__: JSON.stringify(pkg.name),
+  },
   plugins: [
     tanstackRouter({
       target: "react",
