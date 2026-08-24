@@ -2,7 +2,7 @@ import "@/lib/comlink/index.ts";
 import * as Comlink from "comlink";
 
 import { dbMain } from "@/worker/db/index.ts";
-import { fs } from "@/worker/fs/index.ts";
+import * as fs from "@/worker/fs/index.ts";
 
 interface SharedWorkerScope {
   onconnect: ((event: MessageEvent) => void) | null;

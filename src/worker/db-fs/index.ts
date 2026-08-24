@@ -1,25 +1,12 @@
 import { Effect } from "effect";
 import { BTreeStore, type BTreeStore as BTreeStoreType } from "oxkv";
-import type { FsError } from "@/worker/fs/error.ts";
-import { type FileData, fs } from "@/worker/fs/index.ts";
 import { DbError } from "@/worker/db/error.ts";
-import type {
-  DbEvent,
-  EventBus,
-  TableModule,
-} from "@/worker/db/factory.ts";
+import type { DbEvent, EventBus, TableModule } from "@/worker/db/factory.ts";
 import { exportStore, hydrateStore } from "@/worker/db/factory.ts";
 import type { Id } from "@/worker/db/schema.ts";
+import { openStore } from "@/worker/fs/store.ts";
 
-const lift = <A>(
-  effect: Effect.Effect<A, FsError>,
-): Effect.Effect<A, DbError> =>
-  Effect.mapError(effect, (error) => new DbError({ error }));
-
-const decodeFile = (data: FileData): unknown =>
-  JSON.parse(
-    typeof data === "string" ? data : new TextDecoder().decode(data),
-  );
+const storage = await openStore();
 
 export type FsPersistence = {
   save: (
@@ -34,25 +21,55 @@ export type FsPersistence = {
 };
 
 export function createFsPersistence(root = "db/main"): FsPersistence {
+  const keyOf = (table: string, id: Id) => `${root}/${table}/${id}`;
+
   return {
     save: (table, id, doc) =>
-      lift(fs.writeFile(`${root}/${table}/${id}`, JSON.stringify(doc))),
-    remove: (table, id) => lift(fs.deleteFile(`${root}/${table}/${id}`)),
+      Effect.tryPromise({
+        try: async () => {
+          await storage.setItem(
+            keyOf(table, id),
+            JSON.stringify(doc),
+          );
+        },
+        catch: (error) => new DbError({ error }),
+      }),
+    remove: (table, id) =>
+      Effect.gen(function* () {
+        const key = keyOf(table, id);
+        const store = yield* Effect.tryPromise({
+          try: () => storage.getItem(key),
+          catch: (error) => new DbError({ error }),
+        });
+
+        if (store == null) {
+          return false;
+        }
+
+        yield* Effect.tryPromise({
+          try: () => storage.removeItem(key),
+          catch: (error) => new DbError({ error }),
+        });
+
+        return true;
+      }),
     load: (table) =>
       Effect.gen(function* () {
-        const ids = yield* lift(fs.listDir(`${root}/${table}`));
+        const prefix = `${root}/${table}/`;
+        const keys = yield* Effect.tryPromise({
+          try: () => storage.getKeys(prefix),
+          catch: (error) => new DbError({ error }),
+        });
 
-        return yield* Effect.forEach(ids, (id) =>
+        return yield* Effect.forEach(keys, (key) =>
           Effect.gen(function* () {
-            const raw = yield* lift(
-              fs.readFile(`${root}/${table}/${id}`),
-            );
-            const value = yield* Effect.try({
-              try: () => decodeFile(raw),
+            const raw = yield* Effect.tryPromise({
+              try: () => storage.getItem(key),
               catch: (error) => new DbError({ error }),
             });
+            const value = yield* Effect.succeed(raw);
 
-            return { id, value };
+            return { id: key.slice(prefix.length) as Id, value };
           }));
       }),
   };

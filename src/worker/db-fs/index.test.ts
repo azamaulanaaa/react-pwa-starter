@@ -5,7 +5,7 @@ import { v7 as randomUUID } from "uuid";
 import { Effect } from "effect";
 
 import { dbMain } from "@/worker/db/index.ts";
-import { fs as fsMain } from "@/worker/fs/index.ts";
+import { openStore } from "@/worker/fs/store.ts";
 import { hydrateStore } from "@/worker/db/factory.ts";
 import { createFsPersistence, loadSnapshot } from "@/worker/db-fs/index.ts";
 import { setupOxkv } from "@/worker/db/oxkv-wasm.ts";
@@ -28,12 +28,12 @@ describe("db-fs: persistent db cycle", () => {
       dbMain.task.set(id, { description: "durable milk", is_done: false }),
     );
 
-    expect(await run(fsMain.exists(path))).toBe(true);
+    expect(await (await openStore()).has(path)).toBe(true);
 
-    const raw = await run(fsMain.readFile(path));
-    const stored = JSON.parse(
-      typeof raw === "string" ? raw : new TextDecoder().decode(raw),
-    );
+    const stored = await (await openStore()).getItem(path) as Record<
+      string,
+      unknown
+    >;
     expect(stored.description).toBe("durable milk");
     expect(typeof stored.created_at).toBe("string");
 
@@ -47,13 +47,14 @@ describe("db-fs: persistent db cycle", () => {
       description: "durable milk 2",
       is_done: true,
     }));
-    const updated = JSON.parse(
-      String(await run(fsMain.readFile(path))),
-    ) as Record<string, unknown>;
+    const updated = await (await openStore()).getItem(path) as Record<
+      string,
+      unknown
+    >;
     expect(updated.description).toBe("durable milk 2");
 
     expect(await run(dbMain.task.delete(id))).toBe(true);
-    expect(await run(fsMain.exists(path))).toBe(false);
+    expect(await (await openStore()).has(path)).toBe(false);
 
     const afterDelete = new BTreeStore();
     const emptySnapshot = await run(loadSnapshot(["task"], persistence));
