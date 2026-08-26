@@ -95,7 +95,7 @@ describe("dbMain.task", () => {
     );
 
     const chunksPromise = firstTwoChunks(() =>
-      dbMain.task.watch({ direction: "next" }),
+      dbMain.task.watch({ direction: "next" })
     );
 
     await new Promise((resolve) => setTimeout(resolve, 50));
@@ -272,7 +272,10 @@ describe("kv api", () => {
   it("filters table rows out of raw scans", async () => {
     const id = randomUUID();
     await run(
-      dbMain.task.set(id, { description: "hidden from kv scan", is_done: false }),
+      dbMain.task.set(id, {
+        description: "hidden from kv scan",
+        is_done: false,
+      }),
     );
     await run(kvApi.set("docs:visible", { n: 1 }));
 
@@ -302,7 +305,7 @@ describe("db event bus", () => {
         ctx.onEvent((event) =>
           Effect.sync(() => {
             collected.push(event);
-          }),
+          })
         );
         return {};
       },

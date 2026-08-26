@@ -20,7 +20,7 @@ export const dbMain = createDatabase("main", dbMainRaw, {
     ctx.onEvent((event) =>
       Effect.sync(() => {
         peers.publish(event);
-      }),
+      })
     );
 
     peers.subscribe((event) => {

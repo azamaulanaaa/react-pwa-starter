@@ -1,5 +1,5 @@
 import { Effect, Schema } from "effect";
-import { Direction, type BTreeStore, type BTreeTx } from "oxkv";
+import { type BTreeStore, type BTreeTx, Direction } from "oxkv";
 
 import type { ChangeBus } from "@/worker/db/change-bus.ts";
 import { DbError } from "@/worker/db/error.ts";

@@ -2,12 +2,12 @@ import { Effect, type Schema, type Stream } from "effect";
 import type { BTreeStore } from "oxkv";
 
 import {
+  type ChangeBus,
   createChangeBus,
   createEventBus,
-  type ChangeBus,
   type DbEvent,
-  type EventHandler,
   type EventBus,
+  type EventHandler,
 } from "@/worker/db/change-bus.ts";
 import { DbError } from "@/worker/db/error.ts";
 import { createKvApi, type KvApi } from "@/worker/db/kv.ts";
@@ -20,8 +20,8 @@ export {
   type DbDeleteEvent,
   type DbEvent,
   type DbSetEvent,
-  type EventHandler,
   type EventBus,
+  type EventHandler,
 } from "@/worker/db/change-bus.ts";
 export type ApiFunction<Args extends any[], A, E> = (
   ...args: Args

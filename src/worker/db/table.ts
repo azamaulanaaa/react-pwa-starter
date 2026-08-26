@@ -4,12 +4,12 @@ import type { ChangeBus, DbEvent } from "@/worker/db/change-bus.ts";
 import { DbError } from "@/worker/db/error.ts";
 import { decodeFx, decodeUnknownFx } from "@/worker/db/helpers.ts";
 import {
-  ListParamsSchema,
-  tableKeys,
   type KvApi,
   type ListParams,
+  ListParamsSchema,
+  tableKeys,
 } from "@/worker/db/kv.ts";
-import { IdSchema, type Base } from "@/worker/db/schema.ts";
+import { type Base, IdSchema } from "@/worker/db/schema.ts";
 
 type TableDeps<Name extends string, A extends Base, I> = {
   tableName: Name;
@@ -41,9 +41,7 @@ export function createTableApi<Name extends string, A extends Base, I>({
       const isPrev = params.direction === "prev";
 
       let startCursor = isPrev ? keys.upperBound : keys.lowerBound;
-      let endCursor: string | undefined = isPrev
-        ? undefined
-        : keys.upperBound;
+      let endCursor: string | undefined = isPrev ? undefined : keys.upperBound;
       let minKey: string | undefined;
 
       if (params.startCursor && params.endCursor) {
@@ -91,8 +89,9 @@ export function createTableApi<Name extends string, A extends Base, I>({
         if (data == null) {
           return yield* Effect.fail(
             new DbError({
-              error:
-                `${String(tableName)} item with ID '${decodedId}' not found`,
+              error: `${
+                String(tableName)
+              } item with ID '${decodedId}' not found`,
             }),
           );
         }
