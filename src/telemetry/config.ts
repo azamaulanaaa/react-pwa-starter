@@ -41,9 +41,17 @@ export interface TelemetryConfig {
 	metricExportIntervalMs: number;
 }
 
+/**
+ * Build-time gate — when false, main.tsx skips the dynamic import entirely so
+ * the OTel chunk is never even fetched. Must stay SDK-free (statically
+ * imported from main.tsx).
+ */
+export function isEnabledAtBuildTime(): boolean {
+	return ENV.MODE !== "test" && parseBool(ENV.VITE_OTEL_ENABLED, true);
+}
+
 export function resolveTelemetryConfig(): TelemetryConfig {
-	// Never run telemetry under vitest.
-	const enabled = ENV.MODE !== "test" && parseBool(ENV.VITE_OTEL_ENABLED, true);
+	const enabled = isEnabledAtBuildTime();
 
 	const endpoint = (ENV.VITE_OTEL_ENDPOINT ?? DEFAULT_OTLP_ENDPOINT).replace(
 		/\/+$/,
