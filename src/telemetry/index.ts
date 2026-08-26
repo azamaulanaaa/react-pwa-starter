@@ -32,7 +32,7 @@ import {
 import { registerInstrumentations } from "@opentelemetry/instrumentation";
 import { FetchInstrumentation } from "@opentelemetry/instrumentation-fetch";
 
-import { sessionId } from "@/telemetry/api.ts";
+import { hasTelemetryConsent, sessionId } from "@/telemetry/api.ts";
 import { resolveTelemetryConfig } from "@/telemetry/config.ts";
 import { instrumentRouter } from "@/telemetry/router.ts";
 import {
@@ -69,6 +69,7 @@ function escapeRegExp(value: string): string {
 export function setupTelemetry({ router }: TelemetryOptions): void {
 	const config = resolveTelemetryConfig();
 	if (!config.enabled) return;
+	if (config.requireConsent && !hasTelemetryConsent()) return;
 
 	const resource = defaultResource().merge(
 		resourceFromAttributes({

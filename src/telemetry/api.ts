@@ -103,3 +103,18 @@ export function sessionId(): string {
 		return crypto.randomUUID();
 	}
 }
+
+// --- Consent gate ---
+// Apps with privacy requirements (GDPR etc.) can set VITE_OTEL_REQUIRE_CONSENT
+// and call setTelemetryConsent(true) once the user opts in. Until then,
+// setupTelemetry() refuses to start and all helpers remain no-ops, so nothing
+// is collected or exported pre-consent.
+let consentGranted = false;
+
+export function setTelemetryConsent(granted: boolean): void {
+	consentGranted = granted;
+}
+
+export function hasTelemetryConsent(): boolean {
+	return consentGranted;
+}

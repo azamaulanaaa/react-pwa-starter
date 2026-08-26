@@ -207,13 +207,18 @@ Dashboard, Honeycomb, Datadog OTLP intake, ...).
 - Configuration is env-based (see `.env.example`): `VITE_OTEL_ENDPOINT`
   (default `http://localhost:4318`), plus service name, sampling ratio, metric
   export interval and a master kill-switch (`VITE_OTEL_ENABLED=false`).
+- Privacy: set `VITE_OTEL_REQUIRE_CONSENT=true` for GDPR-style opt-in —
+  telemetry then refuses to start until the app calls
+  `setTelemetryConsent(true)` from `src/telemetry/api.ts`. Until consent,
+  all helpers stay no-ops and nothing is collected or exported.
 - Out of the box you get:
   - Auto-instrumented `fetch` spans (`@opentelemetry/instrumentation-fetch`);
     OTLP export calls themselves are excluded to avoid recursion.
   - Router navigation spans + `app.router.navigations` / duration histograms.
   - Core Web Vitals (CLS, INP, LCP, FCP, TTFB) as spans + histogram metrics.
   - Page-load timing span from Navigation Timing entries.
-  - Uncaught errors / unhandled rejections as ERROR log records.
+  - Uncaught errors / unhandled rejections as ERROR log records, rate-limited
+    to 10 per minute with a suppression summary (error-storm protection).
   - A stable per-browser-session `session.id` resource attribute.
 - To emit custom telemetry anywhere in app code, import the lightweight helpers
   from `src/telemetry/api.ts` — `getTracer()`, `getMeter()`, `getLogger()` and
