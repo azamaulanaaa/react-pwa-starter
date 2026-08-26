@@ -5,7 +5,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { comlink } from "vite-plugin-comlink";
 import { VitePWA, type VitePWAOptions } from "vite-plugin-pwa";
 import { visualizer } from "rollup-plugin-visualizer";
-import pkg from "./package.json";
+import pkg from "./package.json" with { type: "json" };
 
 const PWA_MANIFEST: VitePWAOptions["manifest"] = {
   name: "React PWA",
@@ -69,9 +69,7 @@ const VENDOR_GROUPS: Record<string, string[]> = {
     "@tanstack/table-core",
   ],
   // Query
-  "query": [
-    "@tanstack/query-core",
-  ],
+  query: ["@tanstack/query-core"],
   // UI design system components, icons, and class utility helpers
   visuals: [
     "@base-ui",
@@ -88,6 +86,8 @@ const VENDOR_GROUPS: Record<string, string[]> = {
   worker: ["comlink", "vite-plugin-comlink"],
   // Service Worker & PWA lifecycle helpers
   pwa: ["workbox-window"],
+  // OpenTelemetry SDK + exporters (lazy-loaded after first paint)
+  otel: ["@opentelemetry", "web-vitals"],
   // Utilites
   util: ["micromustache"],
 };
@@ -144,9 +144,7 @@ export default defineConfig({
   ],
   worker: {
     format: "es",
-    plugins: () => [
-      comlink(),
-    ],
+    plugins: () => [comlink()],
   },
   build: {
     rolldownOptions: {

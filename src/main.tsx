@@ -21,3 +21,11 @@ createRoot(document.getElementById("root")!).render(
     <App />
   </StrictMode>,
 );
+
+// Initialize OpenTelemetry after first paint. The SDK is dynamically imported
+// so it ships in its own lazy chunk and never blocks initial page load.
+void import("@/telemetry/index.ts")
+  .then((telemetry) => telemetry.setupTelemetry())
+  .catch(() => {
+    // Telemetry must never break the app.
+  });
