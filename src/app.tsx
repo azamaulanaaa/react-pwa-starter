@@ -45,8 +45,7 @@ export function App() {
   }, [config.locale, systemLocale]);
 
   useEffect(() => {
-    const isDarkMode =
-      config.theme === "dark" ||
+    const isDarkMode = config.theme === "dark" ||
       (config.theme === "system" && isSystemDarkMode);
     document.documentElement.classList.toggle("dark", isDarkMode);
   }, [config.theme, isSystemDarkMode]);

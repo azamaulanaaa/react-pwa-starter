@@ -1,11 +1,10 @@
 import { createContext, ReactNode, useContext } from "react";
 
 import "@/lib/comlink/index.ts";
-import { wrap, type SyncRemoteProxy } from "@/lib/comlink/index.ts";
+import { type SyncRemoteProxy, wrap } from "@/lib/comlink/index.ts";
 export type WorkerType = typeof import("@/worker/main.ts");
 
-const forceDedicated =
-  typeof location !== "undefined" &&
+const forceDedicated = typeof location !== "undefined" &&
   new URLSearchParams(location.search).get("worker") === "dedicated";
 
 export const workerMode: "shared" | "dedicated" =
