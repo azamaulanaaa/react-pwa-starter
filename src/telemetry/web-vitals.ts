@@ -64,8 +64,11 @@ export function observePageLifecycle(deps: LifecycleDeps = {}): void {
 			) as PerformanceNavigationTiming[];
 			if (!navigation) return;
 
+			// OTel expects times relative to performance.timeOrigin (i.e.
+			// performance.now()-style values), which is exactly what the
+			// NavigationTiming entry exposes — do NOT add timeOrigin here.
 			const span = TRACER.startSpan("page.load", {
-				startTime: performance.timeOrigin + navigation.startTime,
+				startTime: navigation.startTime,
 			});
 			span.setAttributes({
 				"page.ttfb_ms": Math.round(navigation.responseStart),
@@ -76,7 +79,7 @@ export function observePageLifecycle(deps: LifecycleDeps = {}): void {
 				"page.load_event_ms": Math.round(navigation.loadEventEnd),
 				"page.type": navigation.type,
 			});
-			span.end(performance.timeOrigin + navigation.loadEventEnd);
+			span.end(navigation.loadEventEnd);
 		}, 0);
 	});
 
