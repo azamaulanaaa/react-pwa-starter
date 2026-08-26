@@ -192,8 +192,44 @@ src/
 - rollup-plugin-visualizer is included for bundle size analysis.
 - Run `npm run build` and check the generated report to optimize your bundle.
 - Vendor dependencies are grouped into dedicated chunks (react, router,
-  tanstack-ui, effect, database, worker, pwa, ...); see `VENDOR_GROUPS` in
-  `vite.config.ts`.
+  tanstack-ui, effect, database, worker, pwa, otel, ...); see `VENDOR_GROUPS`
+  in `vite.config.ts`.
+
+## Observability (OpenTelemetry)
+
+The app ships with browser OpenTelemetry wired for traces, metrics and logs,
+exported via OTLP/HTTP to any collector (Jaeger, Grafana Tempo/Alloy, Aspire
+Dashboard, Honeycomb, Datadog OTLP intake, ...).
+
+- The SDK lives in a dedicated lazy chunk (`vendor-otel`) and is dynamically
+  imported after first paint from `src/main.tsx`, so it never blocks initial
+  page load.
+- Configuration is env-based (see `.env.example`): `VITE_OTEL_ENDPOINT`
+  (default `http://localhost:4318`), plus service name, sampling ratio, metric
+  export interval and a master kill-switch (`VITE_OTEL_ENABLED=false`).
+- Out of the box you get:
+  - Auto-instrumented `fetch` spans (`@opentelemetry/instrumentation-fetch`);
+    OTLP export calls themselves are excluded to avoid recursion.
+  - Router navigation spans + `app.router.navigations` / duration histograms.
+  - Core Web Vitals (CLS, INP, LCP, FCP, TTFB) as spans + histogram metrics.
+  - Page-load timing span from Navigation Timing entries.
+  - Uncaught errors / unhandled rejections as ERROR log records.
+  - A stable per-browser-session `session.id` resource attribute.
+- To emit custom telemetry anywhere in app code, import the lightweight helpers
+  from `src/telemetry/api.ts` — `getTracer()`, `getMeter()`, `getLogger()` and
+  `withSpan(name, fn)`. They are no-ops until the SDK initializes, so call
+  sites never need state checks. Never import `src/telemetry/index.ts`
+  statically; that would pull the SDK into the eager graph.
+- Your collector must allow CORS from the app origin. Example for Grafana
+  Alloy's OTLP HTTP receiver:
+
+  ```alloy
+  otlp "http" {
+    default_grpc_endpoint = "localhost:4317"
+    default_http_endpoint = "localhost:4318"
+    cors_allowed_origins  = ["https://your-app-origin"]
+  }
+  ```
 
 ## Development tips
 
