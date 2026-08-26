@@ -35,6 +35,10 @@ import { FetchInstrumentation } from "@opentelemetry/instrumentation-fetch";
 import { sessionId } from "@/telemetry/api.ts";
 import { resolveTelemetryConfig } from "@/telemetry/config.ts";
 import { instrumentRouter } from "@/telemetry/router.ts";
+import {
+	observeWebVitals,
+	observePageLifecycle,
+} from "@/telemetry/web-vitals.ts";
 
 export interface TelemetryOptions {
 	/** The app router instance — used to emit navigation spans/metrics. */
@@ -136,4 +140,22 @@ export function setupTelemetry({ router }: TelemetryOptions): void {
 
 	// --- App-level instrumentation ---
 	instrumentRouter(router);
+	observeWebVitals();
+	observePageLifecycle({
+		onHidden: () => {
+			void flushTelemetry(tracerProvider, meterProvider, loggerProvider);
+		},
+	});
+}
+
+async function flushTelemetry(
+	tracerProvider: WebTracerProvider,
+	meterProvider: MeterProvider,
+	loggerProvider: LoggerProvider,
+): Promise<void> {
+	await Promise.allSettled([
+		tracerProvider.forceFlush(),
+		meterProvider.forceFlush(),
+		loggerProvider.forceFlush(),
+	]);
 }
