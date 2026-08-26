@@ -39,6 +39,7 @@ import {
 	observeWebVitals,
 	observePageLifecycle,
 } from "@/telemetry/web-vitals.ts";
+import { captureGlobalErrors } from "@/telemetry/errors.ts";
 
 export interface TelemetryOptions {
 	/** The app router instance — used to emit navigation spans/metrics. */
@@ -141,6 +142,7 @@ export function setupTelemetry({ router }: TelemetryOptions): void {
 	// --- App-level instrumentation ---
 	instrumentRouter(router);
 	observeWebVitals();
+	captureGlobalErrors();
 	observePageLifecycle({
 		onHidden: () => {
 			void flushTelemetry(tracerProvider, meterProvider, loggerProvider);
