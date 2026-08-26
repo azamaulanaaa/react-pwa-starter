@@ -39,10 +39,38 @@ export function captureGlobalErrors(): void {
 	});
 }
 
+// Rate limiting: an error storm (e.g. a bad retry loop) must not flood the
+// log pipeline or the telemetry bill. Fixed-window cap with a one-time
+// suppression summary per window.
+const MAX_RECORDS_PER_WINDOW = 10;
+const WINDOW_MS = 60_000;
+
+let windowStartMs = 0;
+let emittedInWindow = 0;
+let suppressedInWindow = 0;
+
 function record(
 	info: { message: string; stack?: string },
 	source: "uncaught_error" | "unhandled_rejection",
 ): void {
+	const nowMs = Date.now();
+	if (nowMs - windowStartMs >= WINDOW_MS) {
+		if (suppressedInWindow > 0) {
+			emitLog("WARN", `${suppressedInWindow} error records suppressed by rate limiter`, {
+				"error.suppressed": suppressedInWindow,
+			});
+			suppressedInWindow = 0;
+		}
+		windowStartMs = nowMs;
+		emittedInWindow = 0;
+	}
+
+	if (emittedInWindow >= MAX_RECORDS_PER_WINDOW) {
+		suppressedInWindow++;
+		return;
+	}
+	emittedInWindow++;
+
 	emitLog("ERROR", info.message, {
 		"error.source": source,
 		"error.stack": info.stack,
