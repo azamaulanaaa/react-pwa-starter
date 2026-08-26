@@ -62,9 +62,9 @@ function escapeRegExp(value: string): string {
 }
 
 /**
- * Initialize trace/metric/log providers with OTLP HTTP exporters.
- * Telemetry failures must never break the app, so callers are expected to
- * swallow errors.
+ * Initialize providers, exporters and instrumentations.
+ * Resolves once everything is registered; telemetry failures must never break
+ * the app, so callers are expected to swallow errors.
  */
 export function setupTelemetry({ router }: TelemetryOptions): void {
 	const config = resolveTelemetryConfig();
@@ -78,17 +78,18 @@ export function setupTelemetry({ router }: TelemetryOptions): void {
 		}),
 	);
 
+	const endpointRegex = new RegExp(`^${escapeRegExp(config.endpoint)}`);
+
 	// --- Traces ---
+	const traceExporter = new OTLPTraceExporter({
+		url: `${config.endpoint}/v1/traces`,
+	});
 	const tracerProvider = new WebTracerProvider({
 		resource,
 		sampler: new ParentBasedSampler({
 			root: new TraceIdRatioBasedSampler(config.sampleRatio),
 		}),
-		spanProcessors: [
-			new BatchSpanProcessor(
-				new OTLPTraceExporter({ url: `${config.endpoint}/v1/traces` }),
-			),
-		],
+		spanProcessors: [new BatchSpanProcessor(traceExporter)],
 	});
 	tracerProvider.register();
 
@@ -122,7 +123,6 @@ export function setupTelemetry({ router }: TelemetryOptions): void {
 	logs.setGlobalLoggerProvider(loggerProvider);
 
 	// --- Auto-instrumentations (patches global fetch) ---
-	const endpointRegex = new RegExp(`^${escapeRegExp(config.endpoint)}`);
 	registerInstrumentations({
 		tracerProvider,
 		meterProvider,
