@@ -12,7 +12,7 @@ import { useSystemDarkMode } from "@/hooks/primitives/use-system-dark-mode.ts";
 import { useNavigatorLanguage } from "@/hooks/primitives/use-navigator-language.ts";
 
 // Create a new router instance
-const router = createRouter({ routeTree });
+export const router = createRouter({ routeTree });
 
 // Register the router instance for type safety
 declare module "@tanstack/react-router" {
@@ -42,14 +42,12 @@ export function App() {
     }
 
     return config.locale;
-  }, [
-    config.locale,
-    systemLocale,
-  ]);
+  }, [config.locale, systemLocale]);
 
   useEffect(() => {
-    const isDarkMode = config.theme === "dark" ||
-      config.theme === "system" && isSystemDarkMode;
+    const isDarkMode =
+      config.theme === "dark" ||
+      (config.theme === "system" && isSystemDarkMode);
     document.documentElement.classList.toggle("dark", isDarkMode);
   }, [config.theme, isSystemDarkMode]);
 
@@ -58,15 +56,17 @@ export function App() {
 
   useEffect(() => {
     if (locale === "") return;
-    fetch(`/locales/${locale}.json`).then((res) => res.json()).then(
-      setDictionary,
-    ).catch(console.error);
+    fetch(`/locales/${locale}.json`)
+      .then((res) => res.json())
+      .then(setDictionary)
+      .catch(console.error);
   }, [locale]);
 
   useEffect(() => {
-    fetch(`/locales/en-US.json`).then((res) => res.json()).then(
-      setFallbackDictionary,
-    ).catch(console.error);
+    fetch(`/locales/en-US.json`)
+      .then((res) => res.json())
+      .then(setFallbackDictionary)
+      .catch(console.error);
   }, []);
 
   return (

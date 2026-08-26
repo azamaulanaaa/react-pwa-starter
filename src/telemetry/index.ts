@@ -34,6 +34,23 @@ import { FetchInstrumentation } from "@opentelemetry/instrumentation-fetch";
 
 import { sessionId } from "@/telemetry/api.ts";
 import { resolveTelemetryConfig } from "@/telemetry/config.ts";
+import { instrumentRouter } from "@/telemetry/router.ts";
+
+export interface TelemetryOptions {
+	/** The app router instance — used to emit navigation spans/metrics. */
+	router: RouterLike;
+}
+
+/** Minimal structural type of the TanStack Router surface we need. */
+interface RouterLike {
+	subscribe: (
+		eventType: "onBeforeLoad" | "onResolved",
+		fn: (event: {
+			toLocation: { pathname: string };
+			pathChanged: boolean;
+		}) => void,
+	) => () => void;
+}
 
 function escapeRegExp(value: string): string {
 	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -44,7 +61,7 @@ function escapeRegExp(value: string): string {
  * Telemetry failures must never break the app, so callers are expected to
  * swallow errors.
  */
-export function setupTelemetry(): void {
+export function setupTelemetry({ router }: TelemetryOptions): void {
 	const config = resolveTelemetryConfig();
 	if (!config.enabled) return;
 
@@ -116,4 +133,7 @@ export function setupTelemetry(): void {
 			}),
 		],
 	});
+
+	// --- App-level instrumentation ---
+	instrumentRouter(router);
 }

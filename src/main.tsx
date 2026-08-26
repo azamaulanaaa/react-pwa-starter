@@ -2,7 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { registerSW } from "virtual:pwa-register";
 
-import { App } from "@/app.tsx";
+import { App, router } from "@/app.tsx";
 import "@/app.css";
 
 const updateSW = registerSW({
@@ -25,7 +25,7 @@ createRoot(document.getElementById("root")!).render(
 // Initialize OpenTelemetry after first paint. The SDK is dynamically imported
 // so it ships in its own lazy chunk and never blocks initial page load.
 void import("@/telemetry/index.ts")
-  .then((telemetry) => telemetry.setupTelemetry())
+  .then((telemetry) => telemetry.setupTelemetry({ router }))
   .catch(() => {
     // Telemetry must never break the app.
   });
