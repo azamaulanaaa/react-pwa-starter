@@ -137,7 +137,11 @@ export default defineConfig({
       ],
       manifest: PWA_MANIFEST,
       workbox: {
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,json,woff2}"],
+        // .wasm (oxkv database binary) and .woff (geist-mono fallbacks) are
+        // fetched at runtime and must be precached for offline use.
+        globPatterns: [
+          "**/*.{js,css,html,ico,png,svg,json,woff2,woff,wasm}",
+        ],
       },
     }),
     visualizer(),
