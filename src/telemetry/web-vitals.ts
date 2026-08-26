@@ -6,14 +6,7 @@
  * - Page lifecycle emits a `page.load` span derived from the Navigation Timing
  *   entry, logs visibility changes, and notifies on hide for flushing.
  */
-import {
-	onCLS,
-	onFCP,
-	onINP,
-	onLCP,
-	onTTFB,
-	type Metric,
-} from "web-vitals";
+import { onCLS, onFCP, onINP, onLCP, onTTFB, type Metric } from "web-vitals";
 import { trace } from "@opentelemetry/api";
 
 const TRACER = trace.getTracer("web-vitals");
@@ -76,8 +69,7 @@ export function observePageLifecycle(deps: LifecycleDeps = {}): void {
 			});
 			span.setAttributes({
 				"page.ttfb_ms": Math.round(navigation.responseStart),
-				"page.dom_interactive_ms":
-					Math.round(navigation.domInteractive),
+				"page.dom_interactive_ms": Math.round(navigation.domInteractive),
 				"page.dom_content_loaded_ms": Math.round(
 					navigation.domContentLoadedEventEnd,
 				),
