@@ -20,10 +20,27 @@ interface RouterLike {
 	) => () => void;
 }
 
+/**
+ * Collapse dynamic-looking segments ("/tasks/42" -> "/tasks/:id") so metric
+ * labels and span names stay low-cardinality. Heuristic: purely numeric
+ * segments and long hex/uuid-ish segments become ":id". The untouched path
+ * remains available on span attributes.
+ */
+function routePattern(pathname: string): string {
+	return pathname
+		.split("/")
+		.map((segment) =>
+			/^\d+$/.test(segment) || /^[0-9a-f-]{16,}$/i.test(segment)
+				? ":id"
+				: segment,
+		)
+		.join("/");
+}
+
 interface ActiveNavigation {
 	span: Span;
 	startedAtMs: number;
-	pathname: string;
+	pattern: string;
 }
 
 export function instrumentRouter(router: RouterLike): () => void {
@@ -46,20 +63,23 @@ export function instrumentRouter(router: RouterLike): () => void {
 				active.span.end();
 			}
 			const pathname = toLocation.pathname;
-			const span = TRACER.startSpan(`route ${pathname}`, {
+			const pattern = routePattern(pathname);
+			const span = TRACER.startSpan(`route ${pattern}`, {
 				attributes: {
-					"http.route": pathname,
+					"http.route": pattern,
+					// High-cardinality value — kept on the span only, never on metrics.
+					"router.path": pathname,
 					"router.path_changed": pathChanged,
 				},
 			});
-			active = { span, startedAtMs: performance.now(), pathname };
+			active = { span, startedAtMs: performance.now(), pattern };
 		},
 	);
 
 	const unsubscribeEnd = router.subscribe("onResolved", ({ toLocation }) => {
-		if (!active || active.pathname !== toLocation.pathname) return;
+		if (!active || active.pattern !== routePattern(toLocation.pathname)) return;
 		const durationMs = performance.now() - active.startedAtMs;
-		const attrs = { "http.route": active.pathname };
+		const attrs = { "http.route": active.pattern };
 
 		active.span.setAttributes({
 			"router.duration_ms": Math.round(durationMs),
