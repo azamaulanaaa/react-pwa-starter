@@ -39,6 +39,8 @@ export interface TelemetryConfig {
 	sampleRatio: number;
 	/** Metric reader export interval. */
 	metricExportIntervalMs: number;
+	/** When true, setupTelemetry() refuses to start until consent is granted. */
+	requireConsent: boolean;
 }
 
 /**
@@ -71,5 +73,6 @@ export function resolveTelemetryConfig(): TelemetryConfig {
 			ENV.VITE_OTEL_METRIC_EXPORT_INTERVAL_MS,
 			30_000,
 		),
+		requireConsent: parseBool(ENV.VITE_OTEL_REQUIRE_CONSENT, false),
 	};
 }
