@@ -29,9 +29,15 @@ import {
 	resourceFromAttributes,
 	defaultResource,
 } from "@opentelemetry/resources";
+import { registerInstrumentations } from "@opentelemetry/instrumentation";
+import { FetchInstrumentation } from "@opentelemetry/instrumentation-fetch";
 
 import { sessionId } from "@/telemetry/api.ts";
 import { resolveTelemetryConfig } from "@/telemetry/config.ts";
+
+function escapeRegExp(value: string): string {
+	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 /**
  * Initialize trace/metric/log providers with OTLP HTTP exporters.
@@ -92,4 +98,22 @@ export function setupTelemetry(): void {
 	trace.setGlobalTracerProvider(tracerProvider);
 	metrics.setGlobalMeterProvider(meterProvider);
 	logs.setGlobalLoggerProvider(loggerProvider);
+
+	// --- Auto-instrumentations (patches global fetch) ---
+	const endpointRegex = new RegExp(`^${escapeRegExp(config.endpoint)}`);
+	registerInstrumentations({
+		tracerProvider,
+		meterProvider,
+		loggerProvider,
+		instrumentations: [
+			new FetchInstrumentation({
+				// Never trace our own OTLP export calls — they would recurse into
+				// spans about sending spans.
+				ignoreUrls: [endpointRegex],
+				// Propagate W3C traceparent headers to the collector origin so
+				// backend-side work can be correlated with the frontend trace.
+				propagateTraceHeaderCorsUrls: [endpointRegex],
+			}),
+		],
+	});
 }
