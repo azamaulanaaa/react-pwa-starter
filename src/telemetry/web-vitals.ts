@@ -83,6 +83,12 @@ export function observePageLifecycle(deps: LifecycleDeps = {}): void {
 		}, 0);
 	});
 
+	// visibilitychange->hidden does not fire on mobile app kill or
+	// cross-document navigation; pagehide is the reliable last-resort signal.
+	window.addEventListener("pagehide", () => {
+		deps.onHidden?.();
+	});
+
 	document.addEventListener("visibilitychange", () => {
 		if (document.visibilityState === "hidden") {
 			deps.onHidden?.();
