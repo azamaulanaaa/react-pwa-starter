@@ -1,4 +1,4 @@
-import { BuildEnvironmentOptions, defineConfig } from "vite";
+import { type BuildEnvironmentOptions, defineConfig } from "vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
@@ -139,9 +139,7 @@ export default defineConfig({
       workbox: {
         // .wasm (oxkv database binary) and .woff (geist-mono fallbacks) are
         // fetched at runtime and must be precached for offline use.
-        globPatterns: [
-          "**/*.{js,css,html,ico,png,svg,json,woff2,woff,wasm}",
-        ],
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,json,woff2,woff,wasm}"],
       },
     }),
     visualizer(),
