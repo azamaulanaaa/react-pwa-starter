@@ -12,14 +12,17 @@ function getServerSnapshot(): string {
 }
 
 function subscribeToLanguageChange(onStoreChange: () => void) {
-  if (typeof window === "undefined") {
+  if (
+    typeof globalThis === "undefined" ||
+    typeof globalThis.addEventListener !== "function"
+  ) {
     return () => {};
   }
 
-  window.addEventListener("languagechange", onStoreChange);
+  globalThis.addEventListener("languagechange", onStoreChange);
 
   return () => {
-    window.removeEventListener("languagechange", onStoreChange);
+    globalThis.removeEventListener("languagechange", onStoreChange);
   };
 }
 

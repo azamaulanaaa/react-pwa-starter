@@ -2,26 +2,28 @@ import * as Comlink from "comlink";
 import { Cause, Chunk, Effect, Stream } from "effect";
 
 export type ResolveEffect<T, Fallback> = T extends
-  Effect.Effect<infer Success, any, any> ? Promise<Success>
-  : T extends Stream.Stream<infer A, any, any> ? Promise<ReadableStream<A>>
+  Effect.Effect<infer Success, unknown, unknown> ? Promise<Success>
+  : T extends Stream.Stream<infer A, unknown, unknown>
+    ? Promise<ReadableStream<A>>
   : Fallback;
 
-export function flattenTaggedError(err: any): string {
+export function flattenTaggedError(err: unknown): string {
   if (!err || typeof err !== "object") return String(err);
   const tags: string[] = [];
-  let current = err;
+  let current: unknown = err;
   let message = "";
 
   while (current && typeof current === "object") {
-    if (current._tag) tags.push(current._tag);
-    if (typeof current.error === "string") {
-      message = current.error;
+    const obj = current as Record<string, unknown>;
+    if (typeof obj._tag === "string") tags.push(obj._tag);
+    if (typeof obj.error === "string") {
+      message = obj.error;
       break;
-    } else if (current.message) {
-      message = current.message;
+    } else if (obj.message) {
+      message = String(obj.message);
       break;
-    } else if (current.error && typeof current.error === "object") {
-      current = current.error;
+    } else if (obj.error && typeof obj.error === "object") {
+      current = obj.error;
     } else {
       message = JSON.stringify(current);
       break;
@@ -40,8 +42,9 @@ function formatEffectError(cause: Cause.Cause<unknown>): string {
 const NAME_STREAM = "EFFECT_STREAM_PROXY";
 if (!Comlink.transferHandlers.has(NAME_STREAM)) {
   Comlink.transferHandlers.set(NAME_STREAM, {
-    canHandle: (val): val is Stream.Stream<any, any, any> =>
-      val !== null && (typeof val === "object" || typeof val === "function") &&
+    canHandle: (val): val is Stream.Stream<unknown, unknown, unknown> =>
+      val !== null &&
+      (typeof val === "object" || typeof val === "function") &&
       Stream.StreamTypeId in val,
 
     serialize: <A, E>(streamInstance: Stream.Stream<A, E, never>) => {
@@ -69,8 +72,8 @@ if (!Comlink.transferHandlers.has(NAME_STREAM)) {
 
     deserialize: (port: MessagePort) => {
       const remoteIterator = Comlink.wrap<{
-        next(): Promise<IteratorResult<any>>;
-        return(): Promise<IteratorResult<any>>;
+        next(): Promise<IteratorResult<unknown>>;
+        return(): Promise<IteratorResult<unknown>>;
       }>(port);
 
       return new ReadableStream({
@@ -127,7 +130,8 @@ if (!Comlink.transferHandlers.has(NAME_EFFECT)) {
     deserialize: (port: MessagePort) => {
       const proxyFunc = Comlink.wrap<
         () => Promise<
-          { success: true; value: any } | { success: false; error: string }
+          | { success: true; value: unknown }
+          | { success: false; error: string }
         >
       >(port);
       return (async () => {

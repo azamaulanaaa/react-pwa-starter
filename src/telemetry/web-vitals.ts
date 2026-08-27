@@ -57,7 +57,7 @@ interface LifecycleDeps {
 export function observePageLifecycle(deps: LifecycleDeps = {}): void {
   const logger = deps.logger;
 
-  window.addEventListener("load", () => {
+  globalThis.addEventListener("load", () => {
     setTimeout(() => {
       const [navigation] = performance.getEntriesByType(
         "navigation",
@@ -85,7 +85,7 @@ export function observePageLifecycle(deps: LifecycleDeps = {}): void {
 
   // visibilitychange->hidden does not fire on mobile app kill or
   // cross-document navigation; pagehide is the reliable last-resort signal.
-  window.addEventListener("pagehide", () => {
+  globalThis.addEventListener("pagehide", () => {
     deps.onHidden?.();
   });
 

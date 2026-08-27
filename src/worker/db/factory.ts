@@ -23,6 +23,7 @@ export {
   type EventBus,
   type EventHandler,
 } from "@/worker/db/change-bus.ts";
+// deno-lint-ignore no-explicit-any
 export type ApiFunction<Args extends any[], A, E> = (
   ...args: Args
 ) => Effect.Effect<A, E, never> | Stream.Stream<A, E, never>;
@@ -38,23 +39,29 @@ type ModuleContext = {
 
 export type TableModule<
   Name extends string,
+  // deno-lint-ignore no-explicit-any
   Api extends Record<string, ApiFunction<any, any, any>>,
 > = {
   name: Name;
   api: (ctx: ModuleContext) => Api;
 };
 
-type ExtractApiShape<T> = T extends
-  { name: infer Name extends string; api: (ctx: any) => infer Api }
-  ? { [K in Name]: Api }
+type ExtractApiShape<T> = T extends {
+  name: infer Name extends string;
+  api: (ctx: ModuleContext) => infer Api;
+} ? { [K in Name]: Api }
   : never;
 
-type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends
-  (k: infer I) => void ? I
+type UnionToIntersection<U> = (
+  U extends unknown ? (k: U) => void
+    : never
+) extends (k: infer I) => void ? I
   : never;
 
 type GetModuleValues<T> = T extends Record<string, infer M>
-  ? M extends TableModule<any, any> ? M : never
+  // deno-lint-ignore no-explicit-any
+  ? M extends TableModule<any, any> ? M
+  : never
   : never;
 
 export const createTableModule =
@@ -63,15 +70,17 @@ export const createTableModule =
     schema: Schema.Schema<A, I, never>;
   }) =>
   <
-    CustomApi extends Record<string, ApiFunction<any, any, any>> = {},
-  >(
-    moduleConfig?: {
-      extensions?: (
-        ctx: ModuleContext,
-        crud: ReturnType<typeof createTableApi<Name, A, I>>,
-      ) => CustomApi;
-    },
-  ): TableModule<
+    // deno-lint-ignore no-explicit-any
+    CustomApi extends Record<string, ApiFunction<any, any, any>> = Record<
+      PropertyKey,
+      never
+    >,
+  >(moduleConfig?: {
+    extensions?: (
+      ctx: ModuleContext,
+      crud: ReturnType<typeof createTableApi<Name, A, I>>,
+    ) => CustomApi;
+  }): TableModule<
     Name,
     ReturnType<typeof createTableApi<Name, A, I>> & CustomApi
   > => {
@@ -125,12 +134,9 @@ export type DatabaseConfig = {
 };
 
 export function createDatabase<
+  // deno-lint-ignore no-explicit-any
   T extends Record<string, TableModule<any, any>>,
->(
-  name: string,
-  tables: T,
-  config: DatabaseConfig = {},
-) {
+>(name: string, tables: T, config: DatabaseConfig = {}) {
   type DatabaseApi = UnionToIntersection<ExtractApiShape<GetModuleValues<T>>>;
 
   const bus = createChangeBus();

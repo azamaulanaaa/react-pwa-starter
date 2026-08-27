@@ -12,9 +12,9 @@ vi.stubGlobal("fetch", async (url: string) => {
     let content: string;
 
     // Runtime-specific reading
-    if (typeof (globalThis as any).Deno !== "undefined") {
+    if (typeof (globalThis as { Deno?: unknown }).Deno !== "undefined") {
       content = await Deno.readTextFile(fileUrl.toString());
-    } else if (typeof (globalThis as any).Bun !== "undefined") {
+    } else if (typeof (globalThis as { Bun?: unknown }).Bun !== "undefined") {
       content = await Bun.file(fileUrl).text();
     } else {
       // Node fallback (using dynamic import to avoid crashes in non-node)
