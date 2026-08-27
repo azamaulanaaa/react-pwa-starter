@@ -1,20 +1,28 @@
+import { createStorage } from "unstorage";
+import indexedDbDriver from "unstorage/drivers/indexedb";
 import { Effect } from "effect";
 import { BTreeStore, type BTreeStore as BTreeStoreType } from "oxkv";
+
 import { DbError } from "@/worker/db/error.ts";
 import type { DbEvent, EventBus, TableModule } from "@/worker/db/factory.ts";
 import { exportStore, hydrateStore } from "@/worker/db/factory.ts";
 import type { Id } from "@/worker/db/schema.ts";
-import { openStore } from "@/worker/fs/store.ts";
 
-const storage = await openStore();
+const storage = createStorage({
+  driver: indexedDbDriver({ dbName: "db" }),
+});
 
-export type FsPersistence = {
+export function openDbStore() {
+  return Promise.resolve(storage);
+}
+
+export type DbPersistence = {
   save: (table: string, id: Id, doc: unknown) => Effect.Effect<void, DbError>;
   remove: (table: string, id: Id) => Effect.Effect<boolean, DbError>;
   load: (table: string) => Effect.Effect<{ id: Id; value: unknown }[], DbError>;
 };
 
-export function createFsPersistence(root = "db/main"): FsPersistence {
+export function createDbPersistence(root = "db/main"): DbPersistence {
   const keyOf = (table: string, id: Id) => `${root}/${table}/${id}`;
 
   return {
@@ -28,12 +36,12 @@ export function createFsPersistence(root = "db/main"): FsPersistence {
     remove: (table, id) =>
       Effect.gen(function* () {
         const key = keyOf(table, id);
-        const store = yield* Effect.tryPromise({
+        const existing = yield* Effect.tryPromise({
           try: () => storage.getItem(key),
           catch: (error) => new DbError({ error }),
         });
 
-        if (store == null) {
+        if (existing == null) {
           return false;
         }
 
@@ -68,7 +76,7 @@ export function createFsPersistence(root = "db/main"): FsPersistence {
 
 export function loadSnapshot(
   tables: string[],
-  persistence: FsPersistence,
+  persistence: DbPersistence,
 ): Effect.Effect<Uint8Array, DbError> {
   return Effect.gen(function* () {
     const temp = new BTreeStore();
@@ -87,7 +95,7 @@ export function loadSnapshot(
 }
 
 export type DbFs = {
-  persistence: FsPersistence;
+  persistence: DbPersistence;
   attach: (events: EventBus) => () => void;
   hydrate: (store: BTreeStoreType) => Effect.Effect<void, DbError>;
 };
@@ -105,7 +113,7 @@ export function createPeerSync(root = "db/main"): PeerSync {
     };
   }
 
-  const channel = new BroadcastChannel(`db-fs:${root}`);
+  const channel = new BroadcastChannel(`db:${root}`);
 
   return {
     publish: (event) => channel.postMessage(event),
@@ -124,7 +132,7 @@ export function createDbFs(
   tables: Record<string, TableModule<string, any>>,
   root?: string,
 ): DbFs {
-  const persistence = createFsPersistence(root);
+  const persistence = createDbPersistence(root);
   const tableNames = Object.values(tables).map((table) => table.name);
 
   return {
@@ -142,3 +150,7 @@ export function createDbFs(
       ),
   };
 }
+
+// Back-compat alias — remove after migration
+export type FsPersistence = DbPersistence;
+export const createFsPersistence = createDbPersistence;
