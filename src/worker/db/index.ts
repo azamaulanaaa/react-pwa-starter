@@ -3,7 +3,7 @@ import { createDatabase, createEventBus } from "@/worker/db/factory.ts";
 import * as dbMainRaw from "@/worker/db/database/main.ts";
 export type * from "@/worker/db/database/main.ts";
 import { Effect } from "effect";
-import { createDbFs, createPeerSync } from "@/worker/db-fs/index.ts";
+import { createDbFs, createPeerSync } from "@/worker/db/persistence.ts";
 
 const events = createEventBus();
 const dbFs = createDbFs(dbMainRaw);
