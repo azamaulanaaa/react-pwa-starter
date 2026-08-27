@@ -28,6 +28,7 @@ function resolveMax(value: Breakpoint | number): string {
 }
 
 function parseQuery(
+  // deno-lint-ignore ban-types
   query: BreakpointQuery | MediaQueryInput | (string & {}),
 ): string {
   if (typeof query !== "string") {
@@ -67,14 +68,20 @@ export type MediaQueryInput = {
 };
 
 export function useMediaQuery(
+  // deno-lint-ignore ban-types
   query: BreakpointQuery | MediaQueryInput | (string & {}),
 ): boolean {
   const mediaQuery = parseQuery(query);
 
   const subscribe = useCallback(
     (callback: () => void) => {
-      if (typeof window === "undefined") return () => {};
-      const mql = window.matchMedia(mediaQuery);
+      if (
+        typeof globalThis === "undefined" ||
+        typeof globalThis.matchMedia !== "function"
+      ) {
+        return () => {};
+      }
+      const mql = globalThis.matchMedia(mediaQuery);
       mql.addEventListener("change", callback);
       return () => mql.removeEventListener("change", callback);
     },
@@ -82,8 +89,13 @@ export function useMediaQuery(
   );
 
   const getSnapshot = useCallback(() => {
-    if (typeof window === "undefined") return false;
-    return window.matchMedia(mediaQuery).matches;
+    if (
+      typeof globalThis === "undefined" ||
+      typeof globalThis.matchMedia !== "function"
+    ) {
+      return false;
+    }
+    return globalThis.matchMedia(mediaQuery).matches;
   }, [mediaQuery]);
 
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);

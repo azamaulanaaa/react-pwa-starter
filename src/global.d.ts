@@ -6,6 +6,7 @@ declare global {
 
 declare module "@tanstack/react-router" {
   interface StaticDataRouteOption {
+    // deno-lint-ignore no-explicit-any
     breadcrumb?: string | ((match: any) => string);
   }
 }
@@ -15,5 +16,5 @@ declare global {
     & {
       [K in keyof T]: T[K];
     }
-    & {};
+    & Record<PropertyKey, never>;
 }

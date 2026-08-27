@@ -19,19 +19,25 @@ function Page() {
   const { t } = useTranslation();
   const { config, updateConfig } = useConfig();
 
-  const defaultValue = useMemo(() => ({
-    theme: config.theme,
-    locale: config.locale,
-  }), [config]);
+  const defaultValue = useMemo(
+    () => ({
+      theme: config.theme,
+      locale: config.locale,
+    }),
+    [config],
+  );
 
-  const handleOnSubmit = useCallback((value: FormSettingValue) => {
-    updateConfig(value);
-    toastManager.add({
-      description: t("page_dashboard_setting_toast_saved_description"),
-      title: t("page_dashboard_setting_toast_saved_title"),
-      type: "success",
-    });
-  }, [updateConfig, t]);
+  const handleOnSubmit = useCallback(
+    (value: FormSettingValue) => {
+      updateConfig(value);
+      toastManager.add({
+        description: t("page_dashboard_setting_toast_saved_description"),
+        title: t("page_dashboard_setting_toast_saved_title"),
+        type: "success",
+      });
+    },
+    [updateConfig, t],
+  );
 
   return (
     <Card>
@@ -40,7 +46,7 @@ function Page() {
       </CardHeader>
       <CardPanel>
         <FormSetting
-          defaultValue={defaultValue as any}
+          defaultValue={defaultValue as unknown as FormSettingValue}
           onSubmit={handleOnSubmit}
         />
       </CardPanel>

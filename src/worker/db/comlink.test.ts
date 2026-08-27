@@ -14,6 +14,7 @@ describe("comlink bridge", () => {
     const { port1, port2 } = new MessageChannel();
     Comlink.expose({ task: dbMain.task }, port1 as unknown as Comlink.Endpoint);
 
+    // deno-lint-ignore no-explicit-any
     const remote = Comlink.wrap(port2 as unknown as Comlink.Endpoint) as any;
 
     await remote.task.set("test-id-1", {
@@ -28,6 +29,7 @@ describe("comlink bridge", () => {
   it("watch over comlink endpoint", async () => {
     const { port1, port2 } = new MessageChannel();
     Comlink.expose({ task: dbMain.task }, port1 as unknown as Comlink.Endpoint);
+    // deno-lint-ignore no-explicit-any
     const remote = Comlink.wrap(port2 as unknown as Comlink.Endpoint) as any;
 
     const readable = await remote.task.watch({ direction: "next" });

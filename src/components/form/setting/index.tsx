@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { Schema } from "effect";
-import { AnyFieldApi, useForm } from "@tanstack/react-form";
+import { type AnyFieldApi, useForm } from "@tanstack/react-form";
 
 import { useTranslation } from "@/components/context/translation.tsx";
 import { Form } from "@/components/ui/form.tsx";
@@ -15,18 +15,20 @@ import {
 import { Button } from "@/components/ui/button.tsx";
 
 export function useFormSettingSchema() {
-  return Schema.mutable(Schema.Struct({
-    theme: Schema.Union(
-      Schema.Literal("system"),
-      Schema.Literal("light"),
-      Schema.Literal("dark"),
-    ),
-    locale: Schema.Union(
-      Schema.Literal(""),
-      Schema.Literal("en-US"),
-      Schema.Literal("id-ID"),
-    ),
-  }));
+  return Schema.mutable(
+    Schema.Struct({
+      theme: Schema.Union(
+        Schema.Literal("system"),
+        Schema.Literal("light"),
+        Schema.Literal("dark"),
+      ),
+      locale: Schema.Union(
+        Schema.Literal(""),
+        Schema.Literal("en-US"),
+        Schema.Literal("id-ID"),
+      ),
+    }),
+  );
 }
 export type FormSettingValue = Schema.Schema.Type<
   ReturnType<typeof useFormSettingSchema>
@@ -48,9 +50,9 @@ function useSelectThemeValues(): Record<FormSettingValue["theme"], string> {
   const { t } = useTranslation();
 
   return {
-    "system": t("form_setting_theme_select_label_system"),
-    "light": t("form_setting_theme_select_label_light"),
-    "dark": t("form_setting_theme_select_label_dark"),
+    system: t("form_setting_theme_select_label_system"),
+    light: t("form_setting_theme_select_label_light"),
+    dark: t("form_setting_theme_select_label_dark"),
   };
 }
 
@@ -67,16 +69,16 @@ function useSelectLocaleValues(): Record<FormSettingValue["locale"], string> {
 export function FormSetting(props: FormSettingProps) {
   const { t } = useTranslation();
   const schema = useFormSettingSchema();
-  const standard_schema = useMemo(() => Schema.standardSchemaV1(schema), [
-    schema,
-  ]);
+  const standard_schema = useMemo(
+    () => Schema.standardSchemaV1(schema),
+    [schema],
+  );
 
   const select_theme_value = useSelectThemeValues();
   const select_locale_value = useSelectLocaleValues();
 
   const form = useForm({
-    defaultValues: (props.value ?? props.defaultValue) ??
-      FormSettingDefaultValue,
+    defaultValues: props.value ?? props.defaultValue ?? FormSettingDefaultValue,
     validators: {
       onChange: standard_schema,
     },
@@ -108,13 +110,12 @@ export function FormSetting(props: FormSettingProps) {
       <form.Field name="theme">
         {(field) => (
           <Field className="w-full">
-            <FieldLabel>
-              {t("form_setting_theme_label")}
-            </FieldLabel>
+            <FieldLabel>{t("form_setting_theme_label")}</FieldLabel>
             <Select
               items={select_theme_value}
               value={field.state.value}
-              onValueChange={(value) => field.handleChange(value as any)}
+              onValueChange={(value) =>
+                field.handleChange(value as FormSettingValue["theme"])}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -136,13 +137,12 @@ export function FormSetting(props: FormSettingProps) {
       <form.Field name="locale">
         {(field) => (
           <Field className="w-full">
-            <FieldLabel>
-              {t("form_setting_locale_label")}
-            </FieldLabel>
+            <FieldLabel>{t("form_setting_locale_label")}</FieldLabel>
             <Select
               items={select_locale_value}
               value={field.state.value}
-              onValueChange={(value) => field.handleChange(value as any)}
+              onValueChange={(value) =>
+                field.handleChange(value as FormSettingValue["locale"])}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -161,9 +161,7 @@ export function FormSetting(props: FormSettingProps) {
           </Field>
         )}
       </form.Field>
-      <Button type="submit">
-        {t("form_setting_submit_button")}
-      </Button>
+      <Button type="submit">{t("form_setting_submit_button")}</Button>
     </Form>
   );
 }

@@ -9,15 +9,9 @@ import { openStore } from "@/worker/fs/store.ts";
 const storage = await openStore();
 
 export type FsPersistence = {
-  save: (
-    table: string,
-    id: Id,
-    doc: unknown,
-  ) => Effect.Effect<void, DbError>;
+  save: (table: string, id: Id, doc: unknown) => Effect.Effect<void, DbError>;
   remove: (table: string, id: Id) => Effect.Effect<boolean, DbError>;
-  load: (
-    table: string,
-  ) => Effect.Effect<{ id: Id; value: unknown }[], DbError>;
+  load: (table: string) => Effect.Effect<{ id: Id; value: unknown }[], DbError>;
 };
 
 export function createFsPersistence(root = "db/main"): FsPersistence {
@@ -27,10 +21,7 @@ export function createFsPersistence(root = "db/main"): FsPersistence {
     save: (table, id, doc) =>
       Effect.tryPromise({
         try: async () => {
-          await storage.setItem(
-            keyOf(table, id),
-            JSON.stringify(doc),
-          );
+          await storage.setItem(keyOf(table, id), JSON.stringify(doc));
         },
         catch: (error) => new DbError({ error }),
       }),
@@ -98,9 +89,7 @@ export function loadSnapshot(
 export type DbFs = {
   persistence: FsPersistence;
   attach: (events: EventBus) => () => void;
-  hydrate: (
-    store: BTreeStoreType,
-  ) => Effect.Effect<void, DbError>;
+  hydrate: (store: BTreeStoreType) => Effect.Effect<void, DbError>;
 };
 
 export type PeerSync = {
@@ -131,6 +120,7 @@ export function createPeerSync(root = "db/main"): PeerSync {
 }
 
 export function createDbFs(
+  // deno-lint-ignore no-explicit-any
   tables: Record<string, TableModule<string, any>>,
   root?: string,
 ): DbFs {

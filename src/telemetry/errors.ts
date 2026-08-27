@@ -30,12 +30,14 @@ function describe(error: unknown): {
 }
 
 export function captureGlobalErrors(): void {
-  window.addEventListener("error", (event) => {
-    record(describe(event.error ?? event.message), "uncaught_error");
+  globalThis.addEventListener("error", (event) => {
+    const e = event as ErrorEvent;
+    record(describe(e.error ?? e.message), "uncaught_error");
   });
 
-  window.addEventListener("unhandledrejection", (event) => {
-    record(describe(event.reason), "unhandled_rejection");
+  globalThis.addEventListener("unhandledrejection", (event) => {
+    const e = event as PromiseRejectionEvent;
+    record(describe(e.reason), "unhandled_rejection");
   });
 }
 

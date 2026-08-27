@@ -4,7 +4,8 @@ const NAME_FUNCTION = "FUNCTION_PROXY";
 
 if (!Comlink.transferHandlers.has(NAME_FUNCTION)) {
   Comlink.transferHandlers.set(NAME_FUNCTION, {
-    canHandle: (val): val is Function => typeof val === "function",
+    canHandle: (val): val is (...args: unknown[]) => unknown =>
+      typeof val === "function",
     serialize: (val) => {
       const { port1, port2 } = new MessageChannel();
       Comlink.expose(val, port1);

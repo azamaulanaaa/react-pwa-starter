@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+// deno-lint-ignore no-explicit-any
 export function useDebouncedCallback<T extends (...args: any[]) => any>(
   callback: T,
   delay: number,
