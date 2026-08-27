@@ -13,3 +13,8 @@ export type SyncRemoteProxy<T> = {
 };
 
 export { expose, transfer, wrap } from "comlink";
+
+export {
+  interceptProxy,
+  type ProxyCallInterceptor,
+} from "@/lib/comlink/intercept.ts";
