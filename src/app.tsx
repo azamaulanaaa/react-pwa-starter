@@ -55,17 +55,31 @@ export function App() {
 
   useEffect(() => {
     if (locale === "") return;
-    fetch(`/locales/${locale}.json`)
+    const controller = new AbortController();
+    fetch(`/locales/${locale}.json`, { signal: controller.signal })
       .then((res) => res.json())
-      .then(setDictionary)
-      .catch(console.error);
+      .then((next) => {
+        if (!controller.signal.aborted) setDictionary(next);
+      })
+      .catch((error) => {
+        if (controller.signal.aborted) return;
+        console.error(error);
+      });
+    return () => controller.abort();
   }, [locale]);
 
   useEffect(() => {
-    fetch(`/locales/en-US.json`)
+    const controller = new AbortController();
+    fetch(`/locales/en-US.json`, { signal: controller.signal })
       .then((res) => res.json())
-      .then(setFallbackDictionary)
-      .catch(console.error);
+      .then((next) => {
+        if (!controller.signal.aborted) setFallbackDictionary(next);
+      })
+      .catch((error) => {
+        if (controller.signal.aborted) return;
+        console.error(error);
+      });
+    return () => controller.abort();
   }, []);
 
   return (
