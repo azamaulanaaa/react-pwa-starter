@@ -77,7 +77,17 @@ export function instrumentRouter(router: RouterLike): () => void {
   );
 
   const unsubscribeEnd = router.subscribe("onResolved", ({ toLocation }) => {
-    if (!active || active.pattern !== routePattern(toLocation.pathname)) return;
+    if (!active) return;
+    const resolvedPattern = routePattern(toLocation.pathname);
+    if (active.pattern !== resolvedPattern) {
+      // Redirect / alias resolved to a different route: the original load is
+      // done, so close it out instead of leaking the span until the next
+      // navigation. Attribute it to the pattern we actually started on.
+      active.span.setAttribute("router.redirected", resolvedPattern);
+      active.span.end();
+      active = undefined;
+      return;
+    }
     const durationMs = performance.now() - active.startedAtMs;
     const attrs = { "http.route": active.pattern };
 

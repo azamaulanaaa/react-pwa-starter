@@ -32,7 +32,7 @@ import {
 import { registerInstrumentations } from "@opentelemetry/instrumentation";
 import { FetchInstrumentation } from "@opentelemetry/instrumentation-fetch";
 
-import { hasTelemetryConsent, sessionId } from "@/telemetry/api.ts";
+import { getMeter, hasTelemetryConsent, sessionId } from "@/telemetry/api.ts";
 import { resolveTelemetryConfig } from "@/telemetry/config.ts";
 import { instrumentRouter } from "@/telemetry/router.ts";
 import {
@@ -142,7 +142,7 @@ export function setupTelemetry({ router }: TelemetryOptions): void {
 
   // --- App-level instrumentation ---
   instrumentRouter(router);
-  observeWebVitals();
+  observeWebVitals({ meter: getMeter() });
   captureGlobalErrors();
   observePageLifecycle({
     onHidden: () => {
