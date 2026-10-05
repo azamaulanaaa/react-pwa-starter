@@ -1,4 +1,4 @@
-import { type Ref, useMemo, useRef } from "react";
+import { type Ref, useMemo } from "react";
 import {
   ColumnDef,
   flexRender,
@@ -59,15 +59,6 @@ export function TableGeneric<TData>(
   const enableSelection = Boolean(
     props.rowSelection || props.onRowSelectionChange,
   );
-
-  const onRowSelectionChangeRef = useRef(props.onRowSelectionChange);
-  onRowSelectionChangeRef.current = props.onRowSelectionChange;
-
-  const onColumnVisibilityChangeRef = useRef(props.onColumnVisibilityChange);
-  onColumnVisibilityChangeRef.current = props.onColumnVisibilityChange;
-
-  const getRowIdRef = useRef(props.getRowId);
-  getRowIdRef.current = props.getRowId;
 
   const columns = useMemo<ColumnDef<TData>[]>(() => {
     if (!enableSelection) return props.columns;

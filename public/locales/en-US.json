@@ -13,6 +13,7 @@
   "form_task_description_placeholder": "Task Description",
   "form_task_error_task_empty": "Task description cannot be empty",
   "form_task_insert": "Insert",
+  "form_task_validating": "Validating...",
   "image_preview_download": "Download",
   "input_file_add_more_button": "Add files",
   "input_file_button_label": "Add files",

@@ -13,6 +13,7 @@
   "form_task_description_placeholder": "Deskripsi Tugas",
   "form_task_error_task_empty": "Deskripsi tugas tidak boleh kosong",
   "form_task_insert": "Masukkan",
+  "form_task_validating": "Memvalidasi...",
   "image_preview_download": "Unduh",
   "input_file_add_more_button": "Tambah file",
   "input_file_button_label": "Tambah file",

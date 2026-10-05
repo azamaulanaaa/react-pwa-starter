@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { AnyFieldApi, useForm } from "@tanstack/react-form";
+import { useForm } from "@tanstack/react-form";
 import { Schema } from "effect";
 
 import { useTranslation } from "@/components/context/translation.tsx";
@@ -7,6 +7,7 @@ import { Form } from "@/components/ui/form.tsx";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { Button } from "@/components/ui/button.tsx";
+import { FieldInfo } from "@/components/form/field-info.tsx";
 
 const useFormTaskSchema = () => {
   const { t } = useTranslation();
@@ -21,21 +22,6 @@ const useFormTaskSchema = () => {
 export type FormTaskValue = Schema.Schema.Type<
   ReturnType<typeof useFormTaskSchema>
 >;
-
-function FieldInfo({ field }: { field: AnyFieldApi }) {
-  const { t } = useTranslation();
-
-  return (
-    <>
-      {field.state.meta.isTouched && !field.state.meta.isValid
-        ? field.state.meta.errors.map((err) => (
-          <em key={err.message}>{err.message}</em>
-        ))
-        : null}
-      {field.state.meta.isValidating ? t("form_task_validating") : null}
-    </>
-  );
-}
 
 export type FormTaskProps = {
   defaultValues?: FormTaskValue;
@@ -89,7 +75,7 @@ export function FormTask(props: FormTaskProps) {
               placeholder={t("form_task_description_placeholder")}
             />
             <FieldError match={!field.state.meta.isValid}>
-              <FieldInfo field={field} />
+              <FieldInfo field={field} validatingLabel="form_task_validating" />
             </FieldError>
           </Field>
         )}

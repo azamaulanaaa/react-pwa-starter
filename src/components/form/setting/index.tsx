@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { Schema } from "effect";
-import { type AnyFieldApi, useForm } from "@tanstack/react-form";
+import { useForm } from "@tanstack/react-form";
 
 import { useTranslation } from "@/components/context/translation.tsx";
 import { Form } from "@/components/ui/form.tsx";
@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select.tsx";
 import { Button } from "@/components/ui/button.tsx";
+import { FieldInfo } from "@/components/form/field-info.tsx";
 
 export function useFormSettingSchema() {
   return Schema.mutable(
@@ -129,7 +130,7 @@ export function FormSetting(props: FormSettingProps) {
               </SelectPopup>
             </Select>
             <FieldError match={!field.state.meta.isValid}>
-              <FieldInfo field={field} />
+              <FieldInfo field={field} validatingLabel="form_setting_validating" />
             </FieldError>
           </Field>
         )}
@@ -156,27 +157,12 @@ export function FormSetting(props: FormSettingProps) {
               </SelectPopup>
             </Select>
             <FieldError match={!field.state.meta.isValid}>
-              <FieldInfo field={field} />
+              <FieldInfo field={field} validatingLabel="form_setting_validating" />
             </FieldError>
           </Field>
         )}
       </form.Field>
       <Button type="submit">{t("form_setting_submit_button")}</Button>
     </Form>
-  );
-}
-
-function FieldInfo({ field }: { field: AnyFieldApi }) {
-  const { t } = useTranslation();
-
-  return (
-    <>
-      {field.state.meta.isTouched && !field.state.meta.isValid
-        ? field.state.meta.errors.map((err) => (
-          <em key={err.message}>{err.message}</em>
-        ))
-        : null}
-      {field.state.meta.isValidating ? t("form_setting_validating") : null}
-    </>
   );
 }
