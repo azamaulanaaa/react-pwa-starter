@@ -30,12 +30,11 @@ library, so you can bootstrap production-ready apps quickly.
 - Comlink-powered Web Worker that works as both Dedicated and SharedWorker
   (single shared instance across tabs)
 - oxkv (WASM key-value store) for offline-first persistence
-- Cross-tab data sync via change bus / peer sync (`src/worker/db-fs`)
+- Cross-tab data sync via change bus / peer sync (`src/worker/db`)
 - Chunked file storage API with strict part-size validation
 - Custom translation layer (micromustache templates) with en-US/id-ID locales
   plus Intl-based number/date/currency formatting
-- TanStack Router (file-based routes, auto code splitting), Form, Table, and
-  query-core
+- TanStack Router (file-based routes, auto code splitting), Form, and Table
 - Tailwind CSS 4 + utility-first styling
 - Testing with Vitest 4 (fake-indexeddb included)
 - Component preview via Ladle
@@ -85,8 +84,8 @@ in `deno.json`).
   store
 - `effect` — schema validation, streams, and error handling (v3.22+)
 - `micromustache` — mustache-style interpolation for translations
-- `@tanstack/react-router`, `@tanstack/react-form`, `@tanstack/react-table`,
-  `@tanstack/query-core` — routing & data management
+- `@tanstack/react-router`, `@tanstack/react-form`, `@tanstack/react-table` —
+  routing, forms & data tables
 - `@base-ui/react` — unstyled, accessible components
 - `class-variance-authority`, `cnfast`, `tailwindcss` — styling utilities
 - `vitest` — test runner
@@ -115,8 +114,7 @@ src/
 ├── lib/               # Comlink helpers, cn, misc utilities
 └── worker/
     ├── main.ts        # Worker entry: exposes { db, fs } via Comlink
-    ├── db/            # Database layer: tables, schema, change bus, oxkv
-    ├── db-fs/         # DB-backed file system + cross-tab peer sync
+    ├── db/            # Tables, schema, change bus, oxkv, persistence, peer sync
     └── fs/            # Chunked file storage (multi-part uploads)
 ```
 
@@ -136,7 +134,7 @@ src/
     MessagePort.
   - As a Dedicated worker, each tab gets its own instance, and changes are kept
     in sync across tabs via the change bus / peer sync layer
-    (`src/worker/db-fs`).
+    (`src/worker/db`).
 - The database layer (`src/worker/db`) provides typed tables with Effect Schema
   validation on top of the oxkv WASM store, plus watch/stream APIs for reactive
   queries.
