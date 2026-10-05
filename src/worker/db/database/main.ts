@@ -11,4 +11,4 @@ export type Task = Schema.Schema.Type<typeof TaskSchema>;
 export const TableTask = createTableModule({
   name: "task",
   schema: TaskSchema,
-})();
+});

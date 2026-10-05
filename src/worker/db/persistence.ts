@@ -12,9 +12,7 @@ const storage = createStorage({
   driver: indexedDbDriver({ dbName: "db" }),
 });
 
-export function openDbStore() {
-  return Promise.resolve(storage);
-}
+export const dbStorage = storage;
 
 export type DbPersistence = {
   save: (table: string, id: Id, doc: unknown) => Effect.Effect<void, DbError>;
@@ -114,14 +112,22 @@ export function createPeerSync(root = "db/main"): PeerSync {
   }
 
   const channel = new BroadcastChannel(`db:${root}`);
+  // A single onmessage fans out to every subscriber, so a second subscribe()
+  // cannot clobber the first and one unsubscribe cannot detach the rest.
+  const handlers = new Set<(event: DbEvent) => void>();
+
+  channel.onmessage = (message) => {
+    const event = message.data as DbEvent;
+    for (const handler of [...handlers]) handler(event);
+  };
 
   return {
     publish: (event) => channel.postMessage(event),
     subscribe: (handler) => {
-      channel.onmessage = (message) => handler(message.data as DbEvent);
+      handlers.add(handler);
 
       return () => {
-        channel.onmessage = null;
+        handlers.delete(handler);
       };
     },
   };
@@ -150,7 +156,3 @@ export function createDbFs(
       ),
   };
 }
-
-// Back-compat alias — remove after migration
-export type FsPersistence = DbPersistence;
-export const createFsPersistence = createDbPersistence;
