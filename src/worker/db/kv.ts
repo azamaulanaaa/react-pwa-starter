@@ -111,7 +111,7 @@ export function createKvApi({ open, bus }: KvDeps): KvApi {
       Effect.gen(function* () {
         const store = yield* openFx();
         return yield* fromPromise(
-          () => store.exists(key) as Promise<boolean>,
+          () => store.has(key) as Promise<boolean>,
         );
       }),
     gets: (args) =>
@@ -175,7 +175,7 @@ export function createKvApi({ open, bus }: KvDeps): KvApi {
               return removed;
             }),
           exists: (key) =>
-            fromPromise(() => tx.exists(key) as Promise<boolean>),
+            fromPromise(() => tx.has(key) as Promise<boolean>),
           commit: () =>
             Effect.gen(function* () {
               yield* fromPromise(() => tx.commit());

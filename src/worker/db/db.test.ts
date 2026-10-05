@@ -220,9 +220,12 @@ describe("kv api", () => {
   });
 
   it("paginates and filters raw keys with gets", async () => {
-    await run(kvApi.set("docs:1", { kind: "a", n: 1 }));
-    await run(kvApi.set("docs:2", { kind: "b", n: 5 }));
-    await run(kvApi.set("docs:3", { kind: "a", n: 9 }));
+    // Values are deliberately not single letters: oxkv matches bare terms
+    // fuzzily with slop 2, so "kind:a" also matches "b" and the AND filter
+    // would stop discriminating.
+    await run(kvApi.set("docs:1", { kind: "alpha", n: 1 }));
+    await run(kvApi.set("docs:2", { kind: "beta", n: 5 }));
+    await run(kvApi.set("docs:3", { kind: "alpha", n: 9 }));
 
     const all = await run(
       kvApi.gets({
@@ -242,7 +245,7 @@ describe("kv api", () => {
         direction: "next",
         startCursor: "docs:",
         endCursor: "docs:\uffff",
-        query: "kind:a AND n:[5 TO 10]",
+        query: "kind:alpha AND n:[5 TO 10]",
       }),
     );
     expect(filtered.map((entry) => entry.key)).toEqual(["docs:3"]);
