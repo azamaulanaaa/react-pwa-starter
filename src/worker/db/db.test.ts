@@ -16,21 +16,19 @@ function run<A>(effect: Effect.Effect<A, unknown, never>): Promise<A> {
   return Effect.runPromise(effect);
 }
 
-async function firstTwoChunks(
-  streamFactory: () => ReturnType<typeof dbMain.task.watch>,
-): Promise<Task[][]> {
-  const iterator = Stream.toAsyncIterable(
-    streamFactory(),
-  )[Symbol.asyncIterator]();
-
-  const chunks: Task[][] = [];
-  while (chunks.length < 2) {
-    const result = await iterator.next();
-    if (result.done) break;
-    chunks.push(result.value);
+/** Polls `predicate` until true, failing the test if it never becomes true. */
+async function waitFor(
+  predicate: () => boolean,
+  timeoutMs = 2000,
+  intervalMs = 5,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (!predicate()) {
+    if (Date.now() > deadline) {
+      throw new Error(`waitFor timed out after ${timeoutMs}ms`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
   }
-  await iterator.return?.(undefined);
-  return chunks;
 }
 
 describe("dbMain.task", () => {
@@ -87,37 +85,81 @@ describe("dbMain.task", () => {
   });
 
   it("streams initial data after writes", async () => {
+    const seedId = randomUUID();
     await run(
-      dbMain.task.set(randomUUID(), {
+      dbMain.task.set(seedId, {
         description: "stream seed",
         is_done: false,
       }),
     );
 
-    const chunksPromise = firstTwoChunks(() =>
-      dbMain.task.watch({ direction: "next" })
-    );
+    const iterator = Stream.toAsyncIterable(
+      dbMain.task.watch({ direction: "next" }),
+    )[Symbol.asyncIterator]();
 
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    // Await the first chunk so the subscription is provably live, instead of
+    // sleeping a fixed interval and hoping the watcher attached in time.
+    const initial = (await iterator.next()).value as Task[];
+
+    const secondId = randomUUID();
     await run(
-      dbMain.task.set(randomUUID(), {
+      dbMain.task.set(secondId, {
         description: "stream second",
         is_done: true,
       }),
     );
 
-    const [initial, afterInsert] = await chunksPromise;
-    expect(initial.length).toBeGreaterThanOrEqual(1);
+    const afterInsert = (await iterator.next()).value as Task[];
+    await iterator.return?.(undefined);
+
+    expect(initial.some((task) => task.id === seedId)).toBe(true);
     expect(afterInsert.length).toBe(initial.length + 1);
-    expect(
-      afterInsert.some((task) => task.description === "stream second"),
-    ).toBe(true);
+    expect(afterInsert.some((task) => task.id === secondId)).toBe(true);
+  });
+
+  it("emits exactly one watch chunk per write", async () => {
+    const chunks: Task[][] = [];
+    const iterator = Stream.toAsyncIterable(
+      dbMain.task.watch({ direction: "next" }),
+    )[Symbol.asyncIterator]();
+    void (async () => {
+      for (;;) {
+        const result = await iterator.next();
+        if (result.done) return;
+        chunks.push(result.value);
+      }
+    })();
+
+    // Bounded wait for the subscription to become live, instead of assuming a
+    // fixed settle window is enough for the first queryRows to finish.
+    await waitFor(() => chunks.length >= 1);
+
+    await run(
+      dbMain.task.set(randomUUID(), {
+        description: "single chunk",
+        is_done: false,
+      }),
+    );
+
+    await waitFor(() => chunks.length >= 2);
+    const afterWrite = chunks.length;
+
+    // A duplicate notification would arrive as a third chunk; give it a
+    // window to show up, then assert the write produced exactly one.
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    expect(chunks.length).toBe(afterWrite);
+
+    await iterator.return?.(undefined);
+    expect(afterWrite - 1).toBe(1);
   });
 
   it("paginates next and prev with limit", async () => {
+    const pageIds: string[] = [];
     for (let i = 0; i < 3; i++) {
+      const id = randomUUID();
+      pageIds.push(id);
       await run(
-        dbMain.task.set(randomUUID(), {
+        dbMain.task.set(id, {
           description: `page ${i}`,
           is_done: false,
         }),
@@ -138,9 +180,14 @@ describe("dbMain.task", () => {
     );
 
     expect(nextPage.length).toBe(2);
-    expect(prevPage.map((task) => task.description)).toEqual([
-      "page 2",
-      "page 1",
+    expect(prevPage.length).toBe(2);
+    // The store is shared across every test in this file. Keys are uuid v7, so
+    // key order is creation order: `prev` walks the newest keys first, so it
+    // must surface exactly the two most recent rows this test created —
+    // independent of whatever earlier tests left behind.
+    expect(prevPage.map((task) => task.id)).toEqual([
+      pageIds[2],
+      pageIds[1],
     ]);
     expect(prevPage.at(-1)!.created_at.getTime()).toBeGreaterThanOrEqual(
       nextPage.at(-1)!.created_at.getTime(),
@@ -269,7 +316,7 @@ describe("kv api", () => {
     await run(tx.rollback());
   });
 
-  it("filters table rows out of raw scans", async () => {
+  it("scans only the requested prefix, never leaking other table rows", async () => {
     const id = randomUUID();
     await run(
       dbMain.task.set(id, {
@@ -285,7 +332,12 @@ describe("kv api", () => {
       endCursor: `docs:\uffff`,
     }));
 
-    expect(entries.some((entry) => entry.key === "docs:visible")).toBe(true);
+    // The range covers `docs:` only, so the task row written above must not
+    // appear — that is the property the test name advertises.
+    expect(entries.map((entry) => entry.key)).toEqual(["docs:visible"]);
+    expect(entries.every((entry) => !entry.key.startsWith("task:"))).toBe(
+      true,
+    );
   });
 });
 
@@ -300,18 +352,16 @@ describe("db event bus", () => {
       schema: BaseSchema.pipe(
         Schema.extend(Schema.Struct({ description: Schema.NonEmptyString })),
       ),
-    })({
-      extensions: (ctx) => {
+    });
+
+    const db = createDatabase("events-test", { collector: CollectorTable }, {
+      setup: (ctx) =>
         ctx.onEvent((event) =>
           Effect.sync(() => {
             collected.push(event);
           })
-        );
-        return {};
-      },
+        ),
     });
-
-    const db = createDatabase("events-test", { collector: CollectorTable });
 
     const id = randomUUID();
     await run(db.collector.set(id, { description: "watched" }));

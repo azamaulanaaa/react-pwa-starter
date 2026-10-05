@@ -64,47 +64,24 @@ type GetModuleValues<T> = T extends Record<string, infer M>
   : never
   : never;
 
-export const createTableModule =
-  <Name extends string, A extends Base, I>(config: {
+export const createTableModule = <Name extends string, A extends Base, I>(
+  config: {
     name: Name;
     schema: Schema.Schema<A, I, never>;
-  }) =>
-  <
-    // deno-lint-ignore no-explicit-any
-    CustomApi extends Record<string, ApiFunction<any, any, any>> = Record<
-      PropertyKey,
-      never
-    >,
-  >(moduleConfig?: {
-    extensions?: (
-      ctx: ModuleContext,
-      crud: ReturnType<typeof createTableApi<Name, A, I>>,
-    ) => CustomApi;
-  }): TableModule<
-    Name,
-    ReturnType<typeof createTableApi<Name, A, I>> & CustomApi
-  > => {
-    return {
-      name: config.name,
-      api: (ctx) => {
-        const crud = createTableApi({
-          tableName: config.name,
-          schema: config.schema,
-          kv: ctx.kv,
-          subscribe: ctx.subscribe,
-          emit: ctx.emit,
-        });
-        const customApi = moduleConfig?.extensions
-          ? moduleConfig.extensions(ctx, crud)
-          : ({} as CustomApi);
-
-        return {
-          ...crud,
-          ...customApi,
-        };
-      },
-    };
+  },
+): TableModule<Name, ReturnType<typeof createTableApi<Name, A, I>>> => {
+  return {
+    name: config.name,
+    api: (ctx) =>
+      createTableApi({
+        tableName: config.name,
+        schema: config.schema,
+        kv: ctx.kv,
+        subscribe: ctx.subscribe,
+        emit: ctx.emit,
+      }),
   };
+};
 
 export function exportStore(
   store: BTreeStore,
@@ -141,11 +118,6 @@ export function createDatabase<
 
   const bus = createChangeBus();
   const events = config.events ?? createEventBus();
-
-  events.subscribe((event) => {
-    bus.notify(event.table);
-    return Effect.void;
-  });
 
   let ready: Promise<BTreeStore> | null = null;
 
