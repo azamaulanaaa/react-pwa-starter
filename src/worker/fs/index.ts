@@ -2,9 +2,9 @@ import { Effect, Ref, Schema, Stream } from "effect";
 import { v7 as randomUUID } from "uuid";
 
 import { FsError } from "@/worker/fs/error.ts";
-import { openStore } from "@/worker/fs/store.ts";
+import { fsStorage } from "@/worker/fs/store.ts";
 
-const db = await openStore();
+const db = fsStorage;
 
 const FileIdSchema = Schema.NonEmptyString;
 export type FileId = Schema.Schema.Type<typeof FileIdSchema>;
@@ -43,14 +43,6 @@ export const MetadataUploadSchema = Schema.Struct({
       const expectedParts = Math.ceil(data.file_size / data.part_size);
       if (data.file_total_parts !== expectedParts) {
         return `Inconsistent math: file_total_parts must be exactly ${expectedParts} for a file of this size split by ${data.part_size} bytes`;
-      }
-    }
-
-    // Multi-part: ensure total_parts * part_size == file_size
-    if (data.file_total_parts > 1) {
-      const product = data.file_total_parts * data.part_size;
-      if (product !== data.file_size) {
-        return `Inconsistent math: file_total_parts (${data.file_total_parts}) * part_size (${data.part_size}) must equal file_size (${data.file_size})`;
       }
     }
 
@@ -187,6 +179,14 @@ export const CompleteUpload = (id: FileId, metadata: FileMetadata) =>
       catch: () =>
         new FsError({ error: "Session missing or already finalized." }),
     });
+    // getItem resolves to null for an unknown id (a cancelled or already
+    // completed upload), so the catch arm above cannot cover that case.
+    if (!session) {
+      return yield* Effect.fail(
+        new FsError({ error: "Session missing or already finalized." }),
+      );
+    }
+
     const indices = Array.from(
       { length: session.file_total_parts },
       (_, i) => i,
@@ -200,7 +200,19 @@ export const CompleteUpload = (id: FileId, metadata: FileMetadata) =>
           if (chunk) buffers.push(chunk as Uint8Array);
         }
 
+        if (buffers.length !== session.file_total_parts) {
+          throw new Error(
+            `missing parts: expected ${session.file_total_parts} parts, assembled ${buffers.length}`,
+          );
+        }
+
         const totalLength = buffers.reduce((acc, val) => acc + val.length, 0);
+        if (totalLength !== session.file_size) {
+          throw new Error(
+            `size mismatch: expected ${session.file_size} bytes, assembled ${totalLength} bytes`,
+          );
+        }
+
         const combined = new Uint8Array(totalLength);
         let offset = 0;
         for (const buffer of buffers) {
