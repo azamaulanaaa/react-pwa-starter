@@ -22,7 +22,8 @@ const createWorker = (): SyncRemoteProxy<WorkerType> => {
     }),
   ) as unknown as SyncRemoteProxy<WorkerType>);
 
-  // Every cross-boundary call becomes a span; no-op until telemetry starts.
+  // Every call across the boundary becomes a span.
+  // This does nothing until the telemetry starts.
   return instrumentWorkerProxy(proxy);
 };
 

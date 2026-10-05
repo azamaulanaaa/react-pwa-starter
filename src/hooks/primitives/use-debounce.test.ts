@@ -23,7 +23,7 @@ describe("useDebouncedCallback", () => {
     expect(callback).toHaveBeenCalledExactlyOnceWith("a");
   });
 
-  it("collapses rapid calls and keeps only the latest arguments", () => {
+  it("collapses a burst of calls into one call with the last arguments", () => {
     const callback = vi.fn();
     const { result } = renderHook(() => useDebouncedCallback(callback, 100));
 
@@ -104,7 +104,7 @@ describe("useDebounce", () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  it("returns the initial value immediately, then lags behind", () => {
+  it("returns the initial value immediately and updates it after the delay", () => {
     const { result, rerender } = renderHook(
       ({ value }) => useDebounce(value, 100),
       { initialProps: { value: "a" } },
@@ -119,7 +119,7 @@ describe("useDebounce", () => {
     expect(result.current).toBe("b");
   });
 
-  it("settles on the last value across a burst of updates", () => {
+  it("returns the last value after a burst of updates", () => {
     const { result, rerender } = renderHook(
       ({ value }) => useDebounce(value, 100),
       { initialProps: { value: "a" } },

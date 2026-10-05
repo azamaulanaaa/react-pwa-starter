@@ -112,8 +112,9 @@ export function createPeerSync(root = "db/main"): PeerSync {
   }
 
   const channel = new BroadcastChannel(`db:${root}`);
-  // A single onmessage fans out to every subscriber, so a second subscribe()
-  // cannot clobber the first and one unsubscribe cannot detach the rest.
+  // A single onmessage handler sends the message to every subscriber.
+  // A second call to subscribe does not replace the first handler.
+  // One call to the unsubscribe function does not detach the other handlers.
   const handlers = new Set<(event: DbEvent) => void>();
 
   channel.onmessage = (message) => {

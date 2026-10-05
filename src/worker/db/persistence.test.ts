@@ -73,7 +73,7 @@ const flush = async () => {
   await new Promise((resolve) => setTimeout(resolve, 50));
 };
 
-/** Unwraps a failed exit down to the DbError payload. */
+/** Returns the `DbError` payload of a failed exit. */
 const failureMessage = (exit: Exit.Exit<unknown, unknown>): string => {
   if (!Exit.isFailure(exit)) return "";
   const failure = Cause.failureOption(exit.cause);
@@ -105,7 +105,8 @@ describe("db persistence: failure mapping", () => {
 
   it("maps a rejected remove to a DbError failure", async () => {
     const failing = createDbPersistence("failure-test-remove");
-    // remove() short-circuits on a missing key, so the key must exist first.
+    // The function `remove` returns false for a missing key.
+    // The test must create the key first.
     await dbStorage.setItem(`failure-test-remove/task/id-2`, "{}");
     vi.spyOn(dbStorage, "removeItem").mockRejectedValue(
       new Error("idb unavailable"),
@@ -139,7 +140,7 @@ describe("db persistence: failure mapping", () => {
 });
 
 describe("createPeerSync", () => {
-  it("is a safe no-op when BroadcastChannel is unavailable", () => {
+  it("does nothing when BroadcastChannel is unavailable", () => {
     const original = globalThis.BroadcastChannel;
     // deno-lint-ignore no-explicit-any
     (globalThis as any).BroadcastChannel = undefined;
@@ -154,9 +155,9 @@ describe("createPeerSync", () => {
     }
   });
 
-  it("fans one message out to every subscriber", async () => {
-    // BroadcastChannel never echoes to the object that posted, so publishing
-    // must come from a second peer instance on the same root.
+  it("sends one message to every subscriber", async () => {
+    // BroadcastChannel does not send a message back to the object that posted it.
+    // The test publishes from a second peer instance on the same root.
     const peers = createPeerSync("fanout-test");
     const sender = createPeerSync("fanout-test");
     const first: unknown[] = [];
@@ -172,11 +173,12 @@ describe("createPeerSync", () => {
     expect(second).toHaveLength(1);
     expect(first[0]).toMatchObject({ kind: "set", id: "id-1" });
 
-    // No close() exists: the channel intentionally lives for the
-    // lifetime of the module, as the worker has no teardown hook.
+    // The peer sync has no close function.
+    // The channel stays alive for the lifetime of the module on purpose.
+    // The worker has no teardown hook.
   });
 
-  it("detaches only the unsubscribed handler", async () => {
+  it("removes only the handler that unsubscribed", async () => {
     const peers = createPeerSync("detach-test");
     const sender = createPeerSync("detach-test");
     const kept: unknown[] = [];
@@ -192,7 +194,8 @@ describe("createPeerSync", () => {
     expect(kept).toHaveLength(0);
     expect(dropped).toHaveLength(1);
 
-    // No close() exists: the channel intentionally lives for the
-    // lifetime of the module, as the worker has no teardown hook.
+    // The peer sync has no close function.
+    // The channel stays alive for the lifetime of the module on purpose.
+    // The worker has no teardown hook.
   });
 });

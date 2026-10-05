@@ -7,8 +7,8 @@ export function useDebouncedCallback<T extends (...args: any[]) => any>(
 ) {
   const callbackRef = useRef(callback);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Arguments of the currently pending call, so flush() can replay them
-  // instead of invoking the callback with undefined.
+  // Arguments of the pending call.
+  // flush() replays them instead of calling the callback with undefined.
   const pendingArgsRef = useRef<unknown[] | null>(null);
 
   useEffect(() => {
@@ -36,12 +36,11 @@ export function useDebouncedCallback<T extends (...args: any[]) => any>(
     [delay, cancel],
   );
 
-  // Runs any pending call immediately, replaying the arguments it was called
-  // with. Takes no arguments of its own so the replayed call is never
-  // accidentally invoked with undefined.
+  // Runs the pending call immediately and replays its arguments.
+  // flush() takes no arguments, so it never calls the callback with undefined.
   const flush = useCallback((): void => {
     if (!timeoutRef.current) return;
-    // Capture before cancel() clears the pending slot.
+    // The code reads the arguments before cancel() clears the pending slot.
     const pending = pendingArgsRef.current ?? [];
     cancel();
     callbackRef.current(...pending);

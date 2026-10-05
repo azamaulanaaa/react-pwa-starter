@@ -1,9 +1,10 @@
 /**
- * Lightweight telemetry helpers — safe to import statically anywhere in app
- * code without pulling the heavy OTel SDK into the initial bundle.
+ * Lightweight telemetry helpers. Import them statically anywhere in app code.
+ * They do not add the heavy OTel SDK to the initial bundle.
  *
- * Before `setupTelemetry()` runs (or if it is disabled) these proxy the OTel
- * API globals, which are no-ops — so call sites never need to check state.
+ * Before `setupTelemetry()` runs, or if telemetry is disabled, these helpers
+ * call the OTel API globals. These globals are no-ops. Call sites never check
+ * state.
  */
 import { type Attributes, metrics, type Span, trace } from "@opentelemetry/api";
 import { type LogAttributes, logs } from "@opentelemetry/api-logs";
@@ -43,8 +44,9 @@ export function emitLog(
 }
 
 /**
- * Wrap an operation in an active span. Works for sync and async functions.
- * Errors are recorded on the span and re-thrown.
+ * Run an operation in an active span. The operation can be a sync function or
+ * an async function. The span records each error. The function re-throws each
+ * error.
  */
 export function withSpan<T>(
   name: string,
@@ -80,7 +82,8 @@ export function withSpan<T>(
 }
 
 function recordErrorOnSpan(span: Span, error: Error | unknown): void {
-  // OTel's Exception type is string | Error — normalize before recording.
+  // OTel's Exception type is string | Error. The code normalizes the value
+  // before recording it.
   const exception = error instanceof Error ? error : String(error);
   span.recordException(exception);
   const message = error instanceof Error ? error.message : String(error);
@@ -88,8 +91,8 @@ function recordErrorOnSpan(span: Span, error: Error | unknown): void {
 }
 
 /**
- * A stable per-session id so all signals from one browser session can be
- * correlated in the backend.
+ * Return a stable id for the current session. The backend can correlate all
+ * signals from one browser session with this id.
  */
 export function sessionId(): string {
   try {
@@ -105,10 +108,10 @@ export function sessionId(): string {
 }
 
 // --- Consent gate ---
-// Apps with privacy requirements (GDPR etc.) can set VITE_OTEL_REQUIRE_CONSENT
-// and call setTelemetryConsent(true) once the user opts in. Until then,
-// setupTelemetry() refuses to start and all helpers remain no-ops, so nothing
-// is collected or exported pre-consent.
+// Apps with privacy requirements, such as GDPR, can set
+// VITE_OTEL_REQUIRE_CONSENT. These apps call setTelemetryConsent(true) after
+// the user opts in. Until then, setupTelemetry() refuses to start and all
+// helpers remain no-ops. Nothing is collected or exported before the consent.
 let consentGranted = false;
 
 export function setTelemetryConsent(granted: boolean): void {

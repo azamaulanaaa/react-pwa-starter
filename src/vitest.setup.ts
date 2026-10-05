@@ -1,11 +1,12 @@
 import { vi } from "vitest";
 
-// Node 22+ defines a stubbed `localStorage` global that is `undefined` without
-// --localstorage-file, and jsdom's window under this Vitest version does not
-// expose a working Storage either (verified: setting environmentOptions.jsdom.url
-// does not help). Install a minimal in-memory Storage so DOM tests can exercise
-// source that touches `localStorage` directly. Node-environment test files
-// (no window) are unaffected.
+// Node 22+ defines a `localStorage` global as a stub. The stub stays `undefined`
+// without --localstorage-file. The jsdom window in this Vitest version does not
+// have a working Storage either. We checked this. Setting
+// environmentOptions.jsdom.url does not help.
+// This setup installs a minimal in-memory Storage. DOM tests can then run source
+// that uses `localStorage` directly. Node-environment test files have no window,
+// so they are not affected.
 if (
   typeof window !== "undefined" &&
   typeof window.localStorage === "undefined"
@@ -34,24 +35,25 @@ if (
   vi.stubGlobal("localStorage", createMemoryStorage());
 }
 
-// Use cross-runtime way to get the root directory
+// Get the root directory in a way that works in all runtimes
 const __ROOT__ = new URL("../", import.meta.url);
 
 vi.stubGlobal("fetch", async (url: string) => {
-  // Normalize the URL to a public file path
+  // Change the URL into a public file path
   const relativePath = url.startsWith("/") ? url.slice(1) : url;
   const fileUrl = new URL(relativePath, new URL("public/", __ROOT__));
 
   try {
     let content: string;
 
-    // Runtime-specific reading
+    // Read the file. The code uses a different function for each runtime.
     if (typeof (globalThis as { Deno?: unknown }).Deno !== "undefined") {
       content = await Deno.readTextFile(fileUrl.toString());
     } else if (typeof (globalThis as { Bun?: unknown }).Bun !== "undefined") {
       content = await Bun.file(fileUrl).text();
     } else {
-      // Node fallback (using dynamic import to avoid crashes in non-node)
+      // Fallback for Node. The code uses a dynamic import. A static import
+      // crashes the other runtimes.
       const { readFileSync } = await import("node:fs");
       content = readFileSync(fileUrl.toString(), "utf-8");
     }

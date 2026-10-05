@@ -120,7 +120,7 @@ describe("fs comlink bridge", () => {
     expect(file).toBeNull();
   });
 
-  it("accepts a multi-part declaration whose size is not a multiple of part_size", async () => {
+  it("accepts a multipart declaration where `file_size` is not a multiple of `part_size`", async () => {
     const remote = createTestFs();
 
     const id: string = await remote.InitUpload({
@@ -139,7 +139,7 @@ describe("fs comlink bridge", () => {
     ).rejects.toThrow(/inconsistent math/i);
   });
 
-  it("streams a multi-part upload whose size is not a multiple of part_size", async () => {
+  it("streams a multipart upload where `file_size` is not a multiple of `part_size`", async () => {
     const remote = createTestFs();
     const partSize = 1024;
     const bytes = new Uint8Array(2500).map((_, i) => (i * 31) % 256);
@@ -174,7 +174,7 @@ describe("fs comlink bridge", () => {
       file_total_parts: totalParts,
     });
 
-    // Deliberately skip part 1 to simulate a lost part.
+    // The test skips part 1 to simulate a lost part.
     for (const i of [0, 2]) {
       const start = i * partSize;
       await remote.UploadPart(
@@ -202,8 +202,9 @@ describe("fs comlink bridge", () => {
     const remote = createTestFs();
     const store = fsStorage;
 
-    // An unknown id resolves to null, which must surface as a typed FsError
-    // rather than a TypeError from dereferencing a null session.
+    // An unknown id resolves to null.
+    // The call must fail with an FsError.
+    // The call must not fail with a TypeError from a null session.
     await expect(
       remote.CompleteUpload(randomUUID(), {
         name: "ghost.bin",
@@ -211,7 +212,8 @@ describe("fs comlink bridge", () => {
       }),
     ).rejects.toThrow(/session missing or already finalized/i);
 
-    // Cancelled sessions are gone too, and must fail the same way.
+    // The test also removes the session.
+    // The call must fail in the same way.
     const id: string = await remote.InitUpload({
       file_size: 4,
       part_size: 4,

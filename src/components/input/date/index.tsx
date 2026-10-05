@@ -26,7 +26,7 @@ import { useFormatters } from "./use-formatters.ts";
 export type DateFormat = "yyyy-mm-dd" | "dd-mm-yyyy" | "mm-dd-yyyy";
 const SEPARATOR = "-";
 
-/** Derives the date format string based on local ordering rules */
+/** Selects the date format string from the ordering rules of the locale */
 function deriveDateFormatFromLocale(locale: string): DateFormat {
   try {
     const parts = new Intl.DateTimeFormat(locale, {
@@ -42,7 +42,7 @@ function deriveDateFormatFromLocale(locale: string): DateFormat {
     if (firstType === "month") return "mm-dd-yyyy";
     if (firstType === "day") return "dd-mm-yyyy";
   } catch {
-    // Fallback if invalid locale string
+    // The code uses the fallback format if the locale string is invalid
   }
   return "yyyy-mm-dd";
 }
@@ -130,7 +130,7 @@ export function InputDate({
 
   const lastValidValueRef = useRef<string>(formatDate(value, dateFormat));
 
-  // Sync state with incoming external `value` or `locale` change
+  // Updates the state from an external `value` or `locale` change
   useEffect(() => {
     const formatted = formatDate(value, dateFormat);
     setInputValue(formatted);
@@ -170,7 +170,7 @@ export function InputDate({
     const val = e.target.value;
     const isValid = val.length === 10 && parseDate(val, dateFormat);
 
-    // Reset back to last valid formatted date on invalid entries
+    // The code resets the input to the last valid date if the entry is invalid
     if (val.length > 0 && !isValid) {
       setInputValue(lastValidValueRef.current);
     }

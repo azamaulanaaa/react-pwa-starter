@@ -1,10 +1,10 @@
 /**
  * OpenTelemetry bootstrap for the browser.
  *
- * This module is intentionally heavy (SDK + exporters) and is reached only
- * through a dynamic `import()` from main.tsx so the OTel SDK lives in its own
- * lazy chunk and never blocks first paint. See src/telemetry/api.ts for the
- * statically-importable helper surface.
+ * This module loads the OTel SDK and the exporters. It loads them only through
+ * a dynamic `import()` in main.tsx. The dynamic import puts the OTel SDK in its
+ * own lazy chunk. That chunk never blocks the first paint.
+ * See src/telemetry/api.ts for the helpers that support static import.
  */
 import { metrics, trace } from "@opentelemetry/api";
 import { logs } from "@opentelemetry/api-logs";
@@ -42,11 +42,14 @@ import {
 import { captureGlobalErrors } from "@/telemetry/errors.ts";
 
 export interface TelemetryOptions {
-  /** The app router instance — used to emit navigation spans/metrics. */
+  /**
+   * The app router instance. The code uses it to emit navigation spans and
+   * metrics.
+   */
   router: RouterLike;
 }
 
-/** Minimal structural type of the TanStack Router surface we need. */
+/** The part of the TanStack Router type that the code uses. */
 interface RouterLike {
   subscribe: (
     eventType: "onBeforeLoad" | "onResolved",
@@ -62,9 +65,9 @@ function escapeRegExp(value: string): string {
 }
 
 /**
- * Initialize providers, exporters and instrumentations.
- * Resolves once everything is registered; telemetry failures must never break
- * the app, so callers are expected to swallow errors.
+ * Register the providers, the exporters, and the instrumentations.
+ * The function returns after the registration finishes. A telemetry failure
+ * must never break the app, so the caller must swallow such an error.
  */
 export function setupTelemetry({ router }: TelemetryOptions): void {
   const config = resolveTelemetryConfig();
@@ -130,11 +133,11 @@ export function setupTelemetry({ router }: TelemetryOptions): void {
     loggerProvider,
     instrumentations: [
       new FetchInstrumentation({
-        // Never trace our own OTLP export calls — they would recurse into
-        // spans about sending spans.
+        // Never trace our own OTLP export calls. The code does this because the
+        // calls would create spans about sending spans.
         ignoreUrls: [endpointRegex],
-        // Propagate W3C traceparent headers to the collector origin so
-        // backend-side work can be correlated with the frontend trace.
+        // Send the W3C traceparent headers to the collector origin. The
+        // backend can then correlate its work with the frontend trace.
         propagateTraceHeaderCorsUrls: [endpointRegex],
       }),
     ],

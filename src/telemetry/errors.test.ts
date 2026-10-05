@@ -9,13 +9,13 @@ vi.mock("@/telemetry/api.ts", () => ({
 type Handler = (event: unknown) => void;
 
 /**
- * Two things are per-test scoped:
- *  - the rate-limiter counters in errors.ts are module-level, so each test
- *    imports a fresh module instance (resetModules re-runs the mock factory,
- *    so emitLog must be read after the import);
- *  - captureGlobalErrors registers listeners on the shared global, so they are
- *    intercepted and invoked directly instead of dispatched, which would
- *    otherwise accumulate one listener per test.
+ * Two items have a scope of one test.
+ * - The rate-limiter counters in errors.ts have module scope. Each test imports
+ *   a new module instance. The `resetModules` call runs the mock factory again,
+ *   so the test must read `emitLog` after the import.
+ * - `captureGlobalErrors` registers listeners on the shared global. The test
+ *   intercepts these listeners and calls them directly. The test does not
+ *   dispatch the events. Each dispatched event would add one listener per test.
  */
 const withFreshErrors = async (
   run: (ctx: {
@@ -30,8 +30,8 @@ const withFreshErrors = async (
   const { captureGlobalErrors } = await import("@/telemetry/errors.ts");
 
   const emitLogMock = api.emitLog as Mock;
-  // The mock instance survives resetModules, so its call history must be
-  // cleared per test even though the rate-limiter counters do not.
+  // The mock instance survives `resetModules`. The test must clear its call
+  // history for each test. The rate-limiter counters keep their values.
   emitLogMock.mockClear();
   const handlers: Record<string, Handler[]> = {
     error: [],
@@ -66,8 +66,8 @@ const warnCalls = (emitLog: Mock) =>
   emitLog.mock.calls.filter((call) => call[0] === "WARN");
 
 describe("captureGlobalErrors", () => {
-  // A failed assertion must not leave the fake clock installed, which would
-  // turn one real failure into cascading false negatives.
+  // A failed assertion must not leave the fake clock installed. The fake clock
+  // would turn one real failure into many false failures.
   afterEach(() => {
     vi.useRealTimers();
   });
@@ -93,7 +93,7 @@ describe("captureGlobalErrors", () => {
     });
   });
 
-  it("stringifies a non-Error rejection reason", async () => {
+  it("converts a non-Error rejection reason into a string", async () => {
     await withFreshErrors(({ emitLog, capture, reject }) => {
       capture();
       reject("plain string reason");
@@ -102,7 +102,7 @@ describe("captureGlobalErrors", () => {
     });
   });
 
-  it("captures an uncaught error event", async () => {
+  it("records an uncaught error event", async () => {
     await withFreshErrors(({ emitLog, capture, throwError }) => {
       capture();
       throwError(new Error("sync throw"));
@@ -114,16 +114,16 @@ describe("captureGlobalErrors", () => {
     });
   });
 
-  it("falls back to the event message when no error object is present", async () => {
+  it("uses the event message when the event has no error object", async () => {
     await withFreshErrors(({ emitLog, capture, throwError }) => {
       capture();
       throwError(undefined);
-      // `error` is undefined, so describe() falls back to String(...).
+      // `error` is undefined, so `describe()` uses `String(...)`.
       expect(errorCalls(emitLog)).toHaveLength(1);
     });
   });
 
-  it("caps a storm at 10 records per window and suppresses the rest", async () => {
+  it("records 10 records per window and suppresses the later records", async () => {
     await withFreshErrors(({ emitLog, capture, reject }) => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2024-01-01T00:00:00Z"));
@@ -132,12 +132,12 @@ describe("captureGlobalErrors", () => {
       for (let i = 0; i < 25; i++) reject(new Error(`storm ${i}`));
 
       expect(errorCalls(emitLog)).toHaveLength(10);
-      // The summary is only emitted once the window rolls over.
+      // The code sends the summary only after the window ends.
       expect(warnCalls(emitLog)).toHaveLength(0);
     });
   });
 
-  it("emits a single WARN summary when the window rolls over", async () => {
+  it("sends one WARN summary when the window ends", async () => {
     await withFreshErrors(({ emitLog, capture, reject }) => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2024-01-01T00:00:00Z"));
@@ -154,8 +154,9 @@ describe("captureGlobalErrors", () => {
       expect(warns[0][1]).toContain("5 error records suppressed");
       expect(warns[0][2]).toMatchObject({ "error.suppressed": 5 });
 
-      // The new window starts clean: 10 from the first window, plus one
-      // accepted record per rollover, and the summary is never repeated.
+      // The new window starts with no count. The total is 10 records from the
+      // first window plus one record for each window after it. The code never
+      // sends the summary twice.
       vi.setSystemTime(new Date("2024-01-01T00:02:01Z"));
       reject(new Error("next window"));
       expect(errorCalls(emitLog)).toHaveLength(12);
@@ -163,7 +164,7 @@ describe("captureGlobalErrors", () => {
     });
   });
 
-  it("keeps suppressing while the same window is still active", async () => {
+  it("keeps suppressing records while the same window is active", async () => {
     await withFreshErrors(({ emitLog, capture, reject }) => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2024-01-01T00:00:00Z"));

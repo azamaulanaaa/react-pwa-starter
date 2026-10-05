@@ -27,7 +27,7 @@ describe("usePersistState", () => {
     expect(result.current[0]).toBe(2);
   });
 
-  it("resolves a functional update against the latest value", () => {
+  it("resolves a functional update with the latest value", () => {
     const { result } = renderHook(() => usePersistState("test_persist", 1));
 
     act(() => result.current[1]((prev) => prev + 5));
@@ -36,7 +36,7 @@ describe("usePersistState", () => {
     expect(result.current[0]).toBe(11);
   });
 
-  it("falls back to the default value when stored JSON is corrupt", () => {
+  it("returns the default value when the stored JSON is invalid", () => {
     localStorage.setItem(KEY, "{not valid json");
 
     const { result } = renderHook(() =>
@@ -59,7 +59,7 @@ describe("usePersistState", () => {
     expect(result.current[0]).toBe(42);
   });
 
-  it("keeps the previous value and logs when persistence throws", () => {
+  it("keeps the previous value and logs an error when persistence throws", () => {
     const error = new Error("quota exceeded");
     const setItem = vi.spyOn(localStorage, "setItem").mockImplementation(
       () => {

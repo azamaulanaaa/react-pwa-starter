@@ -23,10 +23,10 @@ createRoot(document.getElementById("root")!).render(
   </StrictMode>,
 );
 
-// Initialize OpenTelemetry after first paint. The SDK is dynamically imported
-// so it ships in its own lazy chunk and never blocks initial page load.
-// Gating on the build-time flag here (not inside the SDK) means a disabled
-// build never even downloads the chunk.
+// Start OpenTelemetry after the first paint. The code imports the SDK
+// dynamically, so the SDK is in its own lazy chunk. The SDK never blocks the
+// first page load. The build-time flag controls the import here, not inside
+// the SDK. A disabled build does not download the chunk.
 if (isEnabledAtBuildTime()) {
   void import("@/telemetry/index.ts")
     .then((telemetry) => telemetry.setupTelemetry({ router }))

@@ -1,14 +1,14 @@
 /**
- * OpenTelemetry configuration resolved from Vite environment variables.
+ * OpenTelemetry configuration. The values come from Vite environment variables.
  *
- * All variables are optional; sensible defaults are provided so that pointing
- * the app at a local collector is just:
+ * All variables are optional. The code provides default values.
+ * To point the app at a local collector, set this variable:
  *
  *   VITE_OTEL_ENDPOINT=http://localhost:4318
  */
 
 // SAFETY: vite/client types are not visible to every language server in this
-// repo; at build time Vite always provides `import.meta.env` as a string map.
+// repo. At build time, Vite always provides `import.meta.env` as a string map.
 const ENV =
   (import.meta as unknown as { env?: Record<string, string | undefined> })
     .env ??
@@ -24,30 +24,35 @@ function parseNumber(value: string | undefined, fallback: number): number {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-/** Standard OTLP HTTP collector port (e.g. a local Grafana Alloy/Jaeger). */
+/**
+ * Standard OTLP HTTP collector port. A local Grafana Alloy or a local Jaeger
+ * uses this port.
+ */
 const DEFAULT_OTLP_ENDPOINT = "http://localhost:4318";
 
 export interface TelemetryConfig {
-  /** Master kill-switch for all telemetry collection & export. */
+  /** Master switch for all telemetry collection and export. */
   enabled: boolean;
-  /** OTLP HTTP base URL (traces/metrics/logs paths are appended). */
+  /** OTLP HTTP base URL. The code appends the traces, metrics, and logs paths. */
   endpoint: string;
-  /** service.name resource attribute reported to the backend. */
+  /** The `service.name` attribute that the app reports to the backend. */
   serviceName: string;
-  /** Build environment name, e.g. "development" | "production". */
+  /** Build environment name, such as `"development"` or `"production"`. */
   environment: string;
   /** Root span sampling ratio in [0, 1]. */
   sampleRatio: number;
-  /** Metric reader export interval. */
+  /** The interval at which the metric reader exports data, in milliseconds. */
   metricExportIntervalMs: number;
-  /** When true, setupTelemetry() refuses to start until consent is granted. */
+  /**
+   * If true, `setupTelemetry()` refuses to start until the user grants consent.
+   */
   requireConsent: boolean;
 }
 
 /**
- * Build-time gate — when false, main.tsx skips the dynamic import entirely so
- * the OTel chunk is never even fetched. Must stay SDK-free (statically
- * imported from main.tsx).
+ * Build-time gate. If it is false, `main.tsx` skips the dynamic import.
+ * The code never fetches the OTel chunk.
+ * This function must stay SDK-free. `main.tsx` imports it statically.
  */
 export function isEnabledAtBuildTime(): boolean {
   return ENV.MODE !== "test" && parseBool(ENV.VITE_OTEL_ENABLED, true);

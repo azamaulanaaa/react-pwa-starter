@@ -1,20 +1,20 @@
 /**
- * Instrument calls into the worker (Comlink proxies) with a span that brackets
- * each message round-trip.
+ * Record a span for each call into the worker. Each span covers one message
+ * round-trip to a Comlink proxy.
  *
- * The OTel providers are registered on the main/UI thread by setupTelemetry()
- * in src/telemetry/index.ts, so this instrumentation lives there too — never in
- * the worker. That avoids duplicating an SDK per tab and keeps every span on a
- * single trace tree that already contains navigation/web-vital spans.
+ * `setupTelemetry()` in src/telemetry/index.ts registers the OTel providers on
+ * the main thread. This instrumentation runs on the main thread too. Never run
+ * this instrumentation in the worker. Each tab then loads only one SDK. Every
+ * span then stays in one trace tree with the navigation and web-vital spans.
  *
- * The comlink proxy mechanics (callable proxies, path accumulation, thenable
- * passthrough) live in src/lib/comlink/intercept.ts; this file is only the
- * OTel adapter that records a span per intercepted call.
+ * src/lib/comlink/intercept.ts holds the Comlink proxy mechanics. That file
+ * handles the callable proxies, the path accumulation, and the thenable
+ * passthrough. This file only records a span for each intercepted call.
  *
- * Before setupTelemetry() runs (or when it is disabled / consent-pending) the
- * global tracer provider is not registered, so getTracer() resolves to OTel's
- * no-op tracer and every span below becomes a cheap no-op automatically. Callers
- * therefore never need state checks.
+ * The global tracer provider is not registered before `setupTelemetry()` runs.
+ * The provider is also not registered when telemetry is disabled or waits for
+ * consent. Then `getTracer()` returns the OTel no-op tracer. Every span below
+ * becomes a no-op at no cost. Callers never check state.
  */
 import type { Attributes, Span, Tracer } from "@opentelemetry/api";
 
@@ -25,16 +25,26 @@ import {
 import { getTracer } from "@/telemetry/api.ts";
 
 export interface WorkerCallContext {
-  /** Dotted method path for the span name, e.g. "db.task.get" or "fs.Upload". */
+  /**
+   * The dotted method path for the span name, such as `"db.task.get"` or
+   * `"fs.Upload"`.
+   */
   method: string;
-  /** Positional call arguments; sanitized into OTel-safe span attributes. */
+  /**
+   * The positional call arguments. The code sanitizes them into span attributes
+   * that OTel accepts.
+   */
   args?: readonly unknown[];
-  /** Extra attributes merged after the sanitized argument attributes. */
+  /**
+   * Extra attributes. The code merges them after the sanitized argument
+   * attributes.
+   */
   attributes?: Attributes;
 }
 
 function recordError(span: Span, error: unknown): void {
-  // OTel's Exception type is `string | Error` — normalize before recording.
+  // OTel's Exception type is `string | Error`. The code normalizes the value
+  // before recording it.
   const exception = error instanceof Error ? error : String(error);
   span.recordException(exception);
   const message = error instanceof Error ? error.message : String(error);
@@ -42,9 +52,10 @@ function recordError(span: Span, error: unknown): void {
 }
 
 /**
- * Coerce positional arguments into valid OTel attribute values. Only primitives
- * are kept verbatim; anything else degrades to a type tag so payloads (which
- * may contain user data or cyclic structures) never reach an exporter.
+ * Change the positional arguments into values that OTel accepts as attributes.
+ * The code keeps each primitive value unchanged. The code replaces each other
+ * value with a type tag. A payload can contain user data or a cyclic structure.
+ * The code prevents such a payload from reaching an exporter.
  */
 function argAttributes(args: readonly unknown[] | undefined): Attributes {
   const out: Attributes = {};
@@ -60,10 +71,12 @@ function argAttributes(args: readonly unknown[] | undefined): Attributes {
 }
 
 /**
- * Wrap an async worker call in a span. `fn` is the proxied method; we attach
- * outcome + boundary attributes, record exceptions on the span (re-throwing so
- * behaviour is unchanged for callers), and set OK/ERROR status. The tracer is
- * injectable for tests; by default it resolves the global provider.
+ * Record a span for one async worker call. `fn` is the proxied method.
+ * The function adds the outcome attributes and the boundary attributes.
+ * The function records each exception on the span. The function re-throws the
+ * exception, so the behaviour stays the same for the callers. The function sets
+ * the `OK` status or the `ERROR` status. Tests can inject the tracer. By
+ * default the tracer uses the global provider.
  */
 export function withWorkerCall<T>(
   context: WorkerCallContext,
@@ -88,11 +101,12 @@ export function withWorkerCall<T>(
 }
 
 /**
- * Return an instrumented view of a Comlink-wrapped worker proxy. Every method
- * call is wrapped in a span named after its dotted path (e.g. "db.task.get",
- * "fs.Upload"), so all cross-boundary calls become observable without touching
- * any call site. The tracer is injectable for tests; production callers omit
- * it and the global provider resolves per call (no-op until telemetry starts).
+ * Return a new view of a Comlink worker proxy. The view records a span for each
+ * method call. The span name is the dotted path of the method, such as
+ * `"db.task.get"` or `"fs.Upload"`. Then each call across the boundary is
+ * observable, and the code does not change any call site. Tests can inject the
+ * tracer. Production callers omit the tracer. The function uses the global
+ * provider for each call. The provider is a no-op until the telemetry starts.
  */
 export function instrumentWorkerProxy<T extends object>(
   proxy: T,

@@ -2,15 +2,15 @@ import { useMemo } from "react";
 import type { Formatters } from "react-day-picker";
 
 /**
- * Custom hook providing native Intl-driven formatters for react-day-picker,
- * eliminating external locale bundle dependencies.
+ * Returns formatters that use the native `Intl` API.
+ * `react-day-picker` does not need an external locale bundle.
  */
 export function useFormatters(
   /** BCP 47 locale tag (e.g., "en-US", "id-ID", "ja-JP", "ar-SA") */
   locale: string,
 ): Formatters {
   return useMemo(() => {
-    // ─── Cache native Intl instances once per locale ──────────────────────────
+    // ─── Creates the native Intl instances once per locale ────────────────────
     const numberFormatter = new Intl.NumberFormat(locale, {
       useGrouping: false,
     });
@@ -28,39 +28,39 @@ export function useFormatters(
       weekday: "short",
     });
 
-    // ─── Native Intl Formatters ───────────────────────────────────────────────
+    // ─── Native Intl formatters ───────────────────────────────────────────────
 
-    /** Month & Year header label (e.g., "August 2026") */
+    /** Header label for the month and the year (e.g., "August 2026") */
     const formatCaption = (date: Date): string => {
       return captionFormatter.format(date);
     };
 
-    /** Day of month number (e.g., "1", "2", "3") */
+    /** Day number in the month (e.g., "1", "2", "3") */
     const formatDay = (date: Date): string => {
       return numberFormatter.format(date.getDate());
     };
 
-    /** Month dropdown select option label (e.g., "Aug") */
+    /** Option label in the month list (e.g., "Aug") */
     const formatMonthDropdown = (month: Date): string => {
       const parts = monthDropdownFormatter.formatToParts(month);
       return parts.find((p) => p.type === "month")?.value ?? "";
     };
 
-    /** Week number column label */
+    /** Column label for the week number */
     const formatWeekNumber = (weekNumber: number): string => {
       return numberFormatter.format(weekNumber);
     };
 
-    /** Week number header label */
+    /** Header label for the week number */
     const formatWeekNumberHeader = (): string => "";
 
-    /** Column header weekday label (e.g., "Mo", "Tu", "We") */
+    /** Column header label for the weekday (e.g., "Mo", "Tu", "We") */
     const formatWeekdayName = (weekday: Date): string => {
       const parts = weekdayFormatter.formatToParts(weekday);
       return parts.find((p) => p.type === "weekday")?.value ?? "";
     };
 
-    /** Year dropdown select option label (e.g., "2026") */
+    /** Option label in the year list (e.g., "2026") */
     const formatYearDropdown = (year: Date): string => {
       return numberFormatter.format(year.getFullYear());
     };

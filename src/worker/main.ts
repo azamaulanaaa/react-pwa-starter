@@ -8,17 +8,17 @@ interface SharedWorkerScope {
   onconnect: ((event: MessageEvent) => void) | null;
 }
 
-// A dedicated worker's global scope IS the message channel: `wrap(worker)` on
-// the main thread posts straight to `self.onmessage`, which a no-arg
-// Comlink.expose hooks by default.
+// The global scope of a dedicated worker is the message channel.
+// `wrap(worker)` on the main thread posts to `self.onmessage` directly.
+// A no-arg `Comlink.expose` uses `self.onmessage` by default.
 function exposeOnSelf<T>(api: T): void {
   Comlink.expose(api);
 }
 
-// A SharedWorker's global scope is NOT a channel. Each tab connection arrives
-// as an `onconnect` event carrying a fresh MessagePort; tabs only talk to
-// their own port, never to `self`. Exposing inside onconnect gives every
-// connecting tab its own proxy into this single shared instance.
+// The global scope of a SharedWorker is not a channel.
+// Each tab connection arrives as an `onconnect` event that carries a fresh MessagePort.
+// A tab sends messages only to its own port and never to `self`.
+// Exposing inside `onconnect` gives each connecting tab its own proxy into this single shared instance.
 function exposePerConnection<T>(api: T): void {
   const scope = self as unknown as SharedWorkerScope;
 

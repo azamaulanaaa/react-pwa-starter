@@ -55,7 +55,8 @@ describe("interceptProxy", () => {
     );
 
     const result = proxy.leaf(1);
-    expect(invoked).toBe(false); // underlying call still gated
+    // The interceptor has not invoked the underlying call yet.
+    expect(invoked).toBe(false);
     (release as (v: unknown) => void)(undefined);
     await expect(result).resolves.toBe(1);
     expect(invoked).toBe(true);
@@ -106,6 +107,7 @@ describe("interceptProxy", () => {
     (proxy.db.task as unknown as Record<string, unknown>).label = "x";
 
     expect((api.db.task as unknown as Record<string, unknown>).label).toBe("x");
-    expect(calls).toEqual([]); // writes are visible on the node, never spanned
+    // The write reached the node. The interceptor did not see the write.
+    expect(calls).toEqual([]);
   });
 });

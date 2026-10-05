@@ -25,9 +25,11 @@ export const dbMain = createDatabase("main", dbMainRaw, {
       })
     );
 
-    // A peer event is applied to the raw store, so watchers are notified
-    // explicitly here. Failures must not escape as unhandled rejections —
-    // report them and keep the worker alive.
+    // The function applies a peer event to the raw store.
+    // A raw store write does not notify watchers, so the function notifies
+    // them itself.
+    // A failure must not escape as an unhandled rejection. The function
+    // reports the failure and keeps the worker alive.
     const applyPeerEvent = (event: DbEvent) =>
       Effect.gen(function* () {
         const store = yield* fromPromise(() => ctx.open());

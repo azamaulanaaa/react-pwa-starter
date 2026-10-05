@@ -11,8 +11,8 @@ export type IntlNumberInput = number | string | null | undefined;
 
 interface IntlContextValue {
   locale: string; // e.g., 'en-US', 'id-ID', 'de'
-  language: string; // Extracted e.g., 'en'
-  region?: string; // Extracted e.g., 'US'
+  language: string; // First part of the locale, e.g., 'en'
+  region?: string; // Second part of the locale, e.g., 'US'
   currency: string;
   formatCurrency: (
     value: IntlNumberInput,
@@ -58,7 +58,8 @@ export function IntlProvider({
   }, [locale]);
 
   /**
-   * Helper to safely extract numeric values
+   * Extracts a number from the value.
+   * It returns null if the value is empty or not a number.
    */
   const toNumericValue = (value: IntlNumberInput): number | null => {
     if (value === null || value === undefined) return null;
@@ -67,7 +68,8 @@ export function IntlProvider({
   };
 
   /**
-   * Formats currency safely with fallback if invalid currency code is supplied
+   * Formats a currency value.
+   * It uses `USD` if the currency code is invalid.
    */
   const formatCurrency = useCallback(
     (
@@ -95,7 +97,8 @@ export function IntlProvider({
   );
 
   /**
-   * Formats numbers with localized grouping/decimals
+   * Formats a number.
+   * It uses the group and decimal separators of the locale.
    */
   const formatNumber = useCallback(
     (
@@ -111,7 +114,7 @@ export function IntlProvider({
   );
 
   /**
-   * Formats percentages
+   * Formats a percentage value
    */
   const formatPercent = useCallback(
     (
@@ -130,7 +133,7 @@ export function IntlProvider({
   );
 
   /**
-   * Formats dates
+   * Formats a date value
    */
   const formatDate = useCallback(
     (
@@ -147,7 +150,7 @@ export function IntlProvider({
   );
 
   /**
-   * Formats relative time (e.g., "2 days ago")
+   * Formats a relative time value (e.g., "2 days ago")
    */
   const formatRelativeTime = useCallback(
     (
@@ -161,7 +164,8 @@ export function IntlProvider({
   );
 
   /**
-   * Parses localized number string into raw float based on local decimal rules
+   * Parses a localized number string into a float.
+   * It uses the group and decimal separators of the locale.
    */
   const parseNumber = useCallback(
     (formattedString: string): number => {
@@ -187,7 +191,8 @@ export function IntlProvider({
   );
 
   /**
-   * Parses ISO or standard date strings safely
+   * Parses an ISO or standard date string.
+   * It returns null if the string is not a valid date.
    */
   const parseDate = useCallback((dateString: string): Date | null => {
     const parsedDate = new Date(dateString);

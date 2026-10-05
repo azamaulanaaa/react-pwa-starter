@@ -125,7 +125,7 @@ export const UploadPart = (metadata: MetadataUploadPart, blob: Blob) =>
       expectedSize = totalSize - bytesUploadedBefore;
     }
 
-    // Reject any part whose blob exceeds what the declared total allows for this index
+    // Reject a part when its blob size exceeds the total that the declaration allows for this index
     if (
       totalParts > 0 &&
       vBlob.size > Math.min(totalSize, totalParts * basePartSize)
@@ -179,8 +179,9 @@ export const CompleteUpload = (id: FileId, metadata: FileMetadata) =>
       catch: () =>
         new FsError({ error: "Session missing or already finalized." }),
     });
-    // getItem resolves to null for an unknown id (a cancelled or already
-    // completed upload), so the catch arm above cannot cover that case.
+    // getItem resolves to null for an unknown id.
+    // An unknown id means a cancelled upload or a completed upload.
+    // The catch arm above cannot handle this case.
     if (!session) {
       return yield* Effect.fail(
         new FsError({ error: "Session missing or already finalized." }),
@@ -380,14 +381,14 @@ export type UploadProgressEvent = Schema.Schema.Type<
 >;
 
 /**
- * Uploads a raw File/Blob by orchestrating Init, UploadPart, and CompleteUpload.
- * Yields progress events through an Effect Stream using Schema validation/models.
- * Automatically cleans up via `CancelUpload` if aborted or interrupted.
+ * Uploads a raw File/Blob. The function calls Init, UploadPart, and CompleteUpload in order.
+ * The function returns an Effect Stream of progress events. The Stream validates the input with Schema.
+ * The function calls `CancelUpload` if the upload stops before it completes.
  */
 export const Upload = (
   name: string,
   blob: Blob,
-  partSize: number = 524288, // Default to 512KB
+  partSize: number = 524288, // The default part size is 512KB.
 ): Stream.Stream<UploadProgressEvent, FsError> => {
   return Stream.unwrapScoped(
     Effect.gen(function* () {

@@ -21,7 +21,7 @@ interface RecordedSpan {
   exceptions: unknown[];
 }
 
-/** Minimal recording tracer: captures every span without any OTel machinery. */
+/** A recording tracer. It stores every span without any OTel machinery. */
 const makeFakeTracer = (): { spans: RecordedSpan[]; tracer: Tracer } => {
   const spans: RecordedSpan[] = [];
 
@@ -61,7 +61,7 @@ const makeFakeTracer = (): { spans: RecordedSpan[]; tracer: Tracer } => {
 };
 
 describe("withWorkerCall", () => {
-  it("emits an OK span named after the method and passes the value through", async () => {
+  it("emits an OK span with the method name and returns the value", async () => {
     const { spans, tracer } = makeFakeTracer();
 
     const value = await withWorkerCall(
@@ -77,7 +77,7 @@ describe("withWorkerCall", () => {
     expect(spans[0].ended).toBe(true);
   });
 
-  it("records the exception, sets ERROR status, ends the span, and re-throws", async () => {
+  it("records the exception, sets the ERROR status, ends the span, and re-throws", async () => {
     const { spans, tracer } = makeFakeTracer();
 
     await expect(
@@ -94,7 +94,7 @@ describe("withWorkerCall", () => {
     expect(spans[0].ended).toBe(true);
   });
 
-  it("sanitizes arguments into OTel-safe attributes", async () => {
+  it("sanitizes the arguments into span attributes that OTel accepts", async () => {
     const { spans, tracer } = makeFakeTracer();
 
     await withWorkerCall(
@@ -114,7 +114,7 @@ describe("withWorkerCall", () => {
     expect(attributes["worker.arg.4"]).toBe("[function]");
   });
 
-  it("caps recorded arguments at eight and records none when absent", async () => {
+  it("records at most eight arguments and none when there are none", async () => {
     const { spans, tracer } = makeFakeTracer();
 
     await withWorkerCall(
@@ -165,7 +165,7 @@ describe("instrumentWorkerProxy", () => {
     );
   };
 
-  it("spans a nested call across a real comlink round-trip", async () => {
+  it("records one span around a nested call over a real comlink round-trip", async () => {
     const { spans, tracer } = makeFakeTracer();
     const remote = makeRemote(tracer);
 
@@ -178,7 +178,7 @@ describe("instrumentWorkerProxy", () => {
     expect(spans[0].ended).toBe(true);
   });
 
-  it("records remote errors with the dotted method name", async () => {
+  it("records a remote error with the dotted method name", async () => {
     const { spans, tracer } = makeFakeTracer();
     const remote = makeRemote(tracer);
 
@@ -199,7 +199,7 @@ describe("instrumentWorkerProxy", () => {
     expect(spans.map((s) => s.name)).toEqual(["db.task.get", "db.task.get"]);
   });
 
-  it("caches wrapped members so identities stay stable", () => {
+  it("caches the wrapped members so the identities stay stable", () => {
     const { tracer } = makeFakeTracer();
     const remote = makeRemote(tracer);
 
@@ -214,14 +214,16 @@ describe("instrumentWorkerProxy", () => {
       unknown
     >;
 
-    // Comlink's root `then` is a sticky thenable ({ then: () => proxy }) that
-    // must keep stock semantics — passed through, never wrapped or spanned.
+    // The root `then` of Comlink is a sticky thenable of the form
+    // { then: () => proxy }. The code must keep the standard semantics.
+    // The code passes `then` through and never wraps or records it in a span.
     const thenable = remote.then as { then: unknown };
     expect(typeof thenable).toBe("object");
     expect(typeof thenable.then).toBe("function");
 
-    // Symbol keys pass through to the wrapped node verbatim (comlink answers
-    // with its own sub-proxies; plain objects answer with the raw value).
+    // The code passes each symbol key to the wrapped node unchanged. Comlink
+    // answers with its own sub-proxies. A plain object answers with the raw
+    // value.
     const tagged = instrumentWorkerProxy(
       { [Symbol.toStringTag]: "raw-tag" },
       tracer,

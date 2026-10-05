@@ -91,9 +91,10 @@ const makeFakeMeter = (): {
 };
 
 /**
- * Registers the fakes, then imports `@/telemetry/router.ts` fresh. The module
- * captures TRACER/METER at import time, so it must be evaluated *after* the
- * spies are installed or it would bind the real no-op providers.
+ * Register the fakes and then import `@/telemetry/router.ts` again. The module
+ * reads `TRACER` and `METER` at import time. The code must install the spies
+ * before it imports the module. Otherwise the module uses the real no-op
+ * providers.
  */
 const withOtel = async <T>(run: (ctx: {
   spans: RecordedSpan[];
@@ -153,7 +154,7 @@ const makeFakeRouter = () => {
   };
 };
 describe("instrumentRouter", () => {
-  it("collapses dynamic segments so metric cardinality stays low", async () => {
+  it("replaces dynamic segments to keep the metric cardinality low", async () => {
     await withOtel(({ spans, counts, instrumentRouter }) => {
       const router = makeFakeRouter();
       instrumentRouter(router);
@@ -167,7 +168,8 @@ describe("instrumentRouter", () => {
         "route /tasks/:id",
         "route /tasks/:id",
       ]);
-      // The raw high-cardinality path is kept on the span, never on metrics.
+      // The span keeps the raw path, which has a high cardinality. The metrics
+      // never use this path.
       expect(spans[0].attributes["router.path"]).toBe("/tasks/42");
       expect(counts.map((c) => c.attributes)).toEqual([
         { "http.route": "/tasks/:id" },
@@ -176,7 +178,7 @@ describe("instrumentRouter", () => {
     });
   });
 
-  it("ends the span and records duration on a normal navigation", async () => {
+  it("ends the span and records the duration for a normal navigation", async () => {
     await withOtel(({ spans, counts, records, instrumentRouter }) => {
       const router = makeFakeRouter();
       instrumentRouter(router);
@@ -193,7 +195,7 @@ describe("instrumentRouter", () => {
     });
   });
 
-  it("marks a superseded navigation as interrupted and ends its span", async () => {
+  it("marks a replaced navigation as interrupted and ends its span", async () => {
     await withOtel(({ spans, instrumentRouter }) => {
       const router = makeFakeRouter();
       instrumentRouter(router);
@@ -205,13 +207,13 @@ describe("instrumentRouter", () => {
       expect(spans[0].attributes["router.interrupted"]).toBe(true);
       expect(spans[1].ended).toBe(false);
 
-      // The active span still completes on its own resolution.
+      // The active span ends at its own resolution.
       router.resolved("/tasks/2");
       expect(spans[1].ended).toBe(true);
     });
   });
 
-  it("ends the span instead of leaking it when resolution redirects", async () => {
+  it("ends the span instead of leaving it open on a redirect", async () => {
     await withOtel(({ spans, counts, instrumentRouter }) => {
       const router = makeFakeRouter();
       instrumentRouter(router);
@@ -222,12 +224,12 @@ describe("instrumentRouter", () => {
       expect(spans).toHaveLength(1);
       expect(spans[0].ended).toBe(true);
       expect(spans[0].attributes["router.redirected"]).toBe("/new");
-      // A redirect is not a completed navigation, so no counter is recorded.
+      // A redirect is not a complete navigation. The code records no counter.
       expect(counts).toHaveLength(0);
     });
   });
 
-  it("ignores a resolution with no matching in-flight navigation", async () => {
+  it("ignores a resolution with no matching navigation in progress", async () => {
     await withOtel(({ spans, counts, instrumentRouter }) => {
       const router = makeFakeRouter();
       instrumentRouter(router);

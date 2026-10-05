@@ -10,7 +10,7 @@ import { setupOxkv } from "@/worker/db/oxkv-wasm.ts";
 describe("comlink bridge", () => {
   beforeAll(setupOxkv);
 
-  it("set over comlink-style endpoint", async () => {
+  it("sets a document over a comlink endpoint", async () => {
     const { port1, port2 } = new MessageChannel();
     Comlink.expose({ task: dbMain.task }, port1 as unknown as Comlink.Endpoint);
 
@@ -26,7 +26,7 @@ describe("comlink bridge", () => {
     expect(got.description).toBe("hello");
   });
 
-  it("watch over comlink endpoint", async () => {
+  it("watches a table over a comlink endpoint", async () => {
     const { port1, port2 } = new MessageChannel();
     Comlink.expose({ task: dbMain.task }, port1 as unknown as Comlink.Endpoint);
     // deno-lint-ignore no-explicit-any

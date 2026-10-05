@@ -1,9 +1,9 @@
 /**
  * Global error capture.
  *
- * Uncaught exceptions and unhandled rejections are exported as ERROR log
- * records and, when a span is active, recorded on that span as an exception
- * event with error status.
+ * The code exports each uncaught exception and each unhandled rejection as an
+ * ERROR log record. If a span is active, the code also records the
+ * error on that span as an exception event. The code sets the error status.
  */
 import { trace } from "@opentelemetry/api";
 import { emitLog } from "@/telemetry/api.ts";
@@ -12,7 +12,8 @@ function describe(error: unknown): {
   message: string;
   stack?: string;
 } {
-  // Unhandled rejections can nest: { reason: { reason: Error } }.
+  // An unhandled rejection can contain another rejection.
+  // For example: { reason: { reason: Error } }.
   let current = error;
   for (
     let depth = 0;
@@ -41,9 +42,9 @@ export function captureGlobalErrors(): void {
   });
 }
 
-// Rate limiting: an error storm (e.g. a bad retry loop) must not flood the
-// log pipeline or the telemetry bill. Fixed-window cap with a one-time
-// suppression summary per window.
+// Rate limiting. An error storm, such as a bad retry loop, must not flood the
+// log pipeline or the telemetry bill. The code uses a fixed window. The code
+// sends one summary of the suppressed records per window.
 const MAX_RECORDS_PER_WINDOW = 10;
 const WINDOW_MS = 60_000;
 
@@ -82,7 +83,8 @@ function record(
     "error.stack": info.stack,
   });
 
-  // Attach to whatever span is active so the error shows up inline in traces.
+  // Record the error on the active span. The error then shows up inline in
+  // traces.
   trace
     .getActiveSpan()
     ?.recordException(new Error(`${info.message}\n${info.stack ?? ""}`));

@@ -27,7 +27,8 @@ export const ImagePreview = (
 
   const handleDownload = async () => {
     try {
-      // Fetch the image as a blob to force a browser download rather than opening a new tab
+      // The code fetches the image as a blob.
+      // This makes the browser download the file instead of opening a new tab.
       const response = await fetch(src);
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);

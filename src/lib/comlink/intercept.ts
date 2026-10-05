@@ -1,27 +1,34 @@
 /**
  * Intercept every method call on a Comlink remote proxy.
  *
- * Comlink remotes are opaque: each property access returns a fresh callable
- * function-proxy (there is no enumerable shape) and the RPC only fires in that
- * proxy's apply trap. Interception therefore mirrors the same shape — one
- * callable Proxy per node, delegating get/apply/set/construct to the wrapped
- * node and funneling applies through the caller's `intercept` callback with
- * the accumulated dotted path (e.g. "db.task.get").
+ * A Comlink remote has no enumerable shape. Each property access returns a new
+ * callable function proxy. Comlink sends the RPC only from the apply trap of
+ * that proxy.
  *
- * `then` and symbol keys pass through untouched, so `await proxy.x` value
- * reads (a GET RPC under comlink's hood), `releaseProxy`, `createEndpoint`
- * and iterator protocols keep stock semantics. SET and CONSTRUCT RPCs are
- * delegated but not intercepted — by design, only calls are observable.
+ * The interceptor uses the same shape. The function creates one callable proxy
+ * for each node. The proxy delegates `get`, `apply`, `set` and `construct` to
+ * the wrapped node. It sends each apply to the `intercept` callback of the
+ * caller, together with the accumulated dotted path, such as "db.task.get".
  *
- * Also works over plain nested objects with function leaves, which keeps this
- * unit-testable without a worker round-trip.
+ * The proxy passes `then` and symbol keys through unchanged, so `await proxy.x`
+ * keeps the Comlink behavior for a value read. `releaseProxy`, `createEndpoint`
+ * and the iterator protocols also keep that behavior.
+ *
+ * SET and CONSTRUCT RPCs are delegated but not intercepted. Only calls are
+ * observable.
+ *
+ * The function also works on plain nested objects with function leaves, so a
+ * test can call it without a worker.
  */
 
 export type ProxyCallInterceptor = (
-  /** Dotted method path, e.g. "db.task.get" ("" for a call on the root). */
+  /**
+   * The dotted method path, such as "db.task.get".
+   * The path is "" for a call on the root.
+   */
   path: string,
   args: readonly unknown[],
-  /** Invoke the underlying call; always returns a promise. */
+  /** Invoke the underlying call. The call always returns a promise. */
   next: () => Promise<unknown>,
 ) => Promise<unknown>;
 
@@ -33,8 +40,9 @@ export function interceptProxy<T extends object>(
     node: unknown,
     path: string,
   ): object => {
-    // Cache per key so repeated accesses yield stable identities (important
-    // for consumers that stash `proxy.db.task.get` in a variable).
+    // The cache stores one entry per key. Repeated accesses then return the
+    // same proxy identity. This matters for consumers that store
+    // `proxy.db.task.get` in a variable.
     const cache = new Map<string, unknown>();
 
     return new Proxy(() => {}, {
@@ -65,14 +73,14 @@ export function interceptProxy<T extends object>(
       },
 
       set(_target, key, value) {
-        // Delegate so comlink's SET RPC still fires on the remote node; not
-        // intercepted.
+        // The trap delegates the write. Comlink still sends the SET RPC to the
+        // remote node. The trap does not intercept the write.
         return Reflect.set(node as object, key, value);
       },
 
       construct(_target, args, newTarget) {
-        // Delegate `new proxy.X(...)` (comlink CONSTRUCT RPC); not
-        // intercepted.
+        // The trap delegates `new proxy.X(...)`. Comlink sends the CONSTRUCT
+        // RPC. The trap does not intercept the call.
         return Reflect.construct(
           node as new (
             ...callArgs: unknown[]

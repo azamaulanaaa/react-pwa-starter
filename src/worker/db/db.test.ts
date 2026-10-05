@@ -16,7 +16,10 @@ function run<A>(effect: Effect.Effect<A, unknown, never>): Promise<A> {
   return Effect.runPromise(effect);
 }
 
-/** Polls `predicate` until true, failing the test if it never becomes true. */
+/**
+ * Calls `predicate` until it returns true.
+ * The function fails the test when `predicate` never returns true.
+ */
 async function waitFor(
   predicate: () => boolean,
   timeoutMs = 2000,
@@ -63,12 +66,12 @@ describe("dbMain.task", () => {
     await expect(run(dbMain.task.get(id))).rejects.toThrow();
   });
 
-  it("fails reading a missing item and reports delete of it", async () => {
+  it("fails to read a missing task and returns false when it deletes it", async () => {
     await expect(run(dbMain.task.get("missing-id"))).rejects.toThrow();
     expect(await run(dbMain.task.delete("missing-id"))).toBe(false);
   });
 
-  it("upserts like oxkv set", async () => {
+  it("adds the document when it does not exist, like the oxkv set", async () => {
     const id = randomUUID();
     expect(await run(dbMain.task.exists(id))).toBe(false);
 
@@ -84,7 +87,7 @@ describe("dbMain.task", () => {
     await run(dbMain.task.delete(id));
   });
 
-  it("streams initial data after writes", async () => {
+  it("streams the initial rows, then streams again after a write", async () => {
     const seedId = randomUUID();
     await run(
       dbMain.task.set(seedId, {
@@ -97,8 +100,8 @@ describe("dbMain.task", () => {
       dbMain.task.watch({ direction: "next" }),
     )[Symbol.asyncIterator]();
 
-    // Await the first chunk so the subscription is provably live, instead of
-    // sleeping a fixed interval and hoping the watcher attached in time.
+    // The test awaits the first chunk, so the subscription is live.
+    // A fixed sleep cannot prove that the watcher attached in time.
     const initial = (await iterator.next()).value as Task[];
 
     const secondId = randomUUID();
@@ -130,8 +133,8 @@ describe("dbMain.task", () => {
       }
     })();
 
-    // Bounded wait for the subscription to become live, instead of assuming a
-    // fixed settle window is enough for the first queryRows to finish.
+    // The test waits with a limit until the subscription is live.
+    // A fixed wait cannot prove that the first queryRows call finished.
     await waitFor(() => chunks.length >= 1);
 
     await run(
@@ -144,8 +147,8 @@ describe("dbMain.task", () => {
     await waitFor(() => chunks.length >= 2);
     const afterWrite = chunks.length;
 
-    // A duplicate notification would arrive as a third chunk; give it a
-    // window to show up, then assert the write produced exactly one.
+    // A duplicate notification arrives as a third chunk.
+    // The test waits for that chunk, then checks that the write made one chunk.
     await new Promise((resolve) => setTimeout(resolve, 250));
     expect(chunks.length).toBe(afterWrite);
 
@@ -153,7 +156,7 @@ describe("dbMain.task", () => {
     expect(afterWrite - 1).toBe(1);
   });
 
-  it("paginates next and prev with limit", async () => {
+  it("paginates with direction `next` and direction `prev` and a limit", async () => {
     const pageIds: string[] = [];
     for (let i = 0; i < 3; i++) {
       const id = randomUUID();
@@ -181,10 +184,11 @@ describe("dbMain.task", () => {
 
     expect(nextPage.length).toBe(2);
     expect(prevPage.length).toBe(2);
-    // The store is shared across every test in this file. Keys are uuid v7, so
-    // key order is creation order: `prev` walks the newest keys first, so it
-    // must surface exactly the two most recent rows this test created —
-    // independent of whatever earlier tests left behind.
+    // Every test in this file uses the same store.
+    // The keys are uuid v7, so the key order is the creation order.
+    // A scan with direction `prev` returns the newest keys first.
+    // The scan returns the two newest rows that this test created.
+    // The result does not depend on the rows that the earlier tests created.
     expect(prevPage.map((task) => task.id)).toEqual([
       pageIds[2],
       pageIds[1],
@@ -220,9 +224,10 @@ describe("kv api", () => {
   });
 
   it("paginates and filters raw keys with gets", async () => {
-    // Values are deliberately not single letters: oxkv matches bare terms
-    // fuzzily with slop 2, so "kind:a" also matches "b" and the AND filter
-    // would stop discriminating.
+    // Values are not single letters on purpose.
+    // oxkv matches a bare term with a fuzzy match that has slop 2.
+    // The query "kind:a" also matches "b".
+    // The AND filter cannot tell the values apart.
     await run(kvApi.set("docs:1", { kind: "alpha", n: 1 }));
     await run(kvApi.set("docs:2", { kind: "beta", n: 5 }));
     await run(kvApi.set("docs:3", { kind: "alpha", n: 9 }));
@@ -335,8 +340,9 @@ describe("kv api", () => {
       endCursor: `docs:\uffff`,
     }));
 
-    // The range covers `docs:` only, so the task row written above must not
-    // appear — that is the property the test name advertises.
+    // The range covers the prefix `docs:` only.
+    // The task row that the test wrote above must not appear in the range.
+    // The test name states this property.
     expect(entries.map((entry) => entry.key)).toEqual(["docs:visible"]);
     expect(entries.every((entry) => !entry.key.startsWith("task:"))).toBe(
       true,

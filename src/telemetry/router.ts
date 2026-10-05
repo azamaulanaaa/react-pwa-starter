@@ -1,8 +1,9 @@
 /**
  * TanStack Router instrumentation.
  *
- * Each navigation gets a span covering route matching + loaders + resolution,
- * plus a navigation counter and duration histogram as metrics.
+ * The code records a span for each navigation. The span covers the route
+ * matching, the loaders, and the resolution. The code also records a navigation
+ * counter and a duration histogram.
  */
 import { metrics, trace } from "@opentelemetry/api";
 import type { Span } from "@opentelemetry/api";
@@ -21,10 +22,12 @@ interface RouterLike {
 }
 
 /**
- * Collapse dynamic-looking segments ("/tasks/42" -> "/tasks/:id") so metric
- * labels and span names stay low-cardinality. Heuristic: purely numeric
- * segments and long hex/uuid-ish segments become ":id". The untouched path
- * remains available on span attributes.
+ * Replace each dynamic segment in a path with `":id"`. The code changes
+ * `"/tasks/42"` into `"/tasks/:id"`. Then the metric labels and the span names
+ * keep a low cardinality.
+ * The code uses a heuristic. The code replaces a segment that contains only
+ * digits. The code also replaces a long hex or uuid-like segment. The span
+ * attributes keep the original path.
  */
 function routePattern(pathname: string): string {
   return pathname
@@ -58,7 +61,7 @@ export function instrumentRouter(router: RouterLike): () => void {
     "onBeforeLoad",
     ({ toLocation, pathChanged }) => {
       if (active) {
-        // Previous navigation was superseded before it resolved.
+        // A later navigation replaces the active navigation before it resolves.
         active.span.setAttribute("router.interrupted", true);
         active.span.end();
       }
@@ -67,7 +70,8 @@ export function instrumentRouter(router: RouterLike): () => void {
       const span = TRACER.startSpan(`route ${pattern}`, {
         attributes: {
           "http.route": pattern,
-          // High-cardinality value — kept on the span only, never on metrics.
+          // The path has a high cardinality. The code sets it on the span only.
+          // The code never sets it on metrics.
           "router.path": pathname,
           "router.path_changed": pathChanged,
         },
@@ -80,9 +84,10 @@ export function instrumentRouter(router: RouterLike): () => void {
     if (!active) return;
     const resolvedPattern = routePattern(toLocation.pathname);
     if (active.pattern !== resolvedPattern) {
-      // Redirect / alias resolved to a different route: the original load is
-      // done, so close it out instead of leaking the span until the next
-      // navigation. Attribute it to the pattern we actually started on.
+      // A redirect or an alias resolves to another route. The original load is
+      // then done. The code ends the span instead of keeping the span open
+      // until the next navigation. The code sets the pattern of the original
+      // start in the `router.redirected` attribute.
       active.span.setAttribute("router.redirected", resolvedPattern);
       active.span.end();
       active = undefined;

@@ -1,10 +1,13 @@
 /**
- * Web vitals + page lifecycle instrumentation.
+ * Web vitals and page lifecycle instrumentation.
  *
- * - Each Core Web Vital (CLS, INP, LCP, FCP, TTFB) is exported as a short
- *   span and recorded in the `app.web_vital.value` histogram metric.
- * - Page lifecycle emits a `page.load` span derived from the Navigation Timing
- *   entry, logs visibility changes, and notifies on hide for flushing.
+ * - The code exports each Core Web Vital as a short span. The names are CLS,
+ *   INP, LCP, FCP, and TTFB. The code also records each value in the
+ *   `app.web_vital.value` histogram metric.
+ * - The page lifecycle emits a `page.load` span. The code takes the data for
+ *   this span from the Navigation Timing entry. The code logs each visibility
+ *   change. The code notifies the caller on hide, so the caller can flush the
+ *   data.
  */
 import { type Metric, onCLS, onFCP, onINP, onLCP, onTTFB } from "web-vitals";
 import { trace } from "@opentelemetry/api";
@@ -49,7 +52,10 @@ export function observeWebVitals(deps: WebVitalsDeps = {}): void {
 }
 
 interface LifecycleDeps {
-  /** Called when the page becomes hidden — good moment to flush exporters. */
+  /**
+   * The code calls this function when the page becomes hidden. This is a good
+   * moment to flush the exporters.
+   */
   onHidden?: () => void;
   logger?: import("@opentelemetry/api-logs").Logger;
 }
@@ -64,9 +70,10 @@ export function observePageLifecycle(deps: LifecycleDeps = {}): void {
       ) as PerformanceNavigationTiming[];
       if (!navigation) return;
 
-      // OTel expects times relative to performance.timeOrigin (i.e.
-      // performance.now()-style values), which is exactly what the
-      // NavigationTiming entry exposes — do NOT add timeOrigin here.
+      // OTel expects times that are relative to performance.timeOrigin. These
+      // times are the same as the values that performance.now() returns. The
+      // NavigationTiming entry exposes these times. The code must not add
+      // timeOrigin here.
       const span = TRACER.startSpan("page.load", {
         startTime: navigation.startTime,
       });
@@ -83,8 +90,10 @@ export function observePageLifecycle(deps: LifecycleDeps = {}): void {
     }, 0);
   });
 
-  // visibilitychange->hidden does not fire on mobile app kill or
-  // cross-document navigation; pagehide is the reliable last-resort signal.
+  // The browser does not send the visibilitychange event with the state
+  // "hidden" when it closes a mobile app. The browser also does not send this
+  // event for a navigation to another document. The pagehide event is the
+  // reliable signal in these cases.
   globalThis.addEventListener("pagehide", () => {
     deps.onHidden?.();
   });

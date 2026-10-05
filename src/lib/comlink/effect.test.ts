@@ -5,7 +5,7 @@ import * as Comlink from "comlink";
 
 import { flattenTaggedError } from "@/lib/comlink/effect.ts";
 
-/** Channels handed out to the tests, so every port is closed in afterEach. */
+/** The tests receive these channels. The `afterEach` hook closes every port. */
 const channels: MessageChannel[] = [];
 const newChannel = (): MessageChannel => {
   const channel = new MessageChannel();
@@ -87,7 +87,7 @@ describe("EFFECT_PROXY transfer handler", () => {
     await expect(remote.boom()).rejects.toThrow(/worker exploded/);
   });
 
-  it("preserves a defect as a worker error rather than swallowing it", async () => {
+  it("reports a defect as a worker error instead of dropping it", async () => {
     const { port1, port2 } = newChannel();
     Comlink.expose(
       {
