@@ -102,22 +102,16 @@ export const UploadPart = (metadata: MetadataUploadPart, blob: Blob) =>
       catch: () => new FsError({ error: "Upload session not found." }),
     });
     if (!session) {
-      return yield* Effect.fail(
-        new FsError({ error: "Upload session not found." }),
-      );
+      return yield* new FsError({ error: "Upload session not found." });
     }
 
     if (vMetadata.file_total_part !== session.file_total_parts) {
-      return yield* Effect.fail(
-        new FsError({
-          error: "Part count mismatch with initial registration.",
-        }),
-      );
+      return yield* new FsError({
+        error: "Part count mismatch with initial registration.",
+      });
     }
     if (vMetadata.file_part >= session.file_total_parts) {
-      return yield* Effect.fail(
-        new FsError({ error: "Part index out of bounds." }),
-      );
+      return yield* new FsError({ error: "Part index out of bounds." });
     }
 
     const totalParts = session.file_total_parts;
@@ -136,23 +130,19 @@ export const UploadPart = (metadata: MetadataUploadPart, blob: Blob) =>
       totalParts > 0 &&
       vBlob.size > Math.min(totalSize, totalParts * basePartSize)
     ) {
-      return yield* Effect.fail(
-        new FsError({
-          error:
-            `Blob size mismatch for part ${currentPartIndex}. Expected at most ${
-              Math.min(totalSize, totalParts * basePartSize)
-            } bytes (declared total ${totalSize} / parts ${totalParts}), but received ${vBlob.size} bytes.`,
-        }),
-      );
+      return yield* new FsError({
+        error:
+          `Blob size mismatch for part ${currentPartIndex}. Expected at most ${
+            Math.min(totalSize, totalParts * basePartSize)
+          } bytes (declared total ${totalSize} / parts ${totalParts}), but received ${vBlob.size} bytes.`,
+      });
     }
 
     if (vBlob.size !== expectedSize) {
-      return yield* Effect.fail(
-        new FsError({
-          error:
-            `Blob size mismatch for part ${currentPartIndex}. Expected ${expectedSize} bytes, but received ${vBlob.size} bytes.`,
-        }),
-      );
+      return yield* new FsError({
+        error:
+          `Blob size mismatch for part ${currentPartIndex}. Expected ${expectedSize} bytes, but received ${vBlob.size} bytes.`,
+      });
     }
 
     yield* Effect.tryPromise({
@@ -189,9 +179,9 @@ export const CompleteUpload = (id: FileId, metadata: FileMetadata) =>
     // An unknown id means a cancelled upload or a completed upload.
     // The catch arm above cannot handle this case.
     if (!session) {
-      return yield* Effect.fail(
-        new FsError({ error: "Session missing or already finalized." }),
-      );
+      return yield* new FsError({
+        error: "Session missing or already finalized.",
+      });
     }
 
     const indices = Array.from(
@@ -271,9 +261,9 @@ export const CancelUpload = (id: FileId) =>
     });
 
     if (!session) {
-      return yield* Effect.fail(
-        new FsError({ error: "Upload session not found or already removed." }),
-      );
+      return yield* new FsError({
+        error: "Upload session not found or already removed.",
+      });
     }
 
     yield* Effect.tryPromise({

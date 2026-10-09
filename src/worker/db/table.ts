@@ -91,13 +91,11 @@ export function createTableApi<Name extends string, A extends Base, I>({
         const data = yield* kv.get(keys.of(decodedId));
 
         if (data == null) {
-          return yield* Effect.fail(
-            new DbError({
-              error: `${
-                String(tableName)
-              } item with ID '${decodedId}' not found`,
-            }),
-          );
+          return yield* new DbError({
+            error: `${
+              String(tableName)
+            } item with ID '${decodedId}' not found`,
+          });
         }
 
         return yield* decodeDoc(data);
