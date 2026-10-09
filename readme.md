@@ -112,9 +112,10 @@ src/
 │                      # media query, dark mode, streams)
 ├── lib/               # Comlink helpers, cn, misc utilities
 └── worker/
-    ├── main.ts        # Worker entry. It exposes { db, fs } through Comlink.
+    ├── main.ts        # Worker entry. It exposes { db, fs, queue } through Comlink.
     ├── db/            # Tables, schema, change bus, oxkv, persistence, peer sync
-    └── fs/            # Chunked file storage (multi-part uploads)
+    ├── fs/            # Chunked file storage (multi-part uploads)
+    └── queue/         # Job queue: schema, registry, store, watch bus, scheduler
 ```
 
 ## Worker boundary
@@ -122,8 +123,9 @@ src/
 This section names files and symbols, not line numbers, so it stays true when the
 code moves.
 
-- The worker owns the database and the file store. `src/worker/main.ts` exposes
-  `{ db, fs }`. `src/components/context/worker.tsx` reaches the worker over a
+- The worker owns the database, the file store, and the job queue.
+  `src/worker/main.ts` exposes `{ db, fs, queue }`.
+  `src/components/context/worker.tsx` reaches the worker over a
   Comlink endpoint. In shared mode it wraps the shared port. In dedicated mode
   it wraps the Worker itself.
 - `src/lib/comlink/effect.ts` registers two transfer handlers. `EFFECT_PROXY`
@@ -146,10 +148,13 @@ code moves.
   ```
 
   The `_tag` does not survive the boundary.
-  - The worker declares two tags today: `app/worker/db` on `DbError` in
-    `src/worker/db/error.ts`, and `app/worker/fs` on `FsError` in
-    `src/worker/fs/error.ts`. Only the database one reaches the UI, because no
-    UI code calls the file store yet.
+  - The worker declares three tags today: `app/worker/db` on `DbError` in
+    `src/worker/db/error.ts`, `app/worker/fs` on `FsError` in
+    `src/worker/fs/error.ts`, and `app/worker/queue` on `QueueError` in
+    `src/worker/queue/error.ts`. Only the database one reaches the UI, because
+    no UI code calls the file store or the queue yet.
+    `flattenTaggedError` writes only `[tag] message`, so the client sees a
+    `QueueError` nowhere, including its `reason`.
   - The moment a second tag reaches the client, stop relying on the tag
     surviving. Parsing the tag out of the message text works, but it is a guess
     that breaks silently when the message format changes. The fix is to send
@@ -167,14 +172,28 @@ code moves.
   changing the run path again.
 - The UI makes five worker calls today, all of them `db.task`, all in
   `src/routes/_dashboard/index.tsx`: `watch`, `set` twice, `get`, and `delete`.
-  The file store is built, tested, and bridged. No UI code calls it.
+  The file store and the job queue are built, tested, and bridged. No UI code
+  calls either one.
+- `register` in `src/worker/queue/index.ts` is worker-side only and is not on
+  the exposed `queue` object. A handler is a closure, so only a module the
+  worker imports can register one. A `kind` is usable only in a build where
+  some module called `register` for it, and `enqueue` for an unregistered kind
+  fails immediately instead of queueing into a guaranteed failure.
 - Cancelling the reader on the UI side stops the reader and releases the worker's
   stream. The `EFFECT_STREAM_PROXY` finalizer runs on every terminal path, which
   are the end of the data, a failure, and a cancel. It calls the remote `return`
   only on the cancel path, and that call closes the worker's stream fiber. The
-  finalizer closes the port on all three paths.
+  finalizer closes the port on all three paths. Cancelling a `queue.watch`
+  reader releases the worker's subscription. It stops no job.
 - A transferred Effect has no cancel path. Nothing interrupts the worker run when
-  the caller stops awaiting it. The worker runs it to completion.
+  the caller stops awaiting it. The worker runs it to completion. A queue job is
+  different: it runs on a fiber the queue runtime owns, never on the caller's
+  fiber, so dropping the `enqueue` call stops nothing. `pause`, `resume`, and
+  `cancel` are three separate short worker calls that mutate the queue's own
+  state.
+- The queue runtime (`src/worker/queue/runtime.ts`) is built once under an
+  explicit scope that lives for the life of the worker. It is not a `Layer`:
+  `Layer.effect` rebuilds per call, so the queue would reset on every call.
 
 ## Service worker & update UX
 
@@ -185,7 +204,7 @@ code moves.
 
 ## Worker: database and offline persistence
 
-- `src/worker/main.ts` exposes `{ db, fs }` over Comlink. It detects whether it runs as a
+- `src/worker/main.ts` exposes `{ db, fs, queue }` over Comlink. It detects whether it runs as a
   SharedWorker or a Dedicated worker.
   - As a SharedWorker, every tab connects to one shared instance through its own
     MessagePort.
@@ -196,6 +215,21 @@ code moves.
   for reactive queries.
 - The file system layer (`src/worker/fs`) stores files in chunks (multi-part
   uploads) with strict part-size validation rules.
+- The queue layer (`src/worker/queue`) runs jobs. It has one scheduler, one
+  global concurrency limit (2 by default), and an admission cap (64 by default).
+  The records are the single source of truth and the registry is empty until a
+  worker module registers a handler.
+  - `pause` interrupts and `resume` re-runs the handler from its beginning.
+    Nothing about a job's in-memory position survives a pause, so a resumable
+    continuation of an arbitrary Effect does not exist. Cleanup a handler
+    installed with `Effect.addFinalizer` still runs.
+  - `resume` goes to the back of the line. It does not jump ahead of work that
+    was queued while it was paused.
+  - `cancel` interrupts the fiber and leaves the record `canceled`. It does not
+    roll back side effects the handler already produced. Compensation belongs in
+    the handler's own finalizer.
+  - Retry is not in v1. A handler that wants it calls `Effect.retry` inside
+    itself, where it knows whether the failure was transient.
 
 ## Persistent state management
 
