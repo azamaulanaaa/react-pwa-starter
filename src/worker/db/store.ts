@@ -8,7 +8,7 @@ export function openStore(name: string): Promise<BTreeStore> {
 
   if (!instance) {
     instance = (async () => {
-      await initOxkv(wasmUrl);
+      await initOxkv({ module_or_path: wasmUrl });
       return new BTreeStore();
     })();
     instances.set(name, instance);
