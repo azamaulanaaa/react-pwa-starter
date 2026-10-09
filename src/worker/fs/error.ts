@@ -1,5 +1,5 @@
-import { Data } from "effect";
+import { Schema } from "effect";
 
-export class FsError extends Data.TaggedError("app/worker/fs")<{
-  readonly error: unknown;
-}> {}
+export class FsError extends Schema.TaggedError<FsError>()("app/worker/fs", {
+  error: Schema.Unknown,
+}) {}

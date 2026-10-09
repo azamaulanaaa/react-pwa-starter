@@ -1,5 +1,5 @@
-import { Data } from "effect";
+import { Schema } from "effect";
 
-export class DbError extends Data.TaggedError("app/worker/db")<{
-  readonly error: unknown;
-}> {}
+export class DbError extends Schema.TaggedError<DbError>()("app/worker/db", {
+  error: Schema.Unknown,
+}) {}
