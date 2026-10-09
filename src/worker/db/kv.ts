@@ -1,4 +1,5 @@
 import { Effect, Schema, Struct } from "effect";
+import { Atom, AtomRegistry } from "effect/reactivity";
 import { type BTreeStore, type BTreeTx, Direction } from "oxkv";
 
 import type { ChangeBus } from "@/worker/db/change-bus.ts";
@@ -80,7 +81,9 @@ export function createKvApi({ open, bus }: KvDeps): KvApi {
   const directionOf = (params: ListParams) =>
     params.direction === "prev" ? Direction.Prev : Direction.Next;
 
-  const notifyKey = (key: string) => {
+  // A write invalidates the table that owns the key.
+  // The key carries the table name, so the split stays the identity step.
+  const invalidateKey = (key: string) => {
     const tableName = tableOfKey(key);
     if (tableName !== undefined) {
       bus.notify(tableName);
@@ -98,7 +101,7 @@ export function createKvApi({ open, bus }: KvDeps): KvApi {
         const store = yield* openFx();
         yield* fromPromise(() => store.set(key, value));
 
-        notifyKey(key);
+        invalidateKey(key);
       }),
     delete: (key) =>
       Effect.gen(function* () {
@@ -108,7 +111,7 @@ export function createKvApi({ open, bus }: KvDeps): KvApi {
         );
 
         if (removed) {
-          notifyKey(key);
+          invalidateKey(key);
         }
 
         return removed;
@@ -151,12 +154,17 @@ export function createKvApi({ open, bus }: KvDeps): KvApi {
           () => store.begin_tx() as Promise<BTreeTx>,
         );
 
-        const dirtyTables = new Set<string>();
+        // The staged table names live in an atom, so the commit reads the
+        // tables that the transaction changed. The atom stays cached, so the
+        // staged names survive the gap before the commit.
+        const registry = AtomRegistry.make();
+        const dirtyTables = Atom.keepAlive(Atom.make(new Set<string>()));
 
         const markDirty = (key: string) => {
           const tableName = tableOfKey(key);
           if (tableName !== undefined) {
-            dirtyTables.add(tableName);
+            registry.update(dirtyTables, (current) =>
+              new Set(current).add(tableName));
           }
         };
 
@@ -186,7 +194,7 @@ export function createKvApi({ open, bus }: KvDeps): KvApi {
             Effect.gen(function* () {
               yield* fromPromise(() => tx.commit());
 
-              for (const tableName of dirtyTables) {
+              for (const tableName of registry.get(dirtyTables)) {
                 bus.notify(tableName);
               }
             }),

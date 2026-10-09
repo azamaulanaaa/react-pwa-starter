@@ -4,7 +4,7 @@ import { Effect, Schema, Stream, Struct } from "effect";
 import { v7 as randomUUID } from "uuid";
 
 import { dbMain, type Task } from "@/worker/db/index.ts";
-import { createChangeBus } from "@/worker/db/change-bus.ts";
+import { createChangeBus, createEventBus } from "@/worker/db/change-bus.ts";
 import type { DbEvent } from "@/worker/db/factory.ts";
 import { createDatabase, createTableModule } from "@/worker/db/factory.ts";
 import { createKvApi } from "@/worker/db/kv.ts";
@@ -350,6 +350,24 @@ describe("kv api", () => {
   });
 });
 
+describe("db change bus", () => {
+  it("notifies every subscriber of one table only", () => {
+    const bus = createChangeBus();
+    const calls: string[] = [];
+
+    const stop = bus.subscribe("task", () => calls.push("first"));
+    bus.subscribe("task", () => calls.push("second"));
+    bus.subscribe("kv", () => calls.push("other table"));
+
+    bus.notify("task");
+    expect(calls).toEqual(["first", "second"]);
+
+    stop();
+    bus.notify("task");
+    expect(calls).toEqual(["first", "second", "second"]);
+  });
+});
+
 describe("db event bus", () => {
   beforeAll(setupOxkv);
 
@@ -384,5 +402,26 @@ describe("db event bus", () => {
     await run(db.collector.delete(id));
 
     expect(collected.map((event) => event.kind)).toEqual(["set", "delete"]);
+  });
+
+  it("stops calling a handler after unsubscribe", async () => {
+    const bus = createEventBus();
+    const collected: DbEvent[] = [];
+    const event: DbEvent = {
+      kind: "delete",
+      table: "task",
+      id: randomUUID(),
+    };
+
+    const stop = bus.subscribe((received) =>
+      Effect.sync(() => {
+        collected.push(received);
+      }));
+
+    await run(bus.emit(event));
+    stop();
+    await run(bus.emit(event));
+
+    expect(collected).toEqual([event]);
   });
 });
