@@ -1,13 +1,14 @@
 import "fake-indexeddb/auto";
 import { beforeAll, describe, expect, it } from "vitest";
 import { Effect, Schema, Stream, Struct } from "effect";
+import { type BTreeStore } from "oxkv";
 import { v7 as randomUUID } from "uuid";
 
 import { dbMain, type Task } from "@/worker/db/index.ts";
 import { createChangeBus, createEventBus } from "@/worker/db/change-bus.ts";
 import type { DbEvent } from "@/worker/db/factory.ts";
 import { createDatabase, createTableModule } from "@/worker/db/factory.ts";
-import { createKvApi } from "@/worker/db/kv.ts";
+import { createKvApi, KvApi } from "@/worker/db/kv.ts";
 import { setupOxkv } from "@/worker/db/oxkv-wasm.ts";
 import { BaseSchema } from "@/worker/db/schema.ts";
 import { openStore } from "@/worker/db/store.ts";
@@ -365,6 +366,78 @@ describe("db change bus", () => {
     stop();
     bus.notify("task");
     expect(calls).toEqual(["first", "second", "second"]);
+  });
+});
+
+describe("watch teardown", () => {
+  beforeAll(setupOxkv);
+
+  const WatchedTable = createTableModule({
+    name: "watched",
+    schema: BaseSchema.mapFields(
+      Struct.assign(
+        Schema.Struct({ description: Schema.NonEmptyString }).fields,
+      ),
+    ),
+  });
+
+  /**
+   * The bus counts its live listeners, so the test can wait for the release of
+   * the subscription instead of waiting for a fixed time.
+   */
+  function createWatchedApi() {
+    const bus = createChangeBus();
+    let open: Promise<BTreeStore> | null = null;
+    const openStoreOnce = () => (open ??= openStore("watch-teardown"));
+    let listeners = 0;
+
+    const api = WatchedTable.api({
+      kvLayer: KvApi.layer({ open: openStoreOnce, bus }),
+      open: openStoreOnce,
+      subscribe: (tableName, listener) => {
+        listeners += 1;
+        const stop = bus.subscribe(tableName, listener);
+        return () => {
+          listeners -= 1;
+          stop();
+        };
+      },
+      notify: bus.notify,
+      emit: () => Effect.void,
+      onEvent: () => () => {},
+    });
+
+    return { api, listeners: () => listeners };
+  }
+
+  it("releases the change bus subscription when the consumer stops", async () => {
+    const { api, listeners } = createWatchedApi();
+    const chunks: unknown[][] = [];
+
+    const iterator = Stream.toAsyncIterable(
+      api.watch({ direction: "next" }),
+    )[Symbol.asyncIterator]();
+    void (async () => {
+      for (;;) {
+        const result = await iterator.next();
+        if (result.done) return;
+        chunks.push(result.value);
+      }
+    })();
+
+    // The subscription is live after the first query finished.
+    await waitFor(() => chunks.length >= 1);
+    expect(listeners()).toBe(1);
+
+    await iterator.return?.(undefined);
+    await waitFor(() => listeners() === 0);
+
+    // A write after the release must not reach the dead stream.
+    await run(api.set(randomUUID(), { description: "after cancel" }));
+    await new Promise((resolve) => setTimeout(resolve, 250));
+
+    expect(listeners()).toBe(0);
+    expect(chunks.length).toBe(1);
   });
 });
 

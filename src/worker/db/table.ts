@@ -179,15 +179,22 @@ export function createTableApi<Name extends string, A extends Base, I>({
 
               push();
 
-              const unsubscribe = subscribe(tableName, () => {
-                if (!stopped) push();
-              });
-
-              return Effect.sync(() => {
-                stopped = true;
-                unsubscribe();
-                Queue.end(queue);
-              });
+              // `Stream.callback` discards the success value of this effect.
+              // The teardown must therefore be a finalizer, so the
+              // subscription is released when the stream ends, fails, or the
+              // consumer cancels it.
+              yield* Effect.acquireRelease(
+                Effect.sync(() =>
+                  subscribe(tableName, () => {
+                    if (!stopped) push();
+                  })
+                ),
+                (unsubscribe) =>
+                  Effect.sync(() => {
+                    stopped = true;
+                    unsubscribe();
+                  }),
+              );
             })
           );
         })),
