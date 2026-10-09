@@ -119,15 +119,16 @@ src/
 
 ## Worker boundary
 
-This section names files and exported symbols, not line numbers, so it stays
-true when the code moves.
+This section names files and symbols, not line numbers, so it stays true when the
+code moves.
 
 - The worker owns the database and the file store. `src/worker/main.ts` exposes
-  `{ db, fs }`. `src/components/context/worker.tsx` wraps that worker and reaches
-  it over a Comlink MessagePort.
+  `{ db, fs }`. `src/components/context/worker.tsx` reaches the worker over a
+  Comlink endpoint. In shared mode it wraps the shared port. In dedicated mode
+  it wraps the Worker itself.
 - `src/lib/comlink/effect.ts` registers two transfer handlers. `EFFECT_PROXY`
   handles Effects and `EFFECT_STREAM_PROXY` handles Streams.
-  `src/lib/comlink/std.ts` registers a third handler, for plain functions.
+  `src/lib/comlink/std.ts` registers a handler for plain functions.
 - An Effect is never cloned across the port. `EFFECT_PROXY` keeps the Effect in
   the worker, exposes a function over a `MessageChannel`, and runs it there. It
   returns a plain envelope, `{ success, value }` or `{ success, error }`.
@@ -136,24 +137,42 @@ true when the code moves.
   structured clone carries.
 - Errors cross as strings. `flattenTaggedError` writes `[tag] message`, or
   `[tag -> tag] message` for a nested error. The client receives a plain `Error`
-  whose message holds that text. The `_tag` does not survive the boundary.
+  whose message has two lines. The worker prefixes the first line and
+  `flattenTaggedError` writes the second one, so the shape is:
+
+  ```
+  [Worker Error]
+  [app/worker/db] <message>
+  ```
+
+  The `_tag` does not survive the boundary.
   - The worker declares two tags today: `app/worker/db` on `DbError` in
     `src/worker/db/error.ts`, and `app/worker/fs` on `FsError` in
     `src/worker/fs/error.ts`. Only the database one reaches the UI, because no
     UI code calls the file store yet.
-  - The moment a second tag reaches the client, stop. Parsing the tag out of the
-    message text works, but it is a guess that breaks silently when the message
-    format changes. The fix is to send `{ _tag, message }` across the port and
-    rebuild the tagged error on the client, which this bridge does not do today.
+  - The moment a second tag reaches the client, stop relying on the tag
+    surviving. Parsing the tag out of the message text works, but it is a guess
+    that breaks silently when the message format changes. The fix is to send
+    `{ _tag, message }` across the port and rebuild the tagged error on the
+    client, which this bridge does not do today.
 - The tracer is a `Context.Reference`, so its default resolves outside any
-  Context. `withDevTools` provides the devtools layer around the whole worker-side
-  run, not around one span. Every Effect that call reaches uses that tracer.
+  Context. `withDevTools` provides the devtools layer around the whole
+  transferred Effect run. The layer merges the tracer into the Context of that
+  run and of no other. Nothing changes the default tracer for the process.
+  Effects started on other paths, such as the stream bridge or the plain
+  function handler, keep the default tracer.
+- `effectProxyContext` in `src/lib/comlink/effect.ts` is the shared Context that
+  every transferred Effect runs under. It is module-private and empty today. Add
+  a worker-side service to it and every transferred Effect can read it without
+  changing the run path again.
 - The UI makes five worker calls today, all of them `db.task`, all in
   `src/routes/_dashboard/index.tsx`: `watch`, `set` twice, `get`, and `delete`.
   The file store is built, tested, and bridged. No UI code calls it.
 - Cancelling the reader on the UI side stops the reader and releases the worker's
-  stream. The `EFFECT_STREAM_PROXY` finalizer calls the remote `return`, which
-  closes the worker's stream fiber, and then closes the port.
+  stream. The `EFFECT_STREAM_PROXY` finalizer runs on every terminal path, which
+  are the end of the data, a failure, and a cancel. It calls the remote `return`
+  only on the cancel path, and that call closes the worker's stream fiber. The
+  finalizer closes the port on all three paths.
 - A transferred Effect has no cancel path. Nothing interrupts the worker run when
   the caller stops awaiting it. The worker runs it to completion.
 
