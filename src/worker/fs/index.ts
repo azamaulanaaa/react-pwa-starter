@@ -15,12 +15,18 @@ const FileMetadataSchema = Schema.Struct({
 });
 export type FileMetadata = Schema.Schema.Type<typeof FileMetadataSchema>;
 
+// A non-negative integer. v4 has no `Schema.NonNegativeInt`.
+const NonNegativeInt = Schema.Number.check(
+  Schema.isInt(),
+  Schema.isGreaterThanOrEqualTo(0),
+);
+
 export const MetadataUploadSchema = Schema.Struct({
-  file_size: Schema.NonNegativeInt,
-  part_size: Schema.NonNegativeInt,
-  file_total_parts: Schema.NonNegativeInt,
+  file_size: NonNegativeInt,
+  part_size: NonNegativeInt,
+  file_total_parts: NonNegativeInt,
 }).pipe(
-  Schema.filter((data) => {
+  Schema.check(Schema.makeFilter((data) => {
     if (data.file_size === 0) return "file_size cannot be empty";
     if (data.part_size === 0) return "part_size cannot be zero";
     if (data.file_total_parts === 0) return "total_parts cannot be zero";
@@ -47,14 +53,14 @@ export const MetadataUploadSchema = Schema.Struct({
     }
 
     return;
-  }),
+  })),
 );
 export type MetadataUpload = Schema.Schema.Type<typeof MetadataUploadSchema>;
 
 const MetadataUploadPartSchema = Schema.Struct({
   file_id: FileIdSchema,
-  file_total_part: Schema.NonNegativeInt,
-  file_part: Schema.NonNegativeInt,
+  file_total_part: NonNegativeInt,
+  file_part: NonNegativeInt,
 });
 export type MetadataUploadPart = Schema.Schema.Type<
   typeof MetadataUploadPartSchema
@@ -62,7 +68,7 @@ export type MetadataUploadPart = Schema.Schema.Type<
 
 export const InitUpload = (metadata: MetadataUpload) =>
   Effect.gen(function* () {
-    const vMetadata = yield* Schema.decode(MetadataUploadSchema)(
+    const vMetadata = yield* Schema.decodeEffect(MetadataUploadSchema)(
       metadata,
     )
       .pipe(Effect.mapError((error) => new FsError({ error })));
@@ -79,7 +85,7 @@ export const InitUpload = (metadata: MetadataUpload) =>
 
 export const UploadPart = (metadata: MetadataUploadPart, blob: Blob) =>
   Effect.gen(function* () {
-    const { metadata: vMetadata, blob: vBlob } = yield* Schema.decode(
+    const { metadata: vMetadata, blob: vBlob } = yield* Schema.decodeEffect(
       Schema.Struct({
         metadata: MetadataUploadPartSchema,
         blob: Schema.instanceOf(Blob),
@@ -165,7 +171,7 @@ export const UploadPart = (metadata: MetadataUploadPart, blob: Blob) =>
 
 export const CompleteUpload = (id: FileId, metadata: FileMetadata) =>
   Effect.gen(function* () {
-    const { id: vId, metadata: vMetadata } = yield* Schema.decode(
+    const { id: vId, metadata: vMetadata } = yield* Schema.decodeEffect(
       Schema.Struct({ id: FileIdSchema, metadata: FileMetadataSchema }),
     )({ id, metadata }).pipe(
       Effect.mapError((error) => new FsError({ error })),
@@ -252,7 +258,7 @@ export const CompleteUpload = (id: FileId, metadata: FileMetadata) =>
 
 export const CancelUpload = (id: FileId) =>
   Effect.gen(function* () {
-    const vId = yield* Schema.decode(FileIdSchema)(id).pipe(
+    const vId = yield* Schema.decodeEffect(FileIdSchema)(id).pipe(
       Effect.mapError((error) => new FsError({ error })),
     );
 
@@ -290,7 +296,7 @@ export const CancelUpload = (id: FileId) =>
 
 export const Delete = (id: FileId) =>
   Effect.gen(function* () {
-    const vId = yield* Schema.decode(FileIdSchema)(id).pipe(
+    const vId = yield* Schema.decodeEffect(FileIdSchema)(id).pipe(
       Effect.mapError((error) => new FsError({ error })),
     );
 
@@ -307,7 +313,7 @@ export const Delete = (id: FileId) =>
 
 export const Get = (id: FileId) =>
   Effect.gen(function* () {
-    const vId = yield* Schema.decode(FileIdSchema)(id).pipe(
+    const vId = yield* Schema.decodeEffect(FileIdSchema)(id).pipe(
       Effect.mapError((error) => new FsError({ error })),
     );
 
@@ -370,11 +376,11 @@ export class UploadCompleteEvent
     fileId: Schema.String,
   }) {}
 
-export const UploadProgressEvent = Schema.Union(
+export const UploadProgressEvent = Schema.Union([
   UploadInitEvent,
   UploadProgressEventDetail,
   UploadCompleteEvent,
-);
+]);
 
 export type UploadProgressEvent = Schema.Schema.Type<
   typeof UploadProgressEvent
