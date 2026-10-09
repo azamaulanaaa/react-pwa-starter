@@ -41,11 +41,20 @@ describe("db persistence: persistent db cycle", () => {
     expect(stored.description).toBe("durable milk");
     expect(typeof stored.created_at).toBe("string");
 
+    // The stored string must decode back into the same instant, so a `Date`
+    // field survives the snapshot.
+    const row = await run(dbMain.task.get(id));
+    expect(row.created_at).toBeInstanceOf(Date);
+    expect(row.created_at.toISOString()).toBe(stored.created_at);
+
     const fresh = new BTreeStore();
     const snapshot = await run(loadSnapshot(["task"], persistence));
     await run(hydrateStore(fresh, snapshot));
     const restored = await fresh.get(key);
     expect(restored).toMatchObject({ description: "durable milk" });
+    expect((restored as Record<string, unknown>).created_at).toBe(
+      stored.created_at,
+    );
 
     await run(
       dbMain.task.set(id, {
