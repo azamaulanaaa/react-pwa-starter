@@ -1,5 +1,5 @@
 import * as Comlink from "comlink";
-import { Cause, Effect, Stream } from "effect";
+import { Cause, Effect, Queue, Stream } from "effect";
 import { DevTools } from "effect/devtools";
 
 export type ResolveEffect<T, Fallback> = T extends
@@ -91,31 +91,56 @@ if (!Comlink.transferHandlers.has(NAME_STREAM)) {
         return(): Promise<IteratorResult<unknown>>;
       }>(port);
 
-      return new ReadableStream({
-        async pull(controller) {
-          try {
-            const { value, done } = await remoteIterator.next();
-            if (done) {
-              controller.close();
-              port.close();
-            } else {
-              controller.enqueue(value);
+      // The remote end is a Comlink async iterator, not a local Stream. This
+      // adapter reads the remote iterator outside the stream fiber and offers
+      // each value to a queue. A pending remote read therefore never blocks
+      // the fiber, so a cancel can interrupt the fiber at any time. The buffer
+      // holds one value, so the reader still controls the request rate.
+      const remoteStream = Stream.callback<unknown, Error>(
+        (queue) => {
+          let remoteFinished = false;
+
+          const readRemote = async () => {
+            try {
+              while (true) {
+                const { value, done } = await remoteIterator.next();
+                if (done) break;
+                await Effect.runPromise(Queue.offer(queue, value));
+              }
+              remoteFinished = true;
+              await Effect.runPromise(Queue.end(queue));
+            } catch (err) {
+              remoteFinished = true;
+              await Effect.runPromise(
+                Queue.fail(queue, new Error(flattenTaggedError(err))),
+              );
             }
-          } catch (err) {
-            controller.error(err);
-            port.close();
-          }
+          };
+          void readRemote().catch(() => {
+            // The queue is shut down. The reader stopped reading, so no error
+            // is left to report.
+          });
+
+          // The finalizer runs on every terminal path: the end of the remote
+          // data, a remote failure, and a cancel from the reader. It releases
+          // the remote iterator on the cancel path and closes the port.
+          return Effect.gen(function* () {
+            yield* Effect.addFinalizer(() =>
+              Effect.promise(() =>
+                remoteFinished
+                  ? Promise.resolve()
+                  : remoteIterator.return().then(
+                      () => undefined,
+                      (err) => console.error("Stream cancel failed:", err),
+                    ),
+              ).pipe(Effect.andThen(Effect.sync(() => port.close()))),
+            );
+          });
         },
-        async cancel() {
-          try {
-            await remoteIterator.return();
-          } catch (e) {
-            console.error("Stream cancel failed:", e);
-          } finally {
-            port.close();
-          }
-        },
-      });
+        { bufferSize: 1 },
+      );
+
+      return Stream.toReadableStream(remoteStream);
     },
   });
 }
