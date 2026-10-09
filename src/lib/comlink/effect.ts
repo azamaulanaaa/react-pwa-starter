@@ -39,11 +39,11 @@ export function flattenTaggedError(err: unknown): string {
  * drops the layer and the import. The layer provides nothing, needs nothing,
  * and cannot fail.
  *
- * The tracer it installs is not scoped to the wrapped program. `Tracer` is a
- * `Context.Reference`, so it has a default that resolves outside the Context,
- * and `layerTracer` writes an explicit value for that key. Providing the layer
- * therefore replaces the tracer default for the whole worker, so any Effect
- * run after this one traces to devtools too, not just the wrapped program.
+ * `Effect.provide` builds the layer in a scope and merges its Context into the
+ * program it is applied to, so this tracer reaches that Effect and any fiber
+ * forked beneath it. It does not change the default tracer, so Effects started
+ * separately, for example the ones in the stream bridge below, keep the
+ * default.
  */
 function withDevTools<A, E, R>(
   program: Effect.Effect<A, E, R>,
