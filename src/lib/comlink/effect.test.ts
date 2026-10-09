@@ -13,6 +13,10 @@ const newChannel = (): MessageChannel => {
   return channel;
 };
 
+/** The first message the port receives, as the receiver sees it. */
+const nextMessage = <T>(port: MessagePort): Promise<T> =>
+  new Promise((resolve) => port.once("message", resolve));
+
 afterEach(() => {
   for (const { port1, port2 } of channels.splice(0)) {
     port1.close();
@@ -83,7 +87,9 @@ describe("EFFECT_PROXY transfer handler", () => {
       port2 as unknown as Comlink.Endpoint,
     );
 
-    await expect(remote.boom()).rejects.toThrow(/\[Worker Error\]/);
+    await expect(remote.boom()).rejects.toThrow(
+      /\[Worker Error\]\nworker exploded/,
+    );
     await expect(remote.boom()).rejects.toThrow(/worker exploded/);
   });
 
@@ -100,7 +106,12 @@ describe("EFFECT_PROXY transfer handler", () => {
       port2 as unknown as Comlink.Endpoint,
     );
 
-    await expect(remote.defect()).rejects.toThrow(/\[Worker Error\]/);
+    // A defect carries no failure reason, so the guard writes the pretty
+    // cause here. The body names the defect, which is what tells this branch
+    // apart from the branch for a result that is not an Effect result.
+    await expect(remote.defect()).rejects.toThrow(
+      /\[Worker Error\]\nError: hard defect/,
+    );
   });
 });
 
@@ -109,40 +120,143 @@ describe("EFFECT_PROXY deserialize guard", () => {
   // that fails `Effect.isEffect`. Each test below exposes a non-envelope value
   // on one end of a real channel and hands the other end to the registered
   // deserialize handler, which must reject it.
+
+  // The message the guard writes for a result that is not an Effect result.
+  // The body names the case, so the assertion pins which branch produced the
+  // error instead of matching any Error that carries the prefix.
+  const NOT_AN_EFFECT_RESULT =
+    /\[Worker Error\]\nThe worker returned a value that is not an Effect result\./;
+
+  /** The registered handler, fetched the way `deserializeResult` fetches it. */
+  const handlerOf = () => {
+    const handler = Comlink.transferHandlers.get("EFFECT_PROXY");
+    if (!handler) throw new Error("EFFECT_PROXY handler is not registered");
+    return handler;
+  };
+
   const deserializeResult = (remote: unknown): Promise<unknown> => {
     const { port1, port2 } = newChannel();
     Comlink.expose(
       () => remote,
       port1 as unknown as Comlink.Endpoint,
     );
-    const handler = Comlink.transferHandlers.get("EFFECT_PROXY");
-    if (!handler) throw new Error("EFFECT_PROXY handler is not registered");
     // The handler returns the promise from its async body; the transfer
     // handler type widens it to the Effect it stands in for.
-    return handler.deserialize(
+    return handlerOf().deserialize(
       port2 as unknown as MessagePort,
     ) as unknown as Promise<unknown>;
   };
 
+  it("rejects the structured clone of a real Effect", async () => {
+    // This is the input the guard exists for. A v4 Effect clones without
+    // throwing: the clone arrives as a plain Object whose only own key is
+    // `~effect/Effect/args`, holding the args tuple. It fails
+    // `Effect.isEffect`, and running it throws "Fiber.runLoop: Not a valid
+    // effect: [object Object]" with an undefined message. Nothing in the
+    // clone marks it as dead, so the guard has to reject on shape alone.
+    const { port1, port2 } = newChannel();
+    port1.postMessage(Effect.succeed(42));
+    const clone = await nextMessage<Record<string, unknown>>(port2);
+
+    expect(Effect.isEffect(clone)).toBe(false);
+    expect(Reflect.ownKeys(clone)).toEqual(["~effect/Effect/args"]);
+    expect((clone as { success?: unknown }).success).toBeUndefined();
+
+    // Hand the clone to the handler over a channel of its own, the way a
+    // comlink reply would carry it.
+    await expect(deserializeResult(clone)).rejects.toThrow(
+      NOT_AN_EFFECT_RESULT,
+    );
+  });
+
+  it("rejects when the remote throws", async () => {
+    // The remote function rejects, so the await inside the deserialize body
+    // rejects. The body has no catch, so the rejection reaches the caller
+    // unchanged. The handler must not swallow it or turn it into a result.
+    const { port1, port2 } = newChannel();
+    Comlink.expose(
+      (): never => {
+        throw new Error("the remote exploded");
+      },
+      port1 as unknown as Comlink.Endpoint,
+    );
+
+    const handler = handlerOf();
+    const promise = handler.deserialize(
+      port2 as unknown as MessagePort,
+    ) as unknown as Promise<unknown>;
+    const settled = promise.then(
+      (value) => ({ state: "resolved" as const, value }),
+      (error: Error) => ({
+        state: "rejected" as const,
+        message: error.message,
+      }),
+    );
+
+    // It rejects rather than resolving, and it rejects with what the remote
+    // threw. The guard never runs, so no [Worker Error] reaches the caller.
+    expect(await settled).toEqual({
+      state: "rejected",
+      message: "the remote exploded",
+    });
+  });
+
+  it("closes the port after the deserialize settles", async () => {
+    const { port1, port2 } = newChannel();
+    let calls = 0;
+    Comlink.expose(
+      (): { success: boolean; value: number } => {
+        calls += 1;
+        return { success: true, value: 42 };
+      },
+      port1 as unknown as Comlink.Endpoint,
+    );
+
+    const handler = handlerOf();
+    await expect(
+      handler.deserialize(port2 as unknown as MessagePort),
+    ).resolves.toBe(42);
+    expect(calls).toBe(1);
+
+    // The body closes the port in a finally. A closed MessagePort does not
+    // throw on a later post, it drops it, so the test calls the same function
+    // again and waits for an answer that cannot arrive.
+    const remote = Comlink.wrap<() => Promise<number>>(
+      port2 as unknown as Comlink.Endpoint,
+    );
+    const answer = await Promise.race([
+      remote().then(
+        () => "answered",
+        () => "answered",
+      ),
+      new Promise<string>((resolve) => {
+        setTimeout(() => resolve("silent"), 50);
+      }),
+    ]);
+
+    expect(answer).toBe("silent");
+    expect(calls).toBe(1);
+  });
+
   it("rejects a result with no success field", async () => {
     await expect(deserializeResult({ value: 42 })).rejects.toThrow(
-      /\[Worker Error\]/,
+      NOT_AN_EFFECT_RESULT,
     );
   });
 
   it("rejects a null result", async () => {
-    await expect(deserializeResult(null)).rejects.toThrow(/\[Worker Error\]/);
+    await expect(deserializeResult(null)).rejects.toThrow(NOT_AN_EFFECT_RESULT);
   });
 
   it("rejects a primitive result", async () => {
     await expect(deserializeResult("not an Effect result")).rejects.toThrow(
-      /\[Worker Error\]/,
+      NOT_AN_EFFECT_RESULT,
     );
   });
 
   it("rejects a success field that is not a boolean", async () => {
     await expect(deserializeResult({ success: "yes", value: 42 })).rejects
-      .toThrow(/\[Worker Error\]/);
+      .toThrow(NOT_AN_EFFECT_RESULT);
   });
 
   it("resolves the value of a well formed success envelope", async () => {
