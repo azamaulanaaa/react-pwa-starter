@@ -1,5 +1,5 @@
 import * as Comlink from "comlink";
-import { Cause, Effect, Queue, Stream } from "effect";
+import { Cause, Context, Effect, Queue, Stream } from "effect";
 import { DevTools } from "effect/devtools";
 
 export type ResolveEffect<T, Fallback> = T extends
@@ -38,6 +38,12 @@ export function flattenTaggedError(err: unknown): string {
  * defines `__DEVTOOLS__` as false for a production build, and the bundler
  * drops the layer and the import. The layer provides nothing, needs nothing,
  * and cannot fail.
+ *
+ * The tracer it installs is not scoped to the wrapped program. `Tracer` is a
+ * `Context.Reference`, so it has a default that resolves outside the Context,
+ * and `layerTracer` writes an explicit value for that key. Providing the layer
+ * therefore replaces the tracer default for the whole worker, so any Effect
+ * run after this one traces to devtools too, not just the wrapped program.
  */
 function withDevTools<A, E, R>(
   program: Effect.Effect<A, E, R>,
@@ -145,6 +151,18 @@ if (!Comlink.transferHandlers.has(NAME_STREAM)) {
   });
 }
 
+/**
+ * The Context that transferred Effects run under. It is built once here, at
+ * module scope, so every transferred Effect shares one runtime context
+ * instead of each call making a fresh default one.
+ *
+ * It is empty on purpose. This is the single seam for worker-side services:
+ * add a service to this Context and every transferred Effect can read it
+ * without touching the run path again. An `HttpClient` for OTLP export is one
+ * thing that would be added here.
+ */
+const effectProxyContext = Context.empty();
+
 const NAME_EFFECT = "EFFECT_PROXY";
 if (!Comlink.transferHandlers.has(NAME_EFFECT)) {
   Comlink.transferHandlers.set(NAME_EFFECT, {
@@ -153,7 +171,7 @@ if (!Comlink.transferHandlers.has(NAME_EFFECT)) {
     serialize: <A, E>(effectInstance: Effect.Effect<A, E, never>) => {
       const { port1, port2 } = new MessageChannel();
       const executionPromise = () =>
-        Effect.runPromise(
+        Effect.runPromiseWith(effectProxyContext)(
           withDevTools(
             effectInstance.pipe(
               Effect.matchCause({
