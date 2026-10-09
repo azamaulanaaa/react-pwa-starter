@@ -1,6 +1,6 @@
 import "fake-indexeddb/auto";
 import { beforeAll, describe, expect, it } from "vitest";
-import { Chunk, Effect, Schema, Stream } from "effect";
+import { Effect, Schema, Stream, Struct } from "effect";
 import { v7 as randomUUID } from "uuid";
 
 import { dbMain, type Task } from "@/worker/db/index.ts";
@@ -172,7 +172,7 @@ describe("dbMain.task", () => {
     const collectLastChunk = (args: Parameters<typeof dbMain.task.watch>[0]) =>
       Effect.map(
         Stream.runCollect(Stream.take(dbMain.task.watch(args), 1)),
-        (chunk) => Chunk.toReadonlyArray(chunk).at(0) ?? [],
+        (chunks) => chunks.at(0) ?? [],
       );
 
     const nextPage = await Effect.runPromise(
@@ -358,8 +358,10 @@ describe("db event bus", () => {
 
     const CollectorTable = createTableModule({
       name: "collector",
-      schema: BaseSchema.pipe(
-        Schema.extend(Schema.Struct({ description: Schema.NonEmptyString })),
+      schema: BaseSchema.mapFields(
+        Struct.assign(
+          Schema.Struct({ description: Schema.NonEmptyString }).fields,
+        ),
       ),
     });
 

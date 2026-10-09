@@ -67,7 +67,8 @@ type GetModuleValues<T> = T extends Record<string, infer M>
 export const createTableModule = <Name extends string, A extends Base, I>(
   config: {
     name: Name;
-    schema: Schema.Codec<A, I>;
+    // The schema is a struct, so the table code can read its fields.
+    schema: Schema.Codec<A, I> & Schema.Struct<Schema.Struct.Fields>;
   },
 ): TableModule<Name, ReturnType<typeof createTableApi<Name, A, I>>> => {
   return {

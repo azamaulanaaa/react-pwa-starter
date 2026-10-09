@@ -165,9 +165,9 @@ describe("EFFECT_STREAM_PROXY transfer handler", () => {
 describe("formatEffectError integration", () => {
   it("renders a failure cause produced through the same path as the handler", () => {
     const cause = Cause.fail({ _tag: "FsError", error: "no session" });
-    const failures = Cause.failures(cause);
-    const first = Array.from(failures)[0];
+    const failures = cause.reasons.filter(Cause.isFailReason);
+    const first = failures[0];
 
-    expect(flattenTaggedError(first)).toContain("no session");
+    expect(flattenTaggedError(first.error)).toContain("no session");
   });
 });

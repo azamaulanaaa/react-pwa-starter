@@ -76,7 +76,7 @@ const flush = async () => {
 /** Returns the `DbError` payload of a failed exit. */
 const failureMessage = (exit: Exit.Exit<unknown, unknown>): string => {
   if (!Exit.isFailure(exit)) return "";
-  const failure = Cause.failureOption(exit.cause);
+  const failure = Cause.findErrorOption(exit.cause);
   if (Option.isNone(failure)) return String(exit.cause);
   const error = (failure.value as { error?: unknown }).error;
   return String(error);
