@@ -28,10 +28,11 @@ export function createTableApi<Name extends string, A extends Base, I>({
   emit,
 }: TableDeps<Name, A, I>) {
   // v4 removed `Schema.omit`. The code rebuilds the struct without the
-  // three fields that the worker supplies.
+  // three fields that the worker supplies. `toType` keeps the input on the
+  // decoded side, which is what the v3 `typeSchema` call did.
   const { id, created_at, modified_at, ...rest } = Schema.toType(schema)
     .schema.fields;
-  const putSchema = Schema.Struct(rest);
+  const putSchema = Schema.toType(Schema.Struct(rest));
 
   const decodeId = (id: string) => decodeFx(IdSchema, id);
 
