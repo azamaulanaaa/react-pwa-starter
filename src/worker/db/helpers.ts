@@ -10,20 +10,20 @@ export const fromPromise = <A>(
     catch: (error) => new DbError({ error }),
   });
 
-export function decodeFx<A, I>(
+export const decodeFx = Effect.fnUntraced(function*<A, I>(
   schema: Schema.Codec<A, I>,
   input: unknown,
-): Effect.Effect<A, DbError> {
-  return Schema.decodeEffect(schema)(input as I).pipe(
+): Effect.fn.Return<A, DbError> {
+  return yield* Schema.decodeEffect(schema)(input as I).pipe(
     Effect.mapError((error) => new DbError({ error })),
   );
-}
+});
 
-export function decodeUnknownFx<A, I>(
+export const decodeUnknownFx = Effect.fnUntraced(function*<A, I>(
   schema: Schema.Codec<A, I>,
   input: unknown,
-): Effect.Effect<A, DbError> {
-  return Schema.decodeUnknownEffect(schema)(input).pipe(
+): Effect.fn.Return<A, DbError> {
+  return yield* Schema.decodeUnknownEffect(schema)(input).pipe(
     Effect.mapError((error) => new DbError({ error })),
   );
-}
+});

@@ -24,51 +24,59 @@ export function createDbPersistence(root = "db/main"): DbPersistence {
   const keyOf = (table: string, id: Id) => `${root}/${table}/${id}`;
 
   return {
-    save: (table, id, doc) =>
-      Effect.tryPromise({
+    save: Effect.fnUntraced(function*(
+      table: string,
+      id: Id,
+      doc: unknown,
+    ): Effect.fn.Return<void, DbError> {
+      return yield* Effect.tryPromise({
         try: async () => {
           await storage.setItem(keyOf(table, id), JSON.stringify(doc));
         },
         catch: (error) => new DbError({ error }),
-      }),
-    remove: (table, id) =>
-      Effect.gen(function* () {
-        const key = keyOf(table, id);
-        const existing = yield* Effect.tryPromise({
-          try: () => storage.getItem(key),
-          catch: (error) => new DbError({ error }),
-        });
+      });
+    }),
+    remove: Effect.fnUntraced(function*(
+      table: string,
+      id: Id,
+    ): Effect.fn.Return<boolean, DbError> {
+      const key = keyOf(table, id);
+      const existing = yield* Effect.tryPromise({
+        try: () => storage.getItem(key),
+        catch: (error) => new DbError({ error }),
+      });
 
-        if (existing == null) {
-          return false;
-        }
+      if (existing == null) {
+        return false;
+      }
 
-        yield* Effect.tryPromise({
-          try: () => storage.removeItem(key),
-          catch: (error) => new DbError({ error }),
-        });
+      yield* Effect.tryPromise({
+        try: () => storage.removeItem(key),
+        catch: (error) => new DbError({ error }),
+      });
 
-        return true;
-      }),
-    load: (table) =>
-      Effect.gen(function* () {
-        const prefix = `${root}/${table}/`;
-        const keys = yield* Effect.tryPromise({
-          try: () => storage.getKeys(prefix),
-          catch: (error) => new DbError({ error }),
-        });
+      return true;
+    }),
+    load: Effect.fnUntraced(function*(
+      table: string,
+    ): Effect.fn.Return<{ id: Id; value: unknown }[], DbError> {
+      const prefix = `${root}/${table}/`;
+      const keys = yield* Effect.tryPromise({
+        try: () => storage.getKeys(prefix),
+        catch: (error) => new DbError({ error }),
+      });
 
-        return yield* Effect.forEach(keys, (key) =>
-          Effect.gen(function* () {
-            const raw = yield* Effect.tryPromise({
-              try: () => storage.getItem(key),
-              catch: (error) => new DbError({ error }),
-            });
-            const value = yield* Effect.succeed(raw);
+      return yield* Effect.forEach(keys, (key) =>
+        Effect.gen(function* () {
+          const raw = yield* Effect.tryPromise({
+            try: () => storage.getItem(key),
+            catch: (error) => new DbError({ error }),
+          });
+          const value = yield* Effect.succeed(raw);
 
-            return { id: key.slice(prefix.length) as Id, value };
-          }));
-      }),
+          return { id: key.slice(prefix.length) as Id, value };
+        }));
+    }),
   };
 }
 
