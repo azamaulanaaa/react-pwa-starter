@@ -1,5 +1,5 @@
 import * as Comlink from "comlink";
-import { Cause, Chunk, Effect, Stream } from "effect";
+import { Cause, Effect, Stream } from "effect";
 
 export type ResolveEffect<T, Fallback> = T extends
   Effect.Effect<infer Success, unknown, unknown> ? Promise<Success>
@@ -33,10 +33,10 @@ export function flattenTaggedError(err: unknown): string {
 }
 
 function formatEffectError(cause: Cause.Cause<unknown>): string {
-  const failures = Chunk.toReadonlyArray(Cause.failures(cause));
+  const failures = cause.reasons.filter(Cause.isFailReason);
   return failures.length === 0
     ? Cause.pretty(cause) || "An unexpected worker defect occurred."
-    : flattenTaggedError(failures[0]);
+    : flattenTaggedError(failures[0].error);
 }
 
 const NAME_STREAM = "EFFECT_STREAM_PROXY";
@@ -45,7 +45,7 @@ if (!Comlink.transferHandlers.has(NAME_STREAM)) {
     canHandle: (val): val is Stream.Stream<unknown, unknown, unknown> =>
       val !== null &&
       (typeof val === "object" || typeof val === "function") &&
-      Stream.StreamTypeId in val,
+      Stream.isStream(val),
 
     serialize: <A, E>(streamInstance: Stream.Stream<A, E, never>) => {
       const { port1, port2 } = new MessageChannel();
@@ -128,19 +128,33 @@ if (!Comlink.transferHandlers.has(NAME_EFFECT)) {
       return [port2, [port2]];
     },
     deserialize: (port: MessagePort) => {
+      // A structured clone of a v4 Effect does not throw. The clone is an
+      // object that fails `Effect.isEffect`, and running it throws an error
+      // with an undefined message. The check below rejects a result that
+      // does not carry the envelope the worker sends, so a dead value never
+      // reaches the caller as a success.
       const proxyFunc = Comlink.wrap<
-        () => Promise<
-          | { success: true; value: unknown }
-          | { success: false; error: string }
-        >
+        () => Promise<unknown>
       >(port);
       return (async () => {
         try {
           const result = await proxyFunc();
-          if (!result.success) {
-            throw new Error(`[Worker Error]\n${result.error}`);
+          if (
+            result === null || typeof result !== "object" ||
+            typeof (result as { success?: unknown }).success !== "boolean"
+          ) {
+            throw new Error(
+              `[Worker Error]\nThe worker returned a value that is not an Effect result.`,
+            );
           }
-          return result.value;
+          if (!(result as { success: boolean }).success) {
+            throw new Error(
+              `[Worker Error]\n${
+                String((result as { error?: unknown }).error)
+              }`,
+            );
+          }
+          return (result as { value: unknown }).value;
         } finally {
           port.close();
         }
