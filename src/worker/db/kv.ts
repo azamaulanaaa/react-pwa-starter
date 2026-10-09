@@ -1,4 +1,4 @@
-import { Effect, Schema } from "effect";
+import { Effect, Schema, Struct } from "effect";
 import { type BTreeStore, type BTreeTx, Direction } from "oxkv";
 
 import type { ChangeBus } from "@/worker/db/change-bus.ts";
@@ -30,18 +30,24 @@ export type KvApi = {
   beginTx: () => Effect.Effect<KvTx, DbError>;
 };
 
+// A non-negative integer. v4 has no `Schema.NonNegativeInt`.
+const NonNegativeInt = Schema.Number.check(
+  Schema.isInt(),
+  Schema.isGreaterThanOrEqualTo(0),
+);
+
 export const ListParamsSchema = Schema.Struct({
-  limit: Schema.optional(Schema.NonNegativeInt),
-  direction: Schema.Literal("next", "prev"),
+  limit: Schema.optional(NonNegativeInt),
+  direction: Schema.Literals(["next", "prev"]),
   startCursor: Schema.optional(Schema.NonEmptyString),
   endCursor: Schema.optional(Schema.NonEmptyString),
 });
 export type ListParams = Schema.Schema.Type<typeof ListParamsSchema>;
 
-export const KvListParamsSchema = ListParamsSchema.pipe(
-  Schema.extend(Schema.Struct({
+export const KvListParamsSchema = ListParamsSchema.mapFields(
+  Struct.assign(Schema.Struct({
     query: Schema.optional(Schema.String),
-  })),
+  }).fields),
 );
 export type KvListParams = Schema.Schema.Type<typeof KvListParamsSchema>;
 

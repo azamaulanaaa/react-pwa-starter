@@ -11,19 +11,19 @@ export const fromPromise = <A>(
   });
 
 export function decodeFx<A, I>(
-  schema: Schema.Schema<A, I, never>,
+  schema: Schema.Codec<A, I>,
   input: unknown,
 ): Effect.Effect<A, DbError> {
-  return Schema.decode(schema)(input as I).pipe(
+  return Schema.decodeEffect(schema)(input as I).pipe(
     Effect.mapError((error) => new DbError({ error })),
   );
 }
 
 export function decodeUnknownFx<A, I>(
-  schema: Schema.Schema<A, I, never>,
+  schema: Schema.Codec<A, I>,
   input: unknown,
 ): Effect.Effect<A, DbError> {
-  return Schema.decodeUnknown(schema)(input).pipe(
+  return Schema.decodeUnknownEffect(schema)(input).pipe(
     Effect.mapError((error) => new DbError({ error })),
   );
 }

@@ -1,11 +1,13 @@
-import { Schema } from "effect";
+import { Schema, Struct } from "effect";
 import { createTableModule } from "@/worker/db/factory.ts";
 import { BaseSchema } from "@/worker/db/schema.ts";
 
-const TaskSchema = BaseSchema.pipe(Schema.extend(Schema.Struct({
-  description: Schema.NonEmptyString,
-  is_done: Schema.Boolean,
-})));
+const TaskSchema = BaseSchema.mapFields(
+  Struct.assign(Schema.Struct({
+    description: Schema.NonEmptyString,
+    is_done: Schema.Boolean,
+  }).fields),
+);
 export type Task = Schema.Schema.Type<typeof TaskSchema>;
 
 export const TableTask = createTableModule({
