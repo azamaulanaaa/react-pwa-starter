@@ -1,4 +1,4 @@
-import { Chunk, Effect, Option, Schema, Stream } from "effect";
+import { Effect, Queue, Schema, Stream } from "effect";
 
 import type { ChangeBus, DbEvent } from "@/worker/db/change-bus.ts";
 import { DbError } from "@/worker/db/error.ts";
@@ -13,7 +13,8 @@ import { type Base, IdSchema } from "@/worker/db/schema.ts";
 
 type TableDeps<Name extends string, A extends Base, I> = {
   tableName: Name;
-  schema: Schema.Schema<A, I, never>;
+  // The schema is a struct, so the code can read its fields.
+  schema: Schema.Codec<A, I> & Schema.Struct<Schema.Struct.Fields>;
   kv: KvApi;
   subscribe: ChangeBus["subscribe"];
   emit: (event: DbEvent) => Effect.Effect<void, DbError>;
@@ -26,9 +27,11 @@ export function createTableApi<Name extends string, A extends Base, I>({
   subscribe,
   emit,
 }: TableDeps<Name, A, I>) {
-  const putSchema = Schema.typeSchema(schema).pipe(
-    Schema.omit("id", "created_at", "modified_at"),
-  );
+  // v4 removed `Schema.omit`. The code rebuilds the struct without the
+  // three fields that the worker supplies.
+  const { id, created_at, modified_at, ...rest } = Schema.toType(schema)
+    .schema.fields;
+  const putSchema = Schema.Struct(rest);
 
   const decodeId = (id: string) => decodeFx(IdSchema, id);
 
@@ -139,36 +142,43 @@ export function createTableApi<Name extends string, A extends Base, I>({
         Effect.gen(function* () {
           const params = yield* decodeFx(ListParamsSchema, args);
 
-          return Stream.async<A[], DbError>((emit) => {
-            let stopped = false;
-            let generation = 0;
+          // The stream element is the rows array, so the consumer receives one
+          // batch per notification.
+          return Stream.callback<A[], DbError>((queue) =>
+            Effect.gen(function* () {
+              let stopped = false;
+              let generation = 0;
 
-            const push = () => {
-              const current = ++generation;
+              const push = () => {
+                const current = ++generation;
 
-              Effect.runPromise(queryRows(params)).then(
-                (rows) => {
-                  if (stopped || current !== generation) return;
-                  emit(Effect.succeed(Chunk.of(rows)));
-                },
-                (error) => {
-                  if (stopped || current !== generation) return;
-                  emit(Effect.fail(Option.some(new DbError({ error }))));
-                },
-              );
-            };
+                Effect.runPromise(queryRows(params)).then(
+                  (rows) => {
+                    if (stopped || current !== generation) return;
+                    Effect.runFork(Queue.offer(queue, rows));
+                  },
+                  (error) => {
+                    if (stopped || current !== generation) return;
+                    Effect.runFork(
+                      Queue.fail(queue, new DbError({ error })),
+                    );
+                  },
+                );
+              };
 
-            push();
+              push();
 
-            const unsubscribe = subscribe(tableName, () => {
-              if (!stopped) push();
-            });
+              const unsubscribe = subscribe(tableName, () => {
+                if (!stopped) push();
+              });
 
-            return Effect.sync(() => {
-              stopped = true;
-              unsubscribe();
-            });
-          });
+              return Effect.sync(() => {
+                stopped = true;
+                unsubscribe();
+                Queue.end(queue);
+              });
+            })
+          );
         }),
       ),
   };
