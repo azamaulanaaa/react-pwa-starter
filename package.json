@@ -34,7 +34,7 @@
     "class-variance-authority": "^0.7.1",
     "cnfast": "^0.0.8",
     "comlink": "^4.4.2",
-    "effect": "^3.22.1",
+    "effect": "4.0.2",
     "idb-keyval": "^6.3.0",
     "lucide-react": "^1.28.0",
     "micromustache": "^8.0.3",
