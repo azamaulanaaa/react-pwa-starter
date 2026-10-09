@@ -47,7 +47,7 @@ function withDevTools<A, E, R>(
     : program;
 }
 
-function formatEffectError(cause: Cause.Cause<unknown>): string {
+export function formatEffectError(cause: Cause.Cause<unknown>): string {
   const failures = cause.reasons.filter(Cause.isFailReason);
   return failures.length === 0
     ? Cause.pretty(cause) || "An unexpected worker defect occurred."
