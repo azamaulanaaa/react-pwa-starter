@@ -1,5 +1,6 @@
 import * as Comlink from "comlink";
 import { Cause, Effect, Stream } from "effect";
+import { DevTools } from "effect/devtools";
 
 export type ResolveEffect<T, Fallback> = T extends
   Effect.Effect<infer Success, unknown, unknown> ? Promise<Success>
@@ -30,6 +31,20 @@ export function flattenTaggedError(err: unknown): string {
     }
   }
   return tags.length ? `[${tags.join(" -> ")}] ${message}` : message;
+}
+
+/**
+ * The devtools tracer is a layer, so the run path provides it. The build
+ * defines `__DEVTOOLS__` as false for a production build, and the bundler
+ * drops the layer and the import. The layer provides nothing, needs nothing,
+ * and cannot fail.
+ */
+function withDevTools<A, E, R>(
+  program: Effect.Effect<A, E, R>,
+): Effect.Effect<A, E, R> {
+  return __DEVTOOLS__
+    ? program.pipe(Effect.provide(DevTools.layer()))
+    : program;
 }
 
 function formatEffectError(cause: Cause.Cause<unknown>): string {
@@ -114,14 +129,16 @@ if (!Comlink.transferHandlers.has(NAME_EFFECT)) {
       const { port1, port2 } = new MessageChannel();
       const executionPromise = () =>
         Effect.runPromise(
-          effectInstance.pipe(
-            Effect.matchCause({
-              onFailure: (cause) => ({
-                success: false,
-                error: formatEffectError(cause),
+          withDevTools(
+            effectInstance.pipe(
+              Effect.matchCause({
+                onFailure: (cause) => ({
+                  success: false,
+                  error: formatEffectError(cause),
+                }),
+                onSuccess: (value) => ({ success: true, value }),
               }),
-              onSuccess: (value) => ({ success: true, value }),
-            }),
+            ),
           ),
         );
       Comlink.expose(executionPromise, port1);

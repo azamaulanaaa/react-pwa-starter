@@ -114,9 +114,11 @@ const sharedOutputOptions: NonNullable<
   },
 };
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   define: {
     __APP_NAME__: JSON.stringify(pkg.name),
+    // The devtools tracer reaches the user only in a development build.
+    __DEVTOOLS__: JSON.stringify(command === "serve"),
   },
   plugins: [
     tanstackRouter({
@@ -157,4 +159,4 @@ export default defineConfig({
   resolve: {
     tsconfigPaths: true,
   },
-});
+}));
