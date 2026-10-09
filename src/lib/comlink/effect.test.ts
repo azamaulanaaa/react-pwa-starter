@@ -104,6 +104,49 @@ describe("EFFECT_PROXY transfer handler", () => {
   });
 });
 
+describe("plain value transfer", () => {
+  it("passes a plain object through the port", async () => {
+    const { port1, port2 } = newChannel();
+    Comlink.expose(
+      {
+        read: (): { count: number; label: string } => ({
+          count: 2,
+          label: "usable",
+        }),
+      },
+      port1 as unknown as Comlink.Endpoint,
+    );
+    const remote = Comlink.wrap<{
+      read(): Promise<{ count: number; label: string }>;
+    }>(port2 as unknown as Comlink.Endpoint);
+
+    const value = await remote.read();
+
+    expect(value).toEqual({ count: 2, label: "usable" });
+    // A dead clone cannot be used. The test writes to the value, so the
+    // remote side holds a live object.
+    value.count += 1;
+    expect(value.count).toBe(3);
+  });
+
+  it("passes an array through the port", async () => {
+    const { port1, port2 } = newChannel();
+    Comlink.expose(
+      { read: (): string[] => ["first", "second"] },
+      port1 as unknown as Comlink.Endpoint,
+    );
+    const remote = Comlink.wrap<{ read(): Promise<string[]> }>(
+      port2 as unknown as Comlink.Endpoint,
+    );
+
+    const value = await remote.read();
+
+    expect(value).toEqual(["first", "second"]);
+    value.push("third");
+    expect(value).toEqual(["first", "second", "third"]);
+  });
+});
+
 describe("EFFECT_STREAM_PROXY transfer handler", () => {
   it("streams values across the boundary and closes", async () => {
     const { port1, port2 } = newChannel();
