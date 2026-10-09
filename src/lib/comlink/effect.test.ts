@@ -1,4 +1,4 @@
-import { MessageChannel } from "node:worker_threads";
+import { MessageChannel, MessagePort } from "node:worker_threads";
 import { afterEach, describe, expect, it } from "vitest";
 import { Cause, Effect, Stream } from "effect";
 import * as Comlink from "comlink";
@@ -101,6 +101,53 @@ describe("EFFECT_PROXY transfer handler", () => {
     );
 
     await expect(remote.defect()).rejects.toThrow(/\[Worker Error\]/);
+  });
+});
+
+describe("EFFECT_PROXY deserialize guard", () => {
+  // A structured clone of a v4 Effect does not throw. It arrives as an object
+  // that fails `Effect.isEffect`. Each test below exposes a non-envelope value
+  // on one end of a real channel and hands the other end to the registered
+  // deserialize handler, which must reject it.
+  const deserializeResult = (remote: unknown): Promise<unknown> => {
+    const { port1, port2 } = newChannel();
+    Comlink.expose(
+      () => remote,
+      port1 as unknown as Comlink.Endpoint,
+    );
+    const handler = Comlink.transferHandlers.get("EFFECT_PROXY");
+    if (!handler) throw new Error("EFFECT_PROXY handler is not registered");
+    // The handler returns the promise from its async body; the transfer
+    // handler type widens it to the Effect it stands in for.
+    return handler.deserialize(
+      port2 as unknown as MessagePort,
+    ) as unknown as Promise<unknown>;
+  };
+
+  it("rejects a result with no success field", async () => {
+    await expect(deserializeResult({ value: 42 })).rejects.toThrow(
+      /\[Worker Error\]/,
+    );
+  });
+
+  it("rejects a null result", async () => {
+    await expect(deserializeResult(null)).rejects.toThrow(/\[Worker Error\]/);
+  });
+
+  it("rejects a primitive result", async () => {
+    await expect(deserializeResult("not an Effect result")).rejects.toThrow(
+      /\[Worker Error\]/,
+    );
+  });
+
+  it("rejects a success field that is not a boolean", async () => {
+    await expect(deserializeResult({ success: "yes", value: 42 })).rejects
+      .toThrow(/\[Worker Error\]/);
+  });
+
+  it("resolves the value of a well formed success envelope", async () => {
+    await expect(deserializeResult({ success: true, value: 42 })).resolves
+      .toBe(42);
   });
 });
 
