@@ -396,7 +396,7 @@ export const Upload = (
   blob: Blob,
   partSize: number = 524288, // The default part size is 512KB.
 ): Stream.Stream<UploadProgressEvent, FsError> => {
-  return Stream.unwrapScoped(
+  return Stream.unwrap(
     Effect.gen(function* () {
       const totalSize = blob.size;
 
@@ -416,7 +416,7 @@ export const Upload = (
       yield* Effect.addFinalizer((exit) =>
         Effect.gen(function* () {
           if (exit._tag === "Failure") {
-            yield* CancelUpload(fileId).pipe(Effect.ignoreLogged);
+            yield* CancelUpload(fileId).pipe(Effect.ignore({ log: true }));
           }
         })
       );
