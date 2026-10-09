@@ -9,14 +9,13 @@ import { Input } from "@/components/ui/input.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { FieldInfo } from "@/components/form/field-info.tsx";
 
-const useFormTaskSchema = () => {
-  const { t } = useTranslation();
-
-  return Schema.mutable(Schema.Struct({
+// The rule is a check. The message comes from the `checkHook` in `FormTask`.
+export const useFormTaskSchema = () => {
+  return Schema.Struct({
     task: Schema.String.pipe(
-      Schema.nonEmptyString({ message: () => t("form_task_error_task_empty") }),
+      Schema.check(Schema.makeFilter((value) => value.length > 0)),
     ),
-  }));
+  });
 };
 
 export type FormTaskValue = Schema.Schema.Type<
@@ -42,7 +41,9 @@ export function FormTask(props: FormTaskProps) {
   const form = useForm({
     defaultValues: defaultValues.current,
     validators: {
-      onChange: Schema.standardSchemaV1(formTaskSchema),
+      onChange: Schema.toStandardSchemaV1(formTaskSchema, {
+        checkHook: () => t("form_task_error_task_empty"),
+      }),
     },
     onSubmit: async ({ value }) => {
       await props.onSubmit(value);

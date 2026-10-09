@@ -16,20 +16,10 @@ import { Button } from "@/components/ui/button.tsx";
 import { FieldInfo } from "@/components/form/field-info.tsx";
 
 export function useFormSettingSchema() {
-  return Schema.mutable(
-    Schema.Struct({
-      theme: Schema.Union(
-        Schema.Literal("system"),
-        Schema.Literal("light"),
-        Schema.Literal("dark"),
-      ),
-      locale: Schema.Union(
-        Schema.Literal(""),
-        Schema.Literal("en-US"),
-        Schema.Literal("id-ID"),
-      ),
-    }),
-  );
+  return Schema.Struct({
+    theme: Schema.Literals(["system", "light", "dark"]),
+    locale: Schema.Literals(["", "en-US", "id-ID"]),
+  });
 }
 export type FormSettingValue = Schema.Schema.Type<
   ReturnType<typeof useFormSettingSchema>
@@ -71,7 +61,7 @@ export function FormSetting(props: FormSettingProps) {
   const { t } = useTranslation();
   const schema = useFormSettingSchema();
   const standard_schema = useMemo(
-    () => Schema.standardSchemaV1(schema),
+    () => Schema.toStandardSchemaV1(schema),
     [schema],
   );
 

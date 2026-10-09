@@ -1,34 +1,31 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Schema } from "effect";
 
-export const FileStateSchema = Schema.Union(
-  Schema.mutable(
-    Schema.Struct({
-      kind: Schema.Literal("ready"),
-      id: Schema.NonEmptyString,
-      name: Schema.NonEmptyString,
-      blob: Schema.instanceOf(Blob),
-    }),
-  ),
-  Schema.mutable(
-    Schema.Struct({
-      kind: Schema.Literal("progress"),
-      id: Schema.NonEmptyString,
-      progress: Schema.NonNegativeInt,
-      name: Schema.NonEmptyString,
-      blob: Schema.instanceOf(Blob),
-    }),
-  ),
-  Schema.mutable(
-    Schema.Struct({
-      kind: Schema.Literal("error"),
-      id: Schema.NonEmptyString,
-      name: Schema.NonEmptyString,
-      blob: Schema.instanceOf(Blob),
-      error: Schema.String,
-    }),
-  ),
-);
+export const FileStateSchema = Schema.Union([
+  Schema.Struct({
+    kind: Schema.Literals(["ready"]),
+    id: Schema.NonEmptyString,
+    name: Schema.NonEmptyString,
+    blob: Schema.instanceOf(Blob),
+  }),
+  Schema.Struct({
+    kind: Schema.Literals(["progress"]),
+    id: Schema.NonEmptyString,
+    progress: Schema.Number.check(
+      Schema.isInt(),
+      Schema.isGreaterThanOrEqualTo(0),
+    ),
+    name: Schema.NonEmptyString,
+    blob: Schema.instanceOf(Blob),
+  }),
+  Schema.Struct({
+    kind: Schema.Literals(["error"]),
+    id: Schema.NonEmptyString,
+    name: Schema.NonEmptyString,
+    blob: Schema.instanceOf(Blob),
+    error: Schema.String,
+  }),
+]);
 export type FileState = Schema.Schema.Type<typeof FileStateSchema>;
 export type ReadyFileState = FileState & {
   kind: "ready";
