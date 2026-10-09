@@ -1,4 +1,4 @@
-import { Effect, Schema, Struct } from "effect";
+import { Context, Effect, Layer, Schema, Struct } from "effect";
 import { Atom, AtomRegistry } from "effect/reactivity";
 import { type BTreeStore, type BTreeTx, Direction } from "oxkv";
 
@@ -20,7 +20,12 @@ export type KvTx = {
   rollback: () => Effect.Effect<void, DbError>;
 };
 
-export type KvApi = {
+/**
+ * The service shape of the raw key-value store. Every table operation needs
+ * it, so the operations read it from the context instead of taking it as an
+ * argument.
+ */
+export type KvService = {
   get: (key: string) => Effect.Effect<unknown, DbError>;
   set: (key: string, value: unknown) => Effect.Effect<void, DbError>;
   delete: (key: string) => Effect.Effect<boolean, DbError>;
@@ -30,6 +35,17 @@ export type KvApi = {
   save: () => Effect.Effect<Uint8Array, DbError>;
   beginTx: () => Effect.Effect<KvTx, DbError>;
 };
+
+export class KvApi extends Context.Service<KvApi, KvService>()(
+  "app/worker/db/KvApi",
+) {
+  /**
+   * Builds the layer that provides the service. The layer is explicit,
+   * because v4 has no `.Default` layer and no `.Live` layer.
+   */
+  static readonly layer = (deps: KvDeps) =>
+    Layer.effect(KvApi, Effect.sync(() => createKvApi(deps)));
+}
 
 // A non-negative integer. v4 has no `Schema.NonNegativeInt`.
 const NonNegativeInt = Schema.Number.check(
@@ -75,7 +91,7 @@ type KvDeps = {
   bus: ChangeBus;
 };
 
-export function createKvApi({ open, bus }: KvDeps): KvApi {
+export function createKvApi({ open, bus }: KvDeps): KvService {
   const openFx = () => fromPromise(open);
 
   const directionOf = (params: ListParams) =>
@@ -90,7 +106,7 @@ export function createKvApi({ open, bus }: KvDeps): KvApi {
     }
   };
 
-  return {
+  return KvApi.of({
     get: (key) =>
       Effect.gen(function* () {
         const store = yield* openFx();
@@ -201,5 +217,5 @@ export function createKvApi({ open, bus }: KvDeps): KvApi {
           rollback: () => fromPromise(() => tx.rollback()),
         } satisfies KvTx;
       }),
-  };
+  });
 }

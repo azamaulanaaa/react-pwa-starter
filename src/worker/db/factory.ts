@@ -1,4 +1,4 @@
-import { Effect, type Schema, type Stream } from "effect";
+import { Effect, Layer, type Schema, type Stream } from "effect";
 import type { BTreeStore } from "oxkv";
 
 import {
@@ -10,7 +10,7 @@ import {
   type EventHandler,
 } from "@/worker/db/change-bus.ts";
 import { DbError } from "@/worker/db/error.ts";
-import { createKvApi, type KvApi } from "@/worker/db/kv.ts";
+import { KvApi } from "@/worker/db/kv.ts";
 import { openStore } from "@/worker/db/store.ts";
 import { createTableApi } from "@/worker/db/table.ts";
 import type { Base } from "@/worker/db/schema.ts";
@@ -29,7 +29,7 @@ export type ApiFunction<Args extends any[], A, E> = (
 ) => Effect.Effect<A, E, never> | Stream.Stream<A, E, never>;
 
 type ModuleContext = {
-  kv: KvApi;
+  kvLayer: Layer.Layer<KvApi>;
   open: () => Promise<BTreeStore>;
   subscribe: ChangeBus["subscribe"];
   notify: ChangeBus["notify"];
@@ -77,7 +77,7 @@ export const createTableModule = <Name extends string, A extends Base, I>(
       createTableApi({
         tableName: config.name,
         schema: config.schema,
-        kv: ctx.kv,
+        kvLayer: ctx.kvLayer,
         subscribe: ctx.subscribe,
         emit: ctx.emit,
       }),
@@ -144,7 +144,7 @@ export function createDatabase<
   };
 
   const ctx: ModuleContext = {
-    kv: createKvApi({ open, bus }),
+    kvLayer: KvApi.layer({ open, bus }),
     open,
     subscribe: bus.subscribe,
     notify: bus.notify,

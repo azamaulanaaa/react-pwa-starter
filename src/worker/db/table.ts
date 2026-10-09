@@ -1,10 +1,10 @@
-import { Effect, Queue, Schema, Stream } from "effect";
+import { Effect, Queue, Schema, Stream, type Layer } from "effect";
 
 import type { ChangeBus, DbEvent } from "@/worker/db/change-bus.ts";
 import { DbError } from "@/worker/db/error.ts";
 import { decodeFx, decodeUnknownFx } from "@/worker/db/helpers.ts";
 import {
-  type KvApi,
+  KvApi,
   type ListParams,
   ListParamsSchema,
   tableKeys,
@@ -15,7 +15,7 @@ type TableDeps<Name extends string, A extends Base, I> = {
   tableName: Name;
   // The schema is a struct, so the code can read its fields.
   schema: Schema.Codec<A, I> & Schema.Struct<Schema.Struct.Fields>;
-  kv: KvApi;
+  kvLayer: Layer.Layer<KvApi>;
   subscribe: ChangeBus["subscribe"];
   emit: (event: DbEvent) => Effect.Effect<void, DbError>;
 };
@@ -23,10 +23,15 @@ type TableDeps<Name extends string, A extends Base, I> = {
 export function createTableApi<Name extends string, A extends Base, I>({
   tableName,
   schema,
-  kv,
+  kvLayer,
   subscribe,
   emit,
 }: TableDeps<Name, A, I>) {
+  // The table code reads the service from the context. The layer closes the
+  // requirement, so the api stays free of context requirements.
+  const withKv = <A2, E, R>(effect: Effect.Effect<A2, E, R>) =>
+    Effect.provide(effect, kvLayer);
+
   // v4 removed `Schema.omit`. The code rebuilds the struct without the
   // three fields that the worker supplies. `toType` keeps the input on the
   // decoded side, which is what the v3 `typeSchema` call did.
@@ -42,6 +47,7 @@ export function createTableApi<Name extends string, A extends Base, I>({
 
   function queryRows(params: ListParams) {
     return Effect.gen(function* () {
+      const kv = yield* KvApi;
       const isPrev = params.direction === "prev";
 
       let startCursor = isPrev ? keys.upperBound : keys.lowerBound;
@@ -79,13 +85,15 @@ export function createTableApi<Name extends string, A extends Base, I>({
 
   return {
     exists: (id: string) =>
-      Effect.gen(function* () {
+      withKv(Effect.gen(function* () {
+        const kv = yield* KvApi;
         const decodedId = yield* decodeId(id);
 
         return yield* kv.exists(keys.of(decodedId));
-      }),
+      })),
     get: (id: string) =>
-      Effect.gen(function* () {
+      withKv(Effect.gen(function* () {
+        const kv = yield* KvApi;
         const decodedId = yield* decodeId(id);
 
         const data = yield* kv.get(keys.of(decodedId));
@@ -99,9 +107,10 @@ export function createTableApi<Name extends string, A extends Base, I>({
         }
 
         return yield* decodeDoc(data);
-      }),
+      })),
     set: (id: string, input: Schema.Schema.Type<typeof putSchema>) =>
-      Effect.gen(function* () {
+      withKv(Effect.gen(function* () {
+        const kv = yield* KvApi;
         const decodedId = yield* decodeId(id);
         const decodedInput = yield* decodeUnknownFx(putSchema, input);
 
@@ -123,9 +132,10 @@ export function createTableApi<Name extends string, A extends Base, I>({
         yield* kv.set(key, doc);
 
         yield* emit({ kind: "set", table: tableName, id: decodedId, doc });
-      }),
+      })),
     delete: (id: string) =>
-      Effect.gen(function* () {
+      withKv(Effect.gen(function* () {
+        const kv = yield* KvApi;
         const decodedId = yield* decodeId(id);
 
         const removed = yield* kv.delete(keys.of(decodedId));
@@ -135,10 +145,10 @@ export function createTableApi<Name extends string, A extends Base, I>({
         }
 
         return removed;
-      }),
+      })),
     watch: (args: ListParams) =>
       Stream.unwrap(
-        Effect.gen(function* () {
+        withKv(Effect.gen(function* () {
           const params = yield* decodeFx(ListParamsSchema, args);
 
           // The stream element is the rows array, so the consumer receives one
@@ -151,7 +161,9 @@ export function createTableApi<Name extends string, A extends Base, I>({
               const push = () => {
                 const current = ++generation;
 
-                Effect.runPromise(queryRows(params)).then(
+                // The callback runs in its own fiber, so the layer
+                // provides the service for every push.
+                Effect.runPromise(withKv(queryRows(params))).then(
                   (rows) => {
                     if (stopped || current !== generation) return;
                     Effect.runFork(Queue.offer(queue, rows));
@@ -178,7 +190,7 @@ export function createTableApi<Name extends string, A extends Base, I>({
               });
             })
           );
-        }),
+        })),
       ),
   };
 }
