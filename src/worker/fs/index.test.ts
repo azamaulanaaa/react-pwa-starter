@@ -1,5 +1,6 @@
 import { MessageChannel } from "node:worker_threads";
 import { beforeEach, describe, expect, it } from "vitest";
+import { Stream } from "effect";
 import * as Comlink from "comlink";
 import { v7 as randomUUID } from "uuid";
 import "fake-indexeddb/auto";
@@ -32,6 +33,51 @@ async function collectStream<T>(stream: ReadableStream<T>): Promise<T[]> {
     values.push(value);
   }
 }
+
+describe("upload stream teardown", () => {
+  it("cancels the session when a part fails after the first part", async () => {
+    const store = fsStorage;
+    const partSize = 1024;
+    const bytes = new Uint8Array(2500).map((_, i) => (i * 31) % 256);
+    const source = new Blob([bytes], { type: "application/octet-stream" });
+
+    // The stub hands a short part to `UploadPart` for part 1, so the stream
+    // fails after part 0 was stored.
+    const brokenBlob = new Proxy(source, {
+      get: (target, property, receiver) =>
+        property === "slice"
+          ? (start: number, end: number) =>
+            start === partSize
+              ? new Blob([new Uint8Array(4)])
+              : target.slice(start, end)
+          : Reflect.get(target, property, receiver),
+    }) as Blob;
+
+    const iterator = Stream.toAsyncIterable(
+      fs.Upload("broken.bin", brokenBlob, partSize),
+    )[Symbol.asyncIterator]();
+
+    const init = await iterator.next();
+    const fileId = (init.value as fs.UploadInitEvent).fileId;
+
+    const failure = await iterator.next().then(
+      () => null,
+      (error: unknown) => error,
+    );
+    await iterator.return?.(undefined);
+
+    expect(String((failure as { error?: unknown })?.error)).toMatch(
+      /size mismatch/i,
+    );
+
+    // The finalizer of the upload stream called `CancelUpload`, so the
+    // session and every stored part are gone.
+    expect(await store.getItem(`uploads:${fileId}:metadata`)).toBeNull();
+    expect(await store.getItemRaw(`uploads:${fileId}:part:0`)).toBeNull();
+    expect(await store.getItemRaw(`uploads:${fileId}:part:1`)).toBeNull();
+    expect(await store.getItemRaw(`uploads:${fileId}:part:2`)).toBeNull();
+  });
+});
 
 describe("fs comlink bridge", () => {
   it("uploads a single-part file and reads it back", async () => {
