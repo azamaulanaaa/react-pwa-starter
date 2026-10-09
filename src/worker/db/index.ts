@@ -49,7 +49,7 @@ export const dbMain = createDatabase("main", dbMainRaw, {
 
       Effect.runPromise(
         applyPeerEvent(event).pipe(
-          Effect.catchAll((error) =>
+          Effect.catch((error) =>
             Effect.sync(() => {
               const cause = error.error;
               emitLog("ERROR", `Failed to apply peer ${key}`, {
