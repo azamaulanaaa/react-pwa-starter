@@ -390,6 +390,40 @@ const provider: SessionContract = {
 </SessionProvider>;
 ```
 
+## Replica reader
+
+- The generic reader is in `src/lib/sync`. The reader has no domain type.
+- `createReplicaReader` accepts a `ReplicaTransport`. An adapter implements the transport for one
+  backend. A test can give a fake transport.
+- `status` returns `appliedSeq`, `head`, and `pending`. The call does not advance the replica.
+- `advance` advances the replica and returns the new status.
+- `manifest` returns the object list. Each entry has a key, an ETag, and an optional size. The
+  reader does not interpret the data.
+- `readObject(key, { etag })` sends a conditional request when the caller gives an ETag. The
+  function returns `{ kind: "object", object }` with the bytes and the ETag. The function returns
+  `{ kind: "not-modified", etag }` for a 304 response.
+- The ETag is an opaque string. The reader does not parse the value.
+- The interface names no backend path and no manifest rule. The adapter owns these details.
+- The reader rejects an empty key, an empty ETag, a 304 response without an ETag, and an object
+  without an ETag.
+
+```ts
+import { createReplicaReader } from "@/lib/sync";
+
+const reader = createReplicaReader(transport);
+
+const status = await reader.status();
+const next = await reader.advance();
+const objects = await reader.manifest();
+const result = await reader.readObject("primary", {
+  etag: localEtag,
+});
+
+if (result.kind === "object") {
+  await store.write(result.object.key, result.object.data);
+}
+```
+
 ## Dark mode
 
 - The hook `useSystemDarkMode` detects the theme. The hook uses the `prefers-color-scheme`
