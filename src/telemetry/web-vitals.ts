@@ -57,7 +57,7 @@ interface LifecycleDeps {
    * moment to flush the exporters.
    */
   onHidden?: () => void;
-  logger?: import("@opentelemetry/api-logs").Logger;
+  logger?: import("@opentelemetry/api").Logger;
 }
 
 export function observePageLifecycle(deps: LifecycleDeps = {}): void {

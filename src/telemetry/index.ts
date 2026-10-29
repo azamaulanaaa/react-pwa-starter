@@ -6,14 +6,19 @@
  * own lazy chunk. That chunk never blocks the first paint.
  * See src/telemetry/api.ts for the helpers that support static import.
  */
-import { metrics, trace } from "@opentelemetry/api";
-import { logs } from "@opentelemetry/api-logs";
+import { context, logs, metrics, propagation, trace } from "@opentelemetry/api";
 import {
   BatchSpanProcessor,
   ParentBasedSampler,
+  StackContextManager,
   TraceIdRatioBasedSampler,
-  WebTracerProvider,
-} from "@opentelemetry/sdk-trace-web";
+  TracerProvider,
+} from "@opentelemetry/sdk-trace";
+import {
+  CompositePropagator,
+  W3CBaggagePropagator,
+  W3CTraceContextPropagator,
+} from "@opentelemetry/core";
 import {
   MeterProvider,
   PeriodicExportingMetricReader,
@@ -88,14 +93,25 @@ export function setupTelemetry({ router }: TelemetryOptions): void {
   const traceExporter = new OTLPTraceExporter({
     url: `${config.endpoint}/v1/traces`,
   });
-  const tracerProvider = new WebTracerProvider({
+  const tracerProvider = new TracerProvider({
     resource,
     sampler: new ParentBasedSampler({
       root: new TraceIdRatioBasedSampler(config.sampleRatio),
     }),
-    spanProcessors: [new BatchSpanProcessor(traceExporter)],
+    spanProcessors: [new BatchSpanProcessor({ exporter: traceExporter })],
   });
-  tracerProvider.register();
+  trace.setGlobalTracerProvider(tracerProvider);
+  // SDK 3 removed WebTracerProvider.register(), so register the context
+  // manager and the W3C propagators that register() used to install.
+  context.setGlobalContextManager(new StackContextManager().enable());
+  propagation.setGlobalPropagator(
+    new CompositePropagator({
+      propagators: [
+        new W3CTraceContextPropagator(),
+        new W3CBaggagePropagator(),
+      ],
+    }),
+  );
 
   // --- Metrics ---
   const meterProvider = new MeterProvider({
@@ -122,7 +138,6 @@ export function setupTelemetry({ router }: TelemetryOptions): void {
     ],
   });
 
-  trace.setGlobalTracerProvider(tracerProvider);
   metrics.setGlobalMeterProvider(meterProvider);
   logs.setGlobalLoggerProvider(loggerProvider);
 
@@ -155,7 +170,7 @@ export function setupTelemetry({ router }: TelemetryOptions): void {
 }
 
 async function flushTelemetry(
-  tracerProvider: WebTracerProvider,
+  tracerProvider: TracerProvider,
   meterProvider: MeterProvider,
   loggerProvider: LoggerProvider,
 ): Promise<void> {

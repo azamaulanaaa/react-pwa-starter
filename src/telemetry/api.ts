@@ -6,8 +6,13 @@
  * call the OTel API globals. These globals are no-ops. Call sites never check
  * state.
  */
-import { type Attributes, metrics, type Span, trace } from "@opentelemetry/api";
-import { type LogAttributes, logs } from "@opentelemetry/api-logs";
+import {
+  type Attributes,
+  logs,
+  metrics,
+  type Span,
+  trace,
+} from "@opentelemetry/api";
 
 export const TELEMETRY_SCOPE = "react-pwa-starter";
 
@@ -33,7 +38,7 @@ const SEVERITY_NUMBERS = {
 export function emitLog(
   severityText: keyof typeof SEVERITY_NUMBERS,
   body: string,
-  attributes?: LogAttributes,
+  attributes?: Attributes,
 ): void {
   getLogger().emit({
     body,
