@@ -66,7 +66,7 @@ npm run dev           # start dev server (Vite)
 | `npm run dev`       | Start the Vite dev server                 |
 | `npm run build`     | Production build (with bundle visualizer) |
 | `npm run preview`   | Preview the production build              |
-| `npm run check`     | Type-check with TypeScript                |
+| `npm run check`     | Type-check with TypeScript 6              |
 | `npm run test`      | Run tests with Vitest                     |
 | `npm run ladle`     | Serve Ladle component previews            |
 | `npm run fmt`       | Format the code with Prettier             |
