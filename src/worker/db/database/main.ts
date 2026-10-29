@@ -1,5 +1,6 @@
 /**
  * The application registers its table modules in this module.
- * The starter does not define a domain table.
+ * Add a table module to the `tables` object to register it.
+ * The starter registers no table.
  */
-export {};
+export const tables = {};

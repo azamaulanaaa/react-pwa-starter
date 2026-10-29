@@ -106,7 +106,8 @@ src/
 │       ├── form/      # Task form and stories
 │       ├── list/      # Task list, stories, and tests
 │       ├── schema.ts  # Task form schema and tests
-│       ├── table.ts   # Task table module
+│       ├── table.ts    # Task table module
+│       ├── register.ts # Task table registration map
 │       └── route.tsx  # Task route example
 ├── components/
 │   ├── ui/            # Prebuilt Base UI component kit (54 components)
@@ -143,16 +144,41 @@ cp src/features/task/route.tsx src/routes/_dashboard/index.tsx
 Then complete these steps:
 
 1. Change the `@/examples/task` imports to `@/features/task`.
-2. Export `TableTask` from `src/worker/db/database/main.ts` to register the
-   table in the worker database:
+2. Add the example table map to `src/worker/db/database/main.ts`:
 
    ```ts
-   export { TableTask } from "@/features/task/table.ts";
+   import { taskTables } from "@/features/task/register.ts";
+
+   export const tables = { ...taskTables };
    ```
 
 3. Keep the task translation keys in `public/locales`.
 
 The example tests run with the normal Vitest config. Run `npm run test`.
+
+## Table registration
+
+The core database factory takes a table map. The core has no table name. An
+application supplies the table modules at startup.
+
+1. Define the table with `createTableModule`. The module has a `name` and an
+   Effect Schema.
+2. Export a table map from a registration module. The example map is in
+   `src/examples/task/register.ts`.
+3. Add the table map to the `tables` object in
+   `src/worker/db/database/main.ts`:
+
+   ```ts
+   import { taskTables } from "@/examples/task/register.ts";
+
+   export const tables = { ...taskTables };
+   ```
+
+`src/worker/db/index.ts` passes the same object to `createDatabase` and
+`createDbFs`. An empty `tables` object starts without a table and without an
+error. The worker type comes from the table map, so the core types name no
+table. The default app registers no table. The task example does not add itself
+to the default app.
 
 ## Worker boundary
 

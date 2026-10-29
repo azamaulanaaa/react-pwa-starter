@@ -202,6 +202,14 @@ describe("default database", () => {
   });
 });
 
+describe("empty table map", () => {
+  it("starts an empty table map without an error", () => {
+    const db = createDatabase("empty-table-map", {});
+
+    expect(Object.keys(db as Record<string, unknown>)).toEqual([]);
+  });
+});
+
 describe("kv api", () => {
   const kvApi = createKvApi({
     open: () => openStore("main"),

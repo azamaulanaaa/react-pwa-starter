@@ -1,6 +1,6 @@
 import { createDatabase, createEventBus } from "@/worker/db/factory.ts";
 
-import * as dbMainRaw from "@/worker/db/database/main.ts";
+import { tables } from "@/worker/db/database/main.ts";
 export type * from "@/worker/db/database/main.ts";
 import { Effect } from "effect";
 import { emitLog } from "@/telemetry/api.ts";
@@ -10,12 +10,12 @@ import { createDbFs, createPeerSync } from "@/worker/db/persistence.ts";
 import { tableKeys } from "@/worker/db/kv.ts";
 
 const events = createEventBus();
-const dbFs = createDbFs(dbMainRaw);
+const dbFs = createDbFs(tables);
 dbFs.attach(events);
 
 const peers = createPeerSync();
 
-export const dbMain = createDatabase("main", dbMainRaw, {
+export const dbMain = createDatabase("main", tables, {
   events,
   hydrate: dbFs.hydrate,
   setup: (ctx) => {
