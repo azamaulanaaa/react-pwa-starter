@@ -61,7 +61,9 @@ describe("usePersistState", () => {
 
   it("keeps the previous value and logs an error when persistence throws", () => {
     const error = new Error("quota exceeded");
-    const setItem = vi.spyOn(localStorage, "setItem").mockImplementation(
+    // The jsdom Storage instance ignores an own-property mock, so patch the
+    // prototype that the hook's `localStorage` object inherits.
+    const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementation(
       () => {
         throw error;
       },
