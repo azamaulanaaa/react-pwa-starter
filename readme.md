@@ -122,6 +122,7 @@ src/
 │                      # media query, dark mode, streams)
 ├── lib/               # Comlink helpers, generic API, auth, sync, and file contracts,
 │                      # cn, utilities
+├── integrations/      # Optional backend adapters (rust-api). The core does not import them.
 └── worker/
     ├── main.ts        # Worker entry. It exposes { db, fs, queue } through Comlink.
     ├── db/            # Tables, schema, change bus, oxkv, persistence, peer sync
@@ -475,6 +476,106 @@ const file = await transport.complete(upload.id, {
 
 For a single-part upload, set `part_size` to `file_size` and set `file_total_parts` to 1.
 A backend adapter maps these calls to its own HTTP routes.
+
+## rust-api adapter
+
+- The adapter is optional. The code is in `src/integrations/rust-api`. The core does not
+  import the adapter.
+- The adapter reads the base URL from `VITE_RUST_API_BASE_URL`. The default is
+  `http://localhost:8080`. The client strips a trailing slash.
+- The client sends `credentials: "include"` on every call. The rust-api `auth_token` cookie
+  is the primary credential. The client can also send a bearer token from an in-memory store.
+- The adapter has no task logic. It does not import `src/examples`.
+- `createRustApiClient` accepts a base URL, a fetch function, and a token store. A test can
+  give a fake fetch.
+- The generated wire types are in `src/integrations/rust-api/generated`. The rust-api
+  repository does not commit an OpenAPI document at the inspected commit. The types come from
+  the route definitions and the response structs. The module names the commit and the
+  regeneration command.
+- To regenerate from a live server, run:
+
+  ```bash
+  curl -s http://localhost:8080/openapi.json -o /tmp/rust-api-openapi.json
+  npx openapi-typescript /tmp/rust-api-openapi.json \
+    -o src/integrations/rust-api/generated/openapi.d.ts
+  ```
+
+### Session provider
+
+- `createRustApiSessionProvider` implements the core `SessionProvider` contract.
+- `login` sends the browser to `GET /auth/login`. The OIDC provider redirects to
+  `/auth/callback`. The callback sets the `auth_token` cookie and returns an `AuthResponse`.
+- `getSession` calls `GET /auth/me`. The adapter maps `sub` to the user id and `exp` seconds to
+  `expiresAt` milliseconds. A `401` response returns null.
+- `refresh` calls `POST /auth/refresh`. The browser sends the `refresh_token` cookie. The
+  adapter stores the new token and calls `getSession` again. A rejected refresh returns null.
+- `logout` calls `POST /auth/logout` and clears the in-memory token.
+- The rust-api login route has no return path parameter. The adapter does not send
+  `LoginOptions.returnTo`.
+
+```ts
+import { createRustApiClient } from "@/integrations/rust-api/client.ts";
+import { createRustApiSessionProvider } from "@/integrations/rust-api/auth.ts";
+
+const client = createRustApiClient({
+  baseUrl: import.meta.env.VITE_RUST_API_BASE_URL,
+});
+const provider = createRustApiSessionProvider({ client });
+```
+
+### Replica reader
+
+- `createRustApiReplicaReader` implements the core `ReplicaReader` contract.
+- `status` calls `GET /sync/status`. The adapter caches the body and the `ETag`. The next
+  call sends `If-None-Match`. A `304` response returns the cached status.
+- The status has no `pending` field. The adapter sets `pending` when `applied_seq < head`.
+- `advance` calls `POST /sync/sync` one time. The adapter returns the `pending` flag from the
+  response and reads the current head from `/sync/status`. The caller repeats the call while
+  `pending` is true.
+- `manifest` calls `GET /sync/db/manifest.json`. The adapter keeps the `sst` order and the
+  `wal` order. It does not sort or filter the entries.
+- The manifest has no per-object ETag. The adapter uses a version token. The first object
+  read returns the server ETag.
+- `readObject` calls `GET /sync/db/{object}`. The adapter sends `If-None-Match` when the caller
+  gives an ETag. A `304` response returns a not-modified result.
+- The adapter keeps the manifest rules. The core reader stays generic.
+
+```ts
+import { createRustApiClient } from "@/integrations/rust-api/client.ts";
+import { createRustApiReplicaReader } from "@/integrations/rust-api/sync.ts";
+
+const client = createRustApiClient();
+const reader = createRustApiReplicaReader({ client });
+
+const status = await reader.status();
+if (status.pending) await reader.advance();
+const objects = await reader.manifest();
+```
+
+### File transport
+
+- `createRustApiFileTransport` implements the core `FileTransport` contract.
+- `init` calls `POST /fs/uploads`. The adapter validates the declaration with the shared
+  schema before the request.
+- `uploadPart` calls `PUT /fs/uploads/{id}/parts/{index}` and sends the part as raw bytes.
+- `complete` calls `POST /fs/uploads/{id}/complete` and then reads `/fs/files/{id}/meta`.
+- `cancel` calls `DELETE /fs/uploads/{id}`.
+- `progress` calls `GET /fs/uploads/{id}`.
+- `metadata` calls `GET /fs/files/{id}/meta`. A `404` response returns null.
+- `download` calls `GET /fs/files/{id}`. A start or end value adds a `Range` header. The
+  adapter maps `206` to a partial blob and `416` to a clear error.
+- `delete` calls `DELETE /fs/files/{id}`.
+- The transport does not attach a file to a domain row. That rule belongs to the application.
+
+```ts
+import { createRustApiClient } from "@/integrations/rust-api/client.ts";
+import { createRustApiFileTransport } from "@/integrations/rust-api/fs.ts";
+
+const client = createRustApiClient();
+const transport = createRustApiFileTransport({ client });
+
+const download = await transport.download("file-id", { start: 0, end: 1023 });
+```
 
 ## Dark mode
 
