@@ -5,6 +5,9 @@ builds offline-capable React applications. The stack is Vite 8, React 19, and Ty
 kit also includes PWA support, a Comlink web worker, an offline database, a file store, i18n,
 and a prebuilt UI component library. You can use the kit to start an application.
 
+The starter has no business logic. The optional task example is separate from the core. An
+application adds its own domain code.
+
 ## Why use this starter kit?
 
 - The service worker installs and updates by itself.
@@ -73,6 +76,136 @@ npm run dev           # start dev server (Vite)
 Prettier formats the code and oxlint lints it. The configurations are in
 `.prettierrc.json`, `.prettierignore`, and `.oxlintrc.json`.
 
+## Start both services
+
+This section starts the frontend and a local `rust-api` instance. The starter does
+not include the backend. Get `rust-api` from
+<https://github.com/azamaulanaaa/rust-api>. The default frontend does not mount the
+adapter. Complete the steps in [rust-api adapter](#rust-api-adapter) in an
+application that needs the backend.
+
+### Prepare the backend
+
+The backend needs Rust 1.88 or newer and an OIDC provider. For local work without
+an S3 bucket, set the S3 backend to `memory`.
+
+Create `config.toml` in the `rust-api` checkout:
+
+```toml
+public_address = "http://localhost:8080"
+listen_port = 8080
+
+[authorization]
+client_id = "rust-api"
+client_secret = "replace-me"
+issuer_url = "https://idp.example.com"
+
+[database]
+prefix = "oxkv"
+
+[s3]
+backend = "memory"
+bucket = "local"
+region = "us-east-1"
+
+[http]
+allowed_origins = ["http://localhost:5173"]
+
+[observability]
+otlp_endpoint = "http://localhost:4318/v1/traces"
+```
+
+- The `public_address` value builds the OIDC redirect. Register
+  `http://localhost:8080/auth/callback` as the redirect URI at the provider. For
+  local development, set `public_address = "http://localhost:8080"`.
+- The `[http].allowed_origins` value must name the frontend dev origin. The Vite
+  dev server uses `http://localhost:5173`. The backend always allows credentials.
+  Set `RUST_API_ALLOWED_ORIGINS=http://localhost:5173` to override the file value.
+- The `[observability].otlp_endpoint` value is optional. The rust-api OTLP export
+  is off by default. The default frontend endpoint is `http://localhost:4318`, and
+  the SDK adds `/v1/traces`, `/v1/metrics`, and `/v1/logs` to it. The rust-api
+  endpoint needs the full signal path. For the `otlp-http` build, set
+  `http://localhost:4318/v1/traces`. For the `otlp-grpc` build, set
+  `http://localhost:4317`. Both services can send to one collector. The collector
+  must allow CORS from `http://localhost:5173` for the browser exporter.
+
+Start the backend:
+
+```bash
+mise install
+cargo run -- serve --config config.toml
+```
+
+In a second terminal, check readiness:
+
+```bash
+curl http://localhost:8080/ready
+```
+
+A `200` response from `/ready` means the backend is ready.
+
+### Configure and start the frontend
+
+Copy the example environment file:
+
+```bash
+cp .env.example .env
+```
+
+Set these values in `.env`:
+
+```dotenv
+VITE_API_BASE_URL=/api
+VITE_RUST_API_BASE_URL=http://localhost:8080
+```
+
+`VITE_API_BASE_URL` sets the base URL for the generic client in `src/lib/api`.
+`VITE_RUST_API_BASE_URL` sets the base URL for the optional adapter in
+`src/integrations/rust-api`. The values above are also the defaults when a
+variable is unset.
+
+Start the frontend:
+
+```bash
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173`.
+
+### Sign in and keep the session
+
+The adapter does not render a login route. Call `provider.login()` from the
+application, or open `http://localhost:8080/auth/login` directly.
+
+1. `GET /auth/login` redirects the browser to the OIDC provider.
+2. The provider redirects to `GET /auth/callback`. The callback sets the
+   `auth_token` cookie. It also sets `refresh_token` when the provider sends one.
+   The callback returns an `AuthResponse` JSON body.
+3. `GET /auth/me` is the session guard. A `401` response means no session. The
+   adapter maps `sub` to the user id and `exp` seconds to `expiresAt`
+   milliseconds.
+4. `POST /auth/refresh` renews the session from the `refresh_token` cookie. Call
+   it before `exp`. A `401` response means the session is gone, so send the user
+   to login again. The adapter keeps the new token in memory.
+5. `POST /auth/logout` clears the `auth_token` cookie. The adapter also clears the
+   in-memory token.
+
+The rust-api adapter sends `credentials: "include"` on every request. The
+backend cookies then cross the two local origins. The adapter does not persist
+the token across page loads.
+
+### Run validation
+
+`npm run dev` starts only the dev server. Run the frontend tests, build, and type
+check with the normal scripts:
+
+```bash
+npm run test
+npm run build
+npm run check
+```
+
 ## Notable dependencies
 
 - `react`, `react-dom` — UI (v19)
@@ -139,13 +272,15 @@ not in the default route tree.
 Copy the example into an application:
 
 ```bash
+mkdir -p src/features
 cp -R src/examples/task src/features/task
 cp src/features/task/route.tsx src/routes/_dashboard/index.tsx
 ```
 
 Then complete these steps:
 
-1. Change the `@/examples/task` imports to `@/features/task`.
+1. Change every `@/examples/task` import in `src/features/task` and
+   `src/routes/_dashboard/index.tsx` to `@/features/task`.
 2. Add the example table map to `src/worker/db/database/main.ts`:
 
    ```ts
@@ -154,9 +289,14 @@ Then complete these steps:
    export const tables = { ...taskTables };
    ```
 
+   The default file exports an empty `tables` object. The example map adds the
+   `task` table to the worker database.
+
 3. Keep the task translation keys in `public/locales`.
 
-The example tests run with the normal Vitest config. Run `npm run test`.
+The example route uses the `/_dashboard/` path. The copy replaces the default
+home page. The example tests run with the normal Vitest config. Run
+`npm run test`.
 
 ## Table registration
 
