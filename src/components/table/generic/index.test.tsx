@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 import { TranslationProvider } from "@/components/context/translation.tsx";
 import {
   TableGeneric,
+  type TableGenericFeatures,
   type TableGenericProps,
 } from "@/components/table/generic/index.tsx";
 
@@ -21,7 +22,7 @@ const PEOPLE: Person[] = [
   { id: "b", name: "Linus", status: "idle" },
 ];
 
-const COLUMNS: ColumnDef<Person>[] = [
+const COLUMNS: ColumnDef<TableGenericFeatures, Person>[] = [
   { accessorKey: "name", header: "Name" },
   { accessorKey: "status", header: "Status" },
 ];
@@ -129,6 +130,36 @@ describe("TableGeneric", () => {
     for (const row of rows) {
       expect(row?.getAttribute("data-state")).toBe("selected");
     }
+  });
+
+  it("keeps selection internally when only the callback is provided", () => {
+    const { onRowSelectionChange } = renderTable();
+
+    fireEvent.click(screen.getByLabelText("Select row person-a"));
+
+    const row = screen.getByText("Ada").closest("tr");
+    expect(row?.getAttribute("data-state")).toBe("selected");
+    expect(onRowSelectionChange).toHaveBeenCalled();
+  });
+
+  it("shows the header checkbox as indeterminate only when partial", () => {
+    render(<SelectionHarness />);
+
+    const isIndeterminate = () =>
+      screen
+        .getByLabelText("Select all rows")
+        .hasAttribute("data-indeterminate");
+
+    expect(isIndeterminate()).toBe(false);
+
+    fireEvent.click(screen.getByLabelText("Select row person-a"));
+    expect(isIndeterminate()).toBe(true);
+
+    fireEvent.click(screen.getByLabelText("Select row person-b"));
+    expect(isIndeterminate()).toBe(false);
+    expect(
+      screen.getByLabelText("Select all rows").getAttribute("aria-checked"),
+    ).toBe("true");
   });
 
   it("hides a column from the controlled visibility state", () => {

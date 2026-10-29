@@ -1,11 +1,11 @@
 import { useMemo } from "react";
 import { Check, Trash } from "lucide-react";
 import {
-  ColumnDef,
+  type ColumnDef,
   flexRender,
-  getCoreRowModel,
-  RowData,
-  useReactTable,
+  metaHelper,
+  tableFeatures,
+  useTable,
 } from "@tanstack/react-table";
 
 import { useTranslation } from "@/components/context/translation.tsx";
@@ -25,12 +25,23 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip.tsx";
 
-declare module "@tanstack/react-table" {
-  interface TableMeta<TData extends RowData> {
-    onToggleDone?: (id: string, is_done: boolean) => void | Promise<void>;
-    onDelete?: (id: string) => void | Promise<void>;
-  }
-}
+/**
+ * The metadata that the cells read through `table.options.meta`. The
+ * `tableMeta` feature slot scopes the type to this table, so the module needs
+ * no global `TableMeta` declaration merging.
+ */
+export type TaskTableMeta = {
+  onToggleDone?: (id: string, is_done: boolean) => void | Promise<void>;
+  onDelete?: (id: string) => void | Promise<void>;
+};
+
+/**
+ * This table uses only the core row model and table meta. The core row model is
+ * built in, so the feature set holds no row-model slots.
+ */
+export const taskTableFeatures = tableFeatures({
+  tableMeta: metaHelper<TaskTableMeta>(),
+});
 
 export type Task = {
   id: string;
@@ -47,7 +58,7 @@ export type ListTaskProps = {
 export function ListTask(props: ListTaskProps) {
   const { t } = useTranslation();
 
-  const columns: ColumnDef<Task>[] = useMemo(() => [
+  const columns: ColumnDef<typeof taskTableFeatures, Task>[] = useMemo(() => [
     {
       accessorKey: "is_done",
       cell: ({ row, table }) => {
@@ -91,10 +102,10 @@ export function ListTask(props: ListTaskProps) {
     },
   ], [t]);
 
-  const table = useReactTable({
+  const table = useTable({
+    features: taskTableFeatures,
     columns,
     data: props.data,
-    getCoreRowModel: getCoreRowModel(),
     meta: {
       onToggleDone: props.onToggleDone,
       onDelete: props.onDelete,
@@ -123,11 +134,8 @@ export function ListTask(props: ListTaskProps) {
         {table.getRowModel().rows?.length
           ? (
             table.getRowModel().rows.map((row) => (
-              <TableRow
-                data-state={row.getIsSelected() && "selected"}
-                key={row.id}
-              >
-                {row.getVisibleCells().map((cell) => (
+              <TableRow key={row.id}>
+                {row.getAllCells().map((cell) => (
                   <TableCell key={cell.id}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>

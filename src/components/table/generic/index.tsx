@@ -1,12 +1,17 @@
-import { type Ref, useMemo } from "react";
+import { type Ref, useCallback, useMemo, useState } from "react";
 import {
-  ColumnDef,
+  type ColumnDef,
+  type ColumnVisibilityState,
+  columnVisibilityFeature,
   flexRender,
-  getCoreRowModel,
-  Row,
-  RowSelectionState,
-  useReactTable,
-  VisibilityState,
+  functionalUpdate,
+  type Row,
+  type RowData,
+  rowSelectionFeature,
+  type RowSelectionState,
+  tableFeatures,
+  type Updater,
+  useTable,
 } from "@tanstack/react-table";
 
 import { cn } from "@/lib/cn.ts";
@@ -27,13 +32,30 @@ import {
 } from "@/components/ui/tooltip.tsx";
 import { ScrollArea } from "@/components/ui/scroll-area.tsx";
 
-export type TableGenericProps<TData = unknown> = {
-  columns: ColumnDef<TData>[];
+/**
+ * The features that every TableGeneric instance needs. The object is defined
+ * once, outside the component, so the table type stays stable and Vite can
+ * drop the features that this module does not import.
+ */
+export const tableGenericFeatures = tableFeatures({
+  rowSelectionFeature,
+  columnVisibilityFeature,
+});
+
+export type TableGenericFeatures = typeof tableGenericFeatures;
+
+export type TableGenericColumnDef<TData extends RowData> = ColumnDef<
+  TableGenericFeatures,
+  TData
+>;
+
+export type TableGenericProps<TData extends RowData = RowData> = {
+  columns: TableGenericColumnDef<TData>[];
   data: TData[];
   getRowId?: (
     row: TData,
     index: number,
-    parent?: Row<TData> | undefined,
+    parent?: Row<TableGenericFeatures, TData>,
   ) => string;
   rowSelection?: RowSelectionState;
   onRowSelectionChange?: (
@@ -41,17 +63,17 @@ export type TableGenericProps<TData = unknown> = {
       | RowSelectionState
       | ((state: RowSelectionState) => RowSelectionState),
   ) => void;
-  columnVisibility?: VisibilityState;
+  columnVisibility?: ColumnVisibilityState;
   onColumnVisibilityChange?: (
     columnVisibility:
-      | VisibilityState
-      | ((state: VisibilityState) => VisibilityState),
+      | ColumnVisibilityState
+      | ((state: ColumnVisibilityState) => ColumnVisibilityState),
   ) => void;
   containerRef?: Ref<HTMLDivElement>;
   getRowRefs?: (id: string) => Ref<HTMLTableRowElement>;
 };
 
-export function TableGeneric<TData>(
+export function TableGeneric<TData extends RowData>(
   props: TableGenericProps<TData>,
 ) {
   const { t } = useTranslation();
@@ -59,11 +81,47 @@ export function TableGeneric<TData>(
   const enableSelection = Boolean(
     props.rowSelection || props.onRowSelectionChange,
   );
+  const enableVisibility = Boolean(
+    props.columnVisibility || props.onColumnVisibilityChange,
+  );
 
-  const columns = useMemo<ColumnDef<TData>[]>(() => {
+  // v9 treats a change callback as an external owner, so a callback without a
+  // value leaves the table slice unchanged. Keep the v8 behavior of an
+  // internally owned slice by holding the value here while the caller supplies
+  // no controlled value.
+  const [internalRowSelection, setInternalRowSelection] =
+    useState<RowSelectionState>({});
+  const [internalColumnVisibility, setInternalColumnVisibility] =
+    useState<ColumnVisibilityState>({});
+
+  const handleRowSelectionChange = useCallback(
+    (updater: Updater<RowSelectionState>) => {
+      if (props.rowSelection === undefined) {
+        setInternalRowSelection((previous) =>
+          functionalUpdate(updater, previous)
+        );
+      }
+      props.onRowSelectionChange?.(updater);
+    },
+    [props.rowSelection, props.onRowSelectionChange],
+  );
+
+  const handleColumnVisibilityChange = useCallback(
+    (updater: Updater<ColumnVisibilityState>) => {
+      if (props.columnVisibility === undefined) {
+        setInternalColumnVisibility((previous) =>
+          functionalUpdate(updater, previous)
+        );
+      }
+      props.onColumnVisibilityChange?.(updater);
+    },
+    [props.columnVisibility, props.onColumnVisibilityChange],
+  );
+
+  const columns = useMemo<TableGenericColumnDef<TData>[]>(() => {
     if (!enableSelection) return props.columns;
 
-    const selectionColumn: ColumnDef<TData> = {
+    const selectionColumn: TableGenericColumnDef<TData> = {
       id: "select",
       enableHiding: false,
       cell: ({ row }) => {
@@ -93,7 +151,8 @@ export function TableGeneric<TData>(
             <Checkbox
               aria-label={t("table_generic_select_all_row")}
               checked={table.getIsAllPageRowsSelected()}
-              indeterminate={table.getIsSomePageRowsSelected()}
+              indeterminate={table.getIsSomePageRowsSelected() &&
+                !table.getIsAllPageRowsSelected()}
               onCheckedChange={(value) => table.toggleAllRowsSelected(!!value)}
             />
           </TooltipTrigger>
@@ -107,22 +166,35 @@ export function TableGeneric<TData>(
 
   const state = useMemo(
     () => ({
-      ...(props.rowSelection !== undefined &&
-        { rowSelection: props.rowSelection }),
-      ...(props.columnVisibility !== undefined &&
-        { columnVisibility: props.columnVisibility }),
+      ...(enableSelection && {
+        rowSelection: props.rowSelection ?? internalRowSelection,
+      }),
+      ...(enableVisibility && {
+        columnVisibility: props.columnVisibility ?? internalColumnVisibility,
+      }),
     }),
-    [props.rowSelection, props.columnVisibility],
+    [
+      enableSelection,
+      enableVisibility,
+      internalColumnVisibility,
+      internalRowSelection,
+      props.columnVisibility,
+      props.rowSelection,
+    ],
   );
 
-  const table = useReactTable({
+  const table = useTable({
+    features: tableGenericFeatures,
     columns,
     data: props.data,
     getRowId: props.getRowId,
     state,
-    onRowSelectionChange: props.onRowSelectionChange,
-    onColumnVisibilityChange: props.onColumnVisibilityChange,
-    getCoreRowModel: getCoreRowModel(),
+    onRowSelectionChange: enableSelection
+      ? handleRowSelectionChange
+      : undefined,
+    onColumnVisibilityChange: enableVisibility
+      ? handleColumnVisibilityChange
+      : undefined,
   });
 
   return (

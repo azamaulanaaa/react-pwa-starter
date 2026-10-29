@@ -1,8 +1,12 @@
 import { useState } from "react";
 import type { Story, StoryDefault } from "@ladle/react";
-import { ColumnDef, RowSelectionState } from "@tanstack/react-table";
+import type { ColumnDef, RowSelectionState } from "@tanstack/react-table";
 
-import { TableGeneric, TableGenericProps } from "./index.tsx";
+import {
+  TableGeneric,
+  type TableGenericFeatures,
+  type TableGenericProps,
+} from "./index.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 
 export default {
@@ -14,7 +18,7 @@ const data = [
   { id: 2, name: "Sophia", status: "Online" },
   { id: 3, name: "Yusuf", status: "Offline" },
 ];
-const columns: ColumnDef<typeof data[number]>[] = [
+const columns: ColumnDef<TableGenericFeatures, typeof data[number]>[] = [
   {
     accessorKey: "name",
     header: "Name",

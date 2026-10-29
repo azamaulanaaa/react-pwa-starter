@@ -30,7 +30,7 @@
     "@tanstack/react-form": "^1.33.3",
     "@tanstack/react-router": "^1.170.18",
     "@tanstack/react-router-devtools": "^1.167.0",
-    "@tanstack/react-table": "^8.21.3",
+    "@tanstack/react-table": "^9.3.1",
     "class-variance-authority": "^0.7.1",
     "cnfast": "^0.2.0",
     "comlink": "^4.4.2",
