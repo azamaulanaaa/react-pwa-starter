@@ -140,7 +140,7 @@ export default defineConfig(({ command }) => ({
         // .wasm (oxkv database binary) and .woff (geist-mono fallbacks) are
         // fetched at runtime and must be precached for offline use.
         globPatterns: ["**/*.{js,css,html,ico,png,svg,json,woff2,woff,wasm}"],
-        // oxkv 0.9 ships a 2.1 MiB wasm binary, over workbox's 2 MiB default.
+        // oxkv 0.10 ships a 2.2 MiB wasm binary, over workbox's 2 MiB default.
         // Raising the limit keeps it precached so offline use still works.
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
       },
