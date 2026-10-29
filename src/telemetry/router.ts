@@ -23,7 +23,7 @@ interface RouterLike {
 
 /**
  * Replace each dynamic segment in a path with `":id"`. The code changes
- * `"/tasks/42"` into `"/tasks/:id"`. Then the metric labels and the span names
+ * `"/items/42"` into `"/items/:id"`. Then the metric labels and the span names
  * keep a low cardinality.
  * The code uses a heuristic. The code replaces a segment that contains only
  * digits. The code also replaces a long hex or uuid-like segment. The span

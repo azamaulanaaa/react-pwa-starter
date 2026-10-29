@@ -101,12 +101,18 @@ Prettier formats the code and oxlint lints it. The configurations are in
 ```
 src/
 ├── routes/            # TanStack Router routes from files (_dashboard layout)
+├── examples/
+│   └── task/          # Optional task example. The default app does not import it.
+│       ├── form/      # Task form and stories
+│       ├── list/      # Task list, stories, and tests
+│       ├── schema.ts  # Task form schema and tests
+│       ├── table.ts   # Task table module
+│       └── route.tsx  # Task route example
 ├── components/
 │   ├── ui/            # Prebuilt Base UI component kit (54 components)
 │   ├── input/         # Date picker and formatted inputs
 │   ├── table/         # Generic table wrapper
-│   ├── form/          # Forms (task, setting)
-│   ├── list/          # List components (task)
+│   ├── form/          # Form helpers and the setting form
 │   ├── context/       # Providers: config, intl, translation, worker
 │   └── image/         # Image preview
 ├── hooks/
@@ -120,6 +126,33 @@ src/
     ├── fs/            # Chunked file storage (multi-part uploads)
     └── queue/         # Job queue: schema, registry, store, watch bus, scheduler
 ```
+
+## Optional task example
+
+The task example in `src/examples/task` shows a form, a list, a schema, a table
+module, and a route. The default app does not import this code. The task route is
+not in the default route tree.
+
+Copy the example into an application:
+
+```bash
+cp -R src/examples/task src/features/task
+cp src/features/task/route.tsx src/routes/_dashboard/index.tsx
+```
+
+Then complete these steps:
+
+1. Change the `@/examples/task` imports to `@/features/task`.
+2. Export `TableTask` from `src/worker/db/database/main.ts` to register the
+   table in the worker database:
+
+   ```ts
+   export { TableTask } from "@/features/task/table.ts";
+   ```
+
+3. Keep the task translation keys in `public/locales`.
+
+The example tests run with the normal Vitest config. Run `npm run test`.
 
 ## Worker boundary
 
@@ -174,10 +207,10 @@ code moves.
   every transferred Effect runs under. It is module-private and empty today. Add
   a worker-side service to it and every transferred Effect can read it without
   changing the run path again.
-- The UI makes five worker calls today, all of them `db.task`, all in
-  `src/routes/_dashboard/index.tsx`: `watch`, `set` twice, `get`, and `delete`.
-  The file store and the job queue are built, tested, and bridged. No UI code
-  calls either one.
+- The default UI makes no database calls. The optional task example in
+  `src/examples/task/route.tsx` shows five calls: `watch`, `set` twice, `get`,
+  and `delete`. The file store and the job queue are built, tested, and
+  bridged. No UI code calls either one.
 - `register` in `src/worker/queue/index.ts` is worker-side only and is not on
   the exposed `queue` object. A handler is a closure, so only a module the
   worker imports can register one. A `kind` is usable only in a build where
@@ -267,14 +300,15 @@ code moves.
 
 ## Testing
 
-- Vitest 4 uses the setup file `src/vitest.setup.ts`. The storage tests use fake-indexeddb.
-- Tests live next to their modules. For example, `src/worker/db/*.test.ts`.
+- Vitest 5 uses the setup file `src/vitest.setup.ts`. The storage tests use fake-indexeddb.
+- Tests live next to their modules. For example, `src/worker/db/*.test.ts` and
+  `src/examples/task/*.test.ts`.
 - Run tests with `npm run test`.
 
 ## Component previews (Ladle)
 
-- Each component has a `stories.tsx` file. Ladle serves these files. The configuration is in
-  `.ladle/`.
+- Each component has a `stories.tsx` file. Ladle serves the stories in
+  `src/components` and `src/examples`. The configuration is in `.ladle/`.
 - Run `npm run ladle` to open the previews.
 
 ## Bundle Analysis

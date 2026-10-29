@@ -26,7 +26,7 @@ import { getTracer } from "@/telemetry/api.ts";
 
 export interface WorkerCallContext {
   /**
-   * The dotted method path for the span name, such as `"db.task.get"` or
+   * The dotted method path for the span name, such as `"db.row.get"` or
    * `"fs.Upload"`.
    */
   method: string;
@@ -103,7 +103,7 @@ export function withWorkerCall<T>(
 /**
  * Return a new view of a Comlink worker proxy. The view records a span for each
  * method call. The span name is the dotted path of the method, such as
- * `"db.task.get"` or `"fs.Upload"`. Then each call across the boundary is
+ * `"db.row.get"` or `"fs.Upload"`. Then each call across the boundary is
  * observable, and the code does not change any call site. Tests can inject the
  * tracer. Production callers omit the tracer. The function uses the global
  * provider for each call. The provider is a no-op until the telemetry starts.

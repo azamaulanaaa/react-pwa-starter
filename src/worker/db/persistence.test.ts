@@ -4,7 +4,7 @@ import { BTreeStore } from "oxkv";
 import { v7 as randomUUID } from "uuid";
 import { Cause, Effect, Exit, Option } from "effect";
 
-import { dbMain } from "@/worker/db/index.ts";
+import { createTestDatabase } from "@/worker/db/test-support.ts";
 import { dbStorage } from "@/worker/db/persistence.ts";
 import { hydrateStore } from "@/worker/db/factory.ts";
 import {
@@ -18,6 +18,7 @@ function run<A>(effect: Effect.Effect<A, unknown, never>): Promise<A> {
   return Effect.runPromise(effect);
 }
 
+const dbMain = createTestDatabase();
 const persistence = createDbPersistence();
 
 describe("db persistence: persistent db cycle", () => {
@@ -25,48 +26,46 @@ describe("db persistence: persistent db cycle", () => {
 
   it("persists every write, restores on load, and removes on delete", async () => {
     const id = randomUUID();
-    const path = `db/main/task/${id}`;
-    const key = `task:${id}`;
+    const path = `db/main/item/${id}`;
+    const key = `item:${id}`;
 
-    await run(
-      dbMain.task.set(id, { description: "durable milk", is_done: false }),
-    );
+    await run(dbMain.item.set(id, { label: "durable milk", done: false }));
 
     expect(await dbStorage.has(path)).toBe(true);
 
     const stored = (await dbStorage.getItem(path)) as Record<string, unknown>;
-    expect(stored.description).toBe("durable milk");
+    expect(stored.label).toBe("durable milk");
     expect(typeof stored.created_at).toBe("string");
 
     // The stored string must decode back into the same instant, so a `Date`
     // field survives the snapshot.
-    const row = await run(dbMain.task.get(id));
+    const row = await run(dbMain.item.get(id));
     expect(row.created_at).toBeInstanceOf(Date);
     expect(row.created_at.toISOString()).toBe(stored.created_at);
 
     const fresh = new BTreeStore();
-    const snapshot = await run(loadSnapshot(["task"], persistence));
+    const snapshot = await run(loadSnapshot(["item"], persistence));
     await run(hydrateStore(fresh, snapshot));
     const restored = await fresh.get(key);
-    expect(restored).toMatchObject({ description: "durable milk" });
+    expect(restored).toMatchObject({ label: "durable milk" });
     expect((restored as Record<string, unknown>).created_at).toBe(
       stored.created_at,
     );
 
     await run(
-      dbMain.task.set(id, {
-        description: "durable milk 2",
-        is_done: true,
+      dbMain.item.set(id, {
+        label: "durable milk 2",
+        done: true,
       }),
     );
     const updated = (await dbStorage.getItem(path)) as Record<string, unknown>;
-    expect(updated.description).toBe("durable milk 2");
+    expect(updated.label).toBe("durable milk 2");
 
-    expect(await run(dbMain.task.delete(id))).toBe(true);
+    expect(await run(dbMain.item.delete(id))).toBe(true);
     expect(await dbStorage.has(path)).toBe(false);
 
     const afterDelete = new BTreeStore();
-    const emptySnapshot = await run(loadSnapshot(["task"], persistence));
+    const emptySnapshot = await run(loadSnapshot(["item"], persistence));
     await run(hydrateStore(afterDelete, emptySnapshot));
     expect(await afterDelete.get(key)).toBe(null);
   });
@@ -99,7 +98,7 @@ describe("db persistence: failure mapping", () => {
     );
 
     const exit = await Effect.runPromiseExit(
-      failing.save("task", "id-1", { n: 1 }),
+      failing.save("item", "id-1", { n: 1 }),
     );
 
     expect(Exit.isFailure(exit)).toBe(true);
@@ -110,12 +109,12 @@ describe("db persistence: failure mapping", () => {
     const failing = createDbPersistence("failure-test-remove");
     // The function `remove` returns false for a missing key.
     // The test must create the key first.
-    await dbStorage.setItem(`failure-test-remove/task/id-2`, "{}");
+    await dbStorage.setItem(`failure-test-remove/item/id-2`, "{}");
     vi.spyOn(dbStorage, "removeItem").mockRejectedValue(
       new Error("idb unavailable"),
     );
 
-    const exit = await Effect.runPromiseExit(failing.remove("task", "id-2"));
+    const exit = await Effect.runPromiseExit(failing.remove("item", "id-2"));
 
     expect(Exit.isFailure(exit)).toBe(true);
     expect(failureMessage(exit)).toContain("idb unavailable");
@@ -124,7 +123,7 @@ describe("db persistence: failure mapping", () => {
   it("returns false instead of failing when the row is already gone", async () => {
     const failing = createDbPersistence("failure-test-missing");
 
-    await expect(run(failing.remove("task", "never-existed"))).resolves.toBe(
+    await expect(run(failing.remove("item", "never-existed"))).resolves.toBe(
       false,
     );
   });
@@ -133,7 +132,7 @@ describe("db persistence: failure mapping", () => {
     const failing = createDbPersistence("failure-test");
     vi.spyOn(dbStorage, "getKeys").mockRejectedValue(new Error("read denied"));
 
-    const exit = await Effect.runPromiseExit(failing.load("task"));
+    const exit = await Effect.runPromiseExit(failing.load("item"));
 
     expect(Exit.isFailure(exit)).toBe(true);
     expect(failureMessage(exit)).toContain("read denied");
@@ -169,7 +168,7 @@ describe("createPeerSync", () => {
 
     sender.publish({
       kind: "set",
-      table: "task",
+      table: "item",
       id: "id-1",
       doc: { n: 1 },
     } as const);
@@ -194,7 +193,7 @@ describe("createPeerSync", () => {
     peers.subscribe((e) => dropped.push(e));
 
     unsubscribeKept();
-    sender.publish({ kind: "delete", table: "task", id: "id-2" } as const);
+    sender.publish({ kind: "delete", table: "item", id: "id-2" } as const);
     await flush();
 
     expect(kept).toHaveLength(0);

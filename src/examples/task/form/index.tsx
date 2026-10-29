@@ -8,19 +8,9 @@ import { Field, FieldError, FieldLabel } from "@/components/ui/field.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { FieldInfo } from "@/components/form/field-info.tsx";
+import { type FormTaskValue, useFormTaskSchema } from "../schema.ts";
 
-// The rule is a check. The message comes from the `checkHook` in `FormTask`.
-export const useFormTaskSchema = () => {
-  return Schema.Struct({
-    task: Schema.String.pipe(
-      Schema.check(Schema.makeFilter((value) => value.length > 0)),
-    ),
-  });
-};
-
-export type FormTaskValue = Schema.Schema.Type<
-  ReturnType<typeof useFormTaskSchema>
->;
+export type { FormTaskValue } from "../schema.ts";
 
 export type FormTaskProps = {
   defaultValues?: FormTaskValue;

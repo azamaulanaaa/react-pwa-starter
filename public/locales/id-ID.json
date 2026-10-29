@@ -25,6 +25,8 @@
   "layout_menu_setting": "Pengaturan",
   "list_task_action": "Aksi",
   "list_task_description": "Deskripsi Tugas",
+  "page_dashboard_home_description": "Starter kit ini sudah siap. Tambahkan kode dan rute aplikasi Anda di dalam src.",
+  "page_dashboard_home_title": "Selamat Datang",
   "page_dashboard_setting_title": "Pengaturan",
   "page_dashboard_setting_toast_saved_description": "Pengaturan telah diperbarui.",
   "page_dashboard_setting_toast_saved_title": "Pengaturan tersimpan",

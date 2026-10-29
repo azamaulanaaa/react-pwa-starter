@@ -159,21 +159,21 @@ describe("instrumentRouter", () => {
       const router = makeFakeRouter();
       instrumentRouter(router);
 
-      router.beforeLoad("/tasks/42");
-      router.resolved("/tasks/42");
-      router.beforeLoad("/tasks/0192f3a4-5b6c-7d8e-9f01-234567890abc");
-      router.resolved("/tasks/0192f3a4-5b6c-7d8e-9f01-234567890abc");
+      router.beforeLoad("/items/42");
+      router.resolved("/items/42");
+      router.beforeLoad("/items/0192f3a4-5b6c-7d8e-9f01-234567890abc");
+      router.resolved("/items/0192f3a4-5b6c-7d8e-9f01-234567890abc");
 
       expect(spans.map((s) => s.name)).toEqual([
-        "route /tasks/:id",
-        "route /tasks/:id",
+        "route /items/:id",
+        "route /items/:id",
       ]);
       // The span keeps the raw path, which has a high cardinality. The metrics
       // never use this path.
-      expect(spans[0].attributes["router.path"]).toBe("/tasks/42");
+      expect(spans[0].attributes["router.path"]).toBe("/items/42");
       expect(counts.map((c) => c.attributes)).toEqual([
-        { "http.route": "/tasks/:id" },
-        { "http.route": "/tasks/:id" },
+        { "http.route": "/items/:id" },
+        { "http.route": "/items/:id" },
       ]);
     });
   });
@@ -200,15 +200,15 @@ describe("instrumentRouter", () => {
       const router = makeFakeRouter();
       instrumentRouter(router);
 
-      router.beforeLoad("/tasks/1");
-      router.beforeLoad("/tasks/2");
+      router.beforeLoad("/items/1");
+      router.beforeLoad("/items/2");
 
       expect(spans[0].ended).toBe(true);
       expect(spans[0].attributes["router.interrupted"]).toBe(true);
       expect(spans[1].ended).toBe(false);
 
       // The active span ends at its own resolution.
-      router.resolved("/tasks/2");
+      router.resolved("/items/2");
       expect(spans[1].ended).toBe(true);
     });
   });

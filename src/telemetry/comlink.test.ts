@@ -65,14 +65,14 @@ describe("withWorkerCall", () => {
     const { spans, tracer } = makeFakeTracer();
 
     const value = await withWorkerCall(
-      { method: "db.task.get" },
+      { method: "db.row.get" },
       () => Promise.resolve({ id: "t1" }),
       tracer,
     );
 
     expect(value).toEqual({ id: "t1" });
     expect(spans).toHaveLength(1);
-    expect(spans[0].name).toBe("db.task.get");
+    expect(spans[0].name).toBe("db.row.get");
     expect(spans[0].status).toEqual({ code: 1 });
     expect(spans[0].ended).toBe(true);
   });
@@ -82,7 +82,7 @@ describe("withWorkerCall", () => {
 
     await expect(
       withWorkerCall(
-        { method: "db.task.boom" },
+        { method: "db.row.boom" },
         () => Promise.reject(new Error("kaboom")),
         tracer,
       ),
@@ -138,19 +138,19 @@ describe("withWorkerCall", () => {
 describe("instrumentWorkerProxy", () => {
   const endpoint = (port: unknown) => port as unknown as Comlink.Endpoint;
 
-  interface TaskApi {
+  interface RowApi {
     get: (id: string) => Promise<{ id: string; done: boolean }>;
     boom: () => Promise<never>;
   }
 
   interface RemoteApi {
-    db: { task: TaskApi };
+    db: { row: RowApi };
   }
 
   const makeRemote = (tracer: Tracer): RemoteApi => {
     const api = {
       db: {
-        task: {
+        row: {
           get: (id: string) => Promise.resolve({ id, done: false }),
           boom: () => Promise.reject(new Error("kaboom")),
         },
@@ -169,11 +169,11 @@ describe("instrumentWorkerProxy", () => {
     const { spans, tracer } = makeFakeTracer();
     const remote = makeRemote(tracer);
 
-    const task = await remote.db.task.get("t1");
+    const row = await remote.db.row.get("t1");
 
-    expect(task.id).toBe("t1");
+    expect(row.id).toBe("t1");
     expect(spans).toHaveLength(1);
-    expect(spans[0].name).toBe("db.task.get");
+    expect(spans[0].name).toBe("db.row.get");
     expect(spans[0].status).toEqual({ code: 1 });
     expect(spans[0].ended).toBe(true);
   });
@@ -182,9 +182,9 @@ describe("instrumentWorkerProxy", () => {
     const { spans, tracer } = makeFakeTracer();
     const remote = makeRemote(tracer);
 
-    await expect(remote.db.task.boom()).rejects.toThrow("kaboom");
+    await expect(remote.db.row.boom()).rejects.toThrow("kaboom");
 
-    expect(spans.map((s) => s.name)).toEqual(["db.task.boom"]);
+    expect(spans.map((s) => s.name)).toEqual(["db.row.boom"]);
     expect(spans[0].status).toEqual({ code: 2, message: "kaboom" });
     expect(spans[0].ended).toBe(true);
   });
@@ -193,10 +193,10 @@ describe("instrumentWorkerProxy", () => {
     const { spans, tracer } = makeFakeTracer();
     const remote = makeRemote(tracer);
 
-    await remote.db.task.get("a");
-    await remote.db.task.get("b");
+    await remote.db.row.get("a");
+    await remote.db.row.get("b");
 
-    expect(spans.map((s) => s.name)).toEqual(["db.task.get", "db.task.get"]);
+    expect(spans.map((s) => s.name)).toEqual(["db.row.get", "db.row.get"]);
   });
 
   it("caches the wrapped members so the identities stay stable", () => {
@@ -204,7 +204,7 @@ describe("instrumentWorkerProxy", () => {
     const remote = makeRemote(tracer);
 
     expect(remote.db).toBe(remote.db);
-    expect(remote.db.task.get).toBe(remote.db.task.get);
+    expect(remote.db.row.get).toBe(remote.db.row.get);
   });
 
   it("passes `then` and symbol keys through untouched", () => {

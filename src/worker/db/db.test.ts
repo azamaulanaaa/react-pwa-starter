@@ -4,7 +4,7 @@ import { Effect, Schema, Stream, Struct } from "effect";
 import { type BTreeStore } from "oxkv";
 import { v7 as randomUUID } from "uuid";
 
-import { dbMain, type Task } from "@/worker/db/index.ts";
+import { dbMain as defaultDb } from "@/worker/db/index.ts";
 import { createChangeBus, createEventBus } from "@/worker/db/change-bus.ts";
 import type { DbEvent } from "@/worker/db/factory.ts";
 import { createDatabase, createTableModule } from "@/worker/db/factory.ts";
@@ -12,6 +12,9 @@ import { createKvApi, KvApi } from "@/worker/db/kv.ts";
 import { setupOxkv } from "@/worker/db/oxkv-wasm.ts";
 import { BaseSchema } from "@/worker/db/schema.ts";
 import { openStore } from "@/worker/db/store.ts";
+import { createTestDatabase, type Item } from "@/worker/db/test-support.ts";
+
+const dbMain = createTestDatabase();
 
 function run<A>(effect: Effect.Effect<A, unknown, never>): Promise<A> {
   return Effect.runPromise(effect);
@@ -35,92 +38,92 @@ async function waitFor(
   }
 }
 
-describe("dbMain.task", () => {
+describe("dbMain.item", () => {
   beforeAll(setupOxkv);
 
   it("inserts, reads, updates, deletes", async () => {
     const id = randomUUID();
-    await run(dbMain.task.set(id, { description: "buy milk", is_done: false }));
+    await run(dbMain.item.set(id, { label: "buy milk", done: false }));
 
-    const inserted = await run(dbMain.task.get(id));
-    expect(inserted.description).toBe("buy milk");
-    expect(inserted.is_done).toBe(false);
+    const inserted = await run(dbMain.item.get(id));
+    expect(inserted.label).toBe("buy milk");
+    expect(inserted.done).toBe(false);
     expect(inserted.created_at).toBeInstanceOf(Date);
 
     await run(
-      dbMain.task.set(id, {
-        description: inserted.description,
-        is_done: true,
+      dbMain.item.set(id, {
+        label: inserted.label,
+        done: true,
       }),
     );
-    const updated = await run(dbMain.task.get(id));
-    expect(updated.is_done).toBe(true);
+    const updated = await run(dbMain.item.get(id));
+    expect(updated.done).toBe(true);
     expect(updated.created_at).toEqual(inserted.created_at);
     expect(updated.modified_at.getTime()).toBeGreaterThanOrEqual(
       updated.created_at.getTime(),
     );
 
-    expect(await run(dbMain.task.delete(id))).toBe(true);
-    expect(await run(dbMain.task.exists(id))).toBe(false);
-    await expect(run(dbMain.task.get(id))).rejects.toThrow();
+    expect(await run(dbMain.item.delete(id))).toBe(true);
+    expect(await run(dbMain.item.exists(id))).toBe(false);
+    await expect(run(dbMain.item.get(id))).rejects.toThrow();
   });
 
-  it("fails to read a missing task and returns false when it deletes it", async () => {
-    await expect(run(dbMain.task.get("missing-id"))).rejects.toThrow();
-    expect(await run(dbMain.task.delete("missing-id"))).toBe(false);
+  it("fails to read a missing item and returns false when it deletes it", async () => {
+    await expect(run(dbMain.item.get("missing-id"))).rejects.toThrow();
+    expect(await run(dbMain.item.delete("missing-id"))).toBe(false);
   });
 
   it("adds the document when it does not exist, like the oxkv set", async () => {
     const id = randomUUID();
-    expect(await run(dbMain.task.exists(id))).toBe(false);
+    expect(await run(dbMain.item.exists(id))).toBe(false);
 
-    await run(dbMain.task.set(id, { description: "upserted", is_done: true }));
-    expect(await run(dbMain.task.exists(id))).toBe(true);
+    await run(dbMain.item.set(id, { label: "upserted", done: true }));
+    expect(await run(dbMain.item.exists(id))).toBe(true);
 
-    const doc = await run(dbMain.task.get(id));
-    expect(doc.description).toBe("upserted");
-    expect(doc.is_done).toBe(true);
+    const doc = await run(dbMain.item.get(id));
+    expect(doc.label).toBe("upserted");
+    expect(doc.done).toBe(true);
 
-    await run(dbMain.task.delete(id));
+    await run(dbMain.item.delete(id));
   });
 
   it("streams the initial rows, then streams again after a write", async () => {
     const seedId = randomUUID();
     await run(
-      dbMain.task.set(seedId, {
-        description: "stream seed",
-        is_done: false,
+      dbMain.item.set(seedId, {
+        label: "stream seed",
+        done: false,
       }),
     );
 
     const iterator = Stream.toAsyncIterable(
-      dbMain.task.watch({ direction: "next" }),
+      dbMain.item.watch({ direction: "next" }),
     )[Symbol.asyncIterator]();
 
     // The test awaits the first chunk, so the subscription is live.
     // A fixed sleep cannot prove that the watcher attached in time.
-    const initial = (await iterator.next()).value as Task[];
+    const initial = (await iterator.next()).value as Item[];
 
     const secondId = randomUUID();
     await run(
-      dbMain.task.set(secondId, {
-        description: "stream second",
-        is_done: true,
+      dbMain.item.set(secondId, {
+        label: "stream second",
+        done: true,
       }),
     );
 
-    const afterInsert = (await iterator.next()).value as Task[];
+    const afterInsert = (await iterator.next()).value as Item[];
     await iterator.return?.(undefined);
 
-    expect(initial.some((task) => task.id === seedId)).toBe(true);
+    expect(initial.some((item) => item.id === seedId)).toBe(true);
     expect(afterInsert.length).toBe(initial.length + 1);
-    expect(afterInsert.some((task) => task.id === secondId)).toBe(true);
+    expect(afterInsert.some((item) => item.id === secondId)).toBe(true);
   });
 
   it("emits exactly one watch chunk per write", async () => {
-    const chunks: Task[][] = [];
+    const chunks: Item[][] = [];
     const iterator = Stream.toAsyncIterable(
-      dbMain.task.watch({ direction: "next" }),
+      dbMain.item.watch({ direction: "next" }),
     )[Symbol.asyncIterator]();
     void (async () => {
       for (;;) {
@@ -135,9 +138,9 @@ describe("dbMain.task", () => {
     await waitFor(() => chunks.length >= 1);
 
     await run(
-      dbMain.task.set(randomUUID(), {
-        description: "single chunk",
-        is_done: false,
+      dbMain.item.set(randomUUID(), {
+        label: "single chunk",
+        done: false,
       }),
     );
 
@@ -159,16 +162,16 @@ describe("dbMain.task", () => {
       const id = randomUUID();
       pageIds.push(id);
       await run(
-        dbMain.task.set(id, {
-          description: `page ${i}`,
-          is_done: false,
+        dbMain.item.set(id, {
+          label: `page ${i}`,
+          done: false,
         }),
       );
     }
 
-    const collectLastChunk = (args: Parameters<typeof dbMain.task.watch>[0]) =>
+    const collectLastChunk = (args: Parameters<typeof dbMain.item.watch>[0]) =>
       Effect.map(
-        Stream.runCollect(Stream.take(dbMain.task.watch(args), 1)),
+        Stream.runCollect(Stream.take(dbMain.item.watch(args), 1)),
         (chunks) => chunks.at(0) ?? [],
       );
 
@@ -186,10 +189,16 @@ describe("dbMain.task", () => {
     // A scan with direction `prev` returns the newest keys first.
     // The scan returns the two newest rows that this test created.
     // The result does not depend on the rows that the earlier tests created.
-    expect(prevPage.map((task) => task.id)).toEqual([pageIds[2], pageIds[1]]);
+    expect(prevPage.map((item) => item.id)).toEqual([pageIds[2], pageIds[1]]);
     expect(prevPage.at(-1)!.created_at.getTime()).toBeGreaterThanOrEqual(
       nextPage.at(-1)!.created_at.getTime(),
     );
+  });
+});
+
+describe("default database", () => {
+  it("starts without a table", () => {
+    expect(Object.keys(defaultDb as Record<string, unknown>)).toEqual([]);
   });
 });
 
@@ -321,9 +330,9 @@ describe("kv api", () => {
   it("scans only the requested prefix, never leaking other table rows", async () => {
     const id = randomUUID();
     await run(
-      dbMain.task.set(id, {
-        description: "hidden from kv scan",
-        is_done: false,
+      dbMain.item.set(id, {
+        label: "hidden from kv scan",
+        done: false,
       }),
     );
     await run(kvApi.set("docs:visible", { n: 1 }));
@@ -337,10 +346,10 @@ describe("kv api", () => {
     );
 
     // The range covers the prefix `docs:` only.
-    // The task row that the test wrote above must not appear in the range.
+    // The item row that the test wrote above must not appear in the range.
     // The test name states this property.
     expect(entries.map((entry) => entry.key)).toEqual(["docs:visible"]);
-    expect(entries.every((entry) => !entry.key.startsWith("task:"))).toBe(true);
+    expect(entries.every((entry) => !entry.key.startsWith("item:"))).toBe(true);
   });
 });
 
@@ -349,15 +358,15 @@ describe("db change bus", () => {
     const bus = createChangeBus();
     const calls: string[] = [];
 
-    const stop = bus.subscribe("task", () => calls.push("first"));
-    bus.subscribe("task", () => calls.push("second"));
+    const stop = bus.subscribe("item", () => calls.push("first"));
+    bus.subscribe("item", () => calls.push("second"));
     bus.subscribe("kv", () => calls.push("other table"));
 
-    bus.notify("task");
+    bus.notify("item");
     expect(calls).toEqual(["first", "second"]);
 
     stop();
-    bus.notify("task");
+    bus.notify("item");
     expect(calls).toEqual(["first", "second", "second"]);
   });
 });
@@ -368,9 +377,7 @@ describe("watch teardown", () => {
   const WatchedTable = createTableModule({
     name: "watched",
     schema: BaseSchema.mapFields(
-      Struct.assign(
-        Schema.Struct({ description: Schema.NonEmptyString }).fields,
-      ),
+      Struct.assign(Schema.Struct({ label: Schema.NonEmptyString }).fields),
     ),
   });
 
@@ -426,7 +433,7 @@ describe("watch teardown", () => {
     await waitFor(() => listeners() === 0);
 
     // A write after the release must not reach the dead stream.
-    await run(api.set(randomUUID(), { description: "after cancel" }));
+    await run(api.set(randomUUID(), { label: "after cancel" }));
     await new Promise((resolve) => setTimeout(resolve, 250));
 
     expect(listeners()).toBe(0);
@@ -443,9 +450,7 @@ describe("db event bus", () => {
     const CollectorTable = createTableModule({
       name: "collector",
       schema: BaseSchema.mapFields(
-        Struct.assign(
-          Schema.Struct({ description: Schema.NonEmptyString }).fields,
-        ),
+        Struct.assign(Schema.Struct({ label: Schema.NonEmptyString }).fields),
       ),
     });
 
@@ -463,7 +468,7 @@ describe("db event bus", () => {
     );
 
     const id = randomUUID();
-    await run(db.collector.set(id, { description: "watched" }));
+    await run(db.collector.set(id, { label: "watched" }));
 
     expect(collected).toEqual([
       { kind: "set", table: "collector", id, doc: expect.anything() },
@@ -479,7 +484,7 @@ describe("db event bus", () => {
     const collected: DbEvent[] = [];
     const event: DbEvent = {
       kind: "delete",
-      table: "task",
+      table: "item",
       id: randomUUID(),
     };
 

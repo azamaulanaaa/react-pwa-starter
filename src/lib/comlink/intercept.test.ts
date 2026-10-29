@@ -8,13 +8,13 @@ interface Inner {
 }
 
 interface Shape {
-  db: { task: Inner };
+  db: { row: Inner };
   leaf: (n: number) => Promise<number>;
 }
 
 const makeApi = (): Shape => ({
   db: {
-    task: {
+    row: {
       get: (id: string) => Promise.resolve({ id }),
       boom: () => Promise.reject(new Error("kaboom")),
     },
@@ -30,11 +30,11 @@ describe("interceptProxy", () => {
       return next();
     });
 
-    await expect(proxy.db.task.get("t1")).resolves.toEqual({ id: "t1" });
+    await expect(proxy.db.row.get("t1")).resolves.toEqual({ id: "t1" });
     await expect(proxy.leaf(21)).resolves.toBe(42);
 
     expect(calls).toEqual([
-      { path: "db.task.get", args: ["t1"] },
+      { path: "db.row.get", args: ["t1"] },
       { path: "leaf", args: [21] },
     ]);
   });
@@ -70,7 +70,7 @@ describe("interceptProxy", () => {
       }),
     );
 
-    await expect(proxy.db.task.boom()).rejects.toThrow("kaboom");
+    await expect(proxy.db.row.boom()).rejects.toThrow("kaboom");
     expect(seen).toBeInstanceOf(Error);
   });
 
@@ -78,7 +78,7 @@ describe("interceptProxy", () => {
     const proxy = interceptProxy(makeApi(), (_p, _a, next) => next());
 
     expect(proxy.db).toBe(proxy.db);
-    expect(proxy.db.task.get).toBe(proxy.db.task.get);
+    expect(proxy.db.row.get).toBe(proxy.db.row.get);
   });
 
   it("passes `then` and symbol keys through untouched", () => {
@@ -101,9 +101,9 @@ describe("interceptProxy", () => {
       return next();
     });
 
-    (proxy.db.task as unknown as Record<string, unknown>).label = "x";
+    (proxy.db.row as unknown as Record<string, unknown>).label = "x";
 
-    expect((api.db.task as unknown as Record<string, unknown>).label).toBe("x");
+    expect((api.db.row as unknown as Record<string, unknown>).label).toBe("x");
     // The write reached the node. The interceptor did not see the write.
     expect(calls).toEqual([]);
   });

@@ -2,7 +2,7 @@
 import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
 
-import { useFormTaskSchema } from "@/components/form/task/index.tsx";
+import { useFormTaskSchema } from "./schema.ts";
 
 const message = "form_task_error_task_empty";
 

@@ -8,7 +8,7 @@
  * The interceptor uses the same shape. The function creates one callable proxy
  * for each node. The proxy delegates `get`, `apply`, `set` and `construct` to
  * the wrapped node. It sends each apply to the `intercept` callback of the
- * caller, together with the accumulated dotted path, such as "db.task.get".
+ * caller, together with the accumulated dotted path, such as "db.row.get".
  *
  * The proxy passes `then` and symbol keys through unchanged, so `await proxy.x`
  * keeps the Comlink behavior for a value read. `releaseProxy`, `createEndpoint`
@@ -23,7 +23,7 @@
 
 export type ProxyCallInterceptor = (
   /**
-   * The dotted method path, such as "db.task.get".
+   * The dotted method path, such as "db.row.get".
    * The path is "" for a call on the root.
    */
   path: string,
@@ -39,7 +39,7 @@ export function interceptProxy<T extends object>(
   const interceptNode = (node: unknown, path: string): object => {
     // The cache stores one entry per key. Repeated accesses then return the
     // same proxy identity. This matters for consumers that store
-    // `proxy.db.task.get` in a variable.
+    // `proxy.db.row.get` in a variable.
     const cache = new Map<string, unknown>();
 
     return new Proxy(() => {}, {
