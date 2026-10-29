@@ -114,13 +114,13 @@ src/
 │   ├── input/         # Date picker and formatted inputs
 │   ├── table/         # Generic table wrapper
 │   ├── form/          # Form helpers and the setting form
-│   ├── context/       # Providers: config, intl, translation, worker
+│   ├── context/       # Providers: config, intl, session, translation, worker
 │   └── image/         # Image preview
 ├── hooks/
 │   ├── engines/       # Higher-level hooks: use-infinite-scroll, use-uploader
 │   └── primitives/    # Small composable hooks (debounce, persist state,
 │                      # media query, dark mode, streams)
-├── lib/               # Comlink helpers, generic API client, cn, misc utilities
+├── lib/               # Comlink helpers, generic API and auth contracts, cn, utilities
 └── worker/
     ├── main.ts        # Worker entry. It exposes { db, fs, queue } through Comlink.
     ├── db/            # Tables, schema, change bus, oxkv, persistence, peer sync
@@ -343,6 +343,51 @@ const api = createApiClient({
 });
 
 const state = await api.request<{ ready: boolean }>("/status");
+```
+
+## Session provider
+
+- The contract is in `src/lib/auth/types.ts`. The index `src/lib/auth` exports the contract
+  and its helpers.
+- The `Session` type has a `user` identity and an `expiresAt` time. The time uses Unix epoch
+  milliseconds. An expired session counts as missing.
+- The `SessionProvider` interface has four methods:
+  - `getSession` returns the current session. The method returns null when no session
+    exists.
+  - `login` starts the login flow. The flow can open a redirect.
+  - `logout` ends the session.
+  - `refresh` renews the session. The method returns the new session.
+- The core has no identity provider detail. An adapter implements the interface for one
+  backend. The core names no OIDC provider and no backend path.
+- The React layer is in `src/components/context/session.tsx`. The module exports
+  `SessionProvider`, `useSession`, and `RequireSession`.
+- `SessionProvider` takes a `provider` prop. The provider loads the session one time when it
+  mounts. `useSession` returns `session`, `status`, `error`, `login`, `logout`, and
+  `refresh`.
+- `RequireSession` renders its children only for a valid session. The guard shows the
+  optional `fallback` while the session loads. Without a session, the guard calls
+  `onUnauthenticated(loginPath)`. When no callback exists, the guard redirects the browser
+  to `loginPath`. The default path is `/login`.
+
+```tsx
+import {
+  RequireSession,
+  SessionProvider,
+} from "@/components/context/session.tsx";
+import type { SessionProvider as SessionContract } from "@/lib/auth";
+
+const provider: SessionContract = {
+  getSession: async () => readSession(),
+  login: async (options) => startLogin(options?.returnTo),
+  logout: async () => endSession(),
+  refresh: async () => renewSession(),
+};
+
+<SessionProvider provider={provider}>
+  <RequireSession loginPath="/sign-in">
+    <Dashboard />
+  </RequireSession>
+</SessionProvider>;
 ```
 
 ## Dark mode
