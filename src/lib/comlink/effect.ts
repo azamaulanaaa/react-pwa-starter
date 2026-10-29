@@ -2,11 +2,12 @@ import * as Comlink from "comlink";
 import { Cause, Context, Effect, Queue, Stream } from "effect";
 import { DevTools } from "effect/devtools";
 
-export type ResolveEffect<T, Fallback> = T extends
-  Effect.Effect<infer Success, unknown, unknown> ? Promise<Success>
-  : T extends Stream.Stream<infer A, unknown, unknown>
-    ? Promise<ReadableStream<A>>
-  : Fallback;
+export type ResolveEffect<T, Fallback> =
+  T extends Effect.Effect<infer Success, unknown, unknown>
+    ? Promise<Success>
+    : T extends Stream.Stream<infer A, unknown, unknown>
+      ? Promise<ReadableStream<A>>
+      : Fallback;
 
 export function flattenTaggedError(err: unknown): string {
   if (!err || typeof err !== "object") return String(err);
@@ -70,8 +71,8 @@ if (!Comlink.transferHandlers.has(NAME_STREAM)) {
 
     serialize: <A, E>(streamInstance: Stream.Stream<A, E, never>) => {
       const { port1, port2 } = new MessageChannel();
-      const iterator = Stream.toAsyncIterable(streamInstance)
-        [Symbol.asyncIterator]();
+      const iterator =
+        Stream.toAsyncIterable(streamInstance)[Symbol.asyncIterator]();
 
       const remoteIterator = {
         async next() {
@@ -193,14 +194,13 @@ if (!Comlink.transferHandlers.has(NAME_EFFECT)) {
       // with an undefined message. The check below rejects a result that
       // does not carry the envelope the worker sends, so a dead value never
       // reaches the caller as a success.
-      const proxyFunc = Comlink.wrap<
-        () => Promise<unknown>
-      >(port);
+      const proxyFunc = Comlink.wrap<() => Promise<unknown>>(port);
       return (async () => {
         try {
           const result = await proxyFunc();
           if (
-            result === null || typeof result !== "object" ||
+            result === null ||
+            typeof result !== "object" ||
             typeof (result as { success?: unknown }).success !== "boolean"
           ) {
             throw new Error(
@@ -209,9 +209,9 @@ if (!Comlink.transferHandlers.has(NAME_EFFECT)) {
           }
           if (!(result as { success: boolean }).success) {
             throw new Error(
-              `[Worker Error]\n${
-                String((result as { error?: unknown }).error)
-              }`,
+              `[Worker Error]\n${String(
+                (result as { error?: unknown }).error,
+              )}`,
             );
           }
           return (result as { value: unknown }).value;

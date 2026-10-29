@@ -57,13 +57,15 @@ export function PaginationLink({
 }: PaginationLinkProps): React.ReactElement {
   const defaultProps = {
     "aria-current": isActive ? ("page" as const) : undefined,
-    className: render ? className : cn(
-      buttonVariants({
-        size,
-        variant: isActive ? "outline" : "ghost",
-      }),
-      className,
-    ),
+    className: render
+      ? className
+      : cn(
+          buttonVariants({
+            size,
+            variant: isActive ? "outline" : "ghost",
+          }),
+          className,
+        ),
     "data-active": isActive,
     "data-slot": "pagination-link",
   };

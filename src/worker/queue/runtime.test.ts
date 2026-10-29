@@ -60,11 +60,15 @@ const stateOf = (queue: QueueRuntime, id: string) =>
   Effect.map(queue.get(id), (job) => job?.state ?? "missing");
 
 const recordOf = (queue: QueueRuntime, id: string) =>
-  queue.get(id).pipe(
-    Effect.flatMap((job) =>
-      job === null ? Effect.die(`job '${id}' is missing`) : Effect.succeed(job)
-    ),
-  );
+  queue
+    .get(id)
+    .pipe(
+      Effect.flatMap((job) =>
+        job === null
+          ? Effect.die(`job '${id}' is missing`)
+          : Effect.succeed(job),
+      ),
+    );
 
 describe("queue.enqueue", () => {
   it("puts the job in queued with attempt 1, progress 0, and ISO timestamps", () =>
@@ -82,7 +86,7 @@ describe("queue.enqueue", () => {
         expect(job.result).toBeNull();
         expect(job.error).toBeNull();
         expect(job.payload).toBeNull();
-      })
+      }),
     ));
 
   it("fails an unregistered kind with unknown_kind and stores nothing", () =>
@@ -93,7 +97,7 @@ describe("queue.enqueue", () => {
         expect(error).toBeInstanceOf(QueueError);
         expect(error.reason).toBe("unknown_kind");
         expect(yield* queue.list()).toEqual([]);
-      })
+      }),
     ));
 
   it("fails at capacity live jobs with queue_full and stores nothing", () =>
@@ -136,19 +140,17 @@ describe("queue scheduling", () => {
                 return n + 1;
               });
               yield* sleep(10);
-              yield* Ref.update(live, () =>
-                count - 1);
+              yield* Ref.update(live, () => count - 1);
               yield* Ref.update(order, (current) => [...current, ctx.id]);
-            }).pipe(Effect.as(1)));
+            }).pipe(Effect.as(1)),
+          );
 
           const a = yield* queue.enqueue({ kind: "upload" });
           const b = yield* queue.enqueue({ kind: "upload" });
           const c = yield* queue.enqueue({ kind: "upload" });
 
           yield* Effect.all(
-            [a, b, c].map((job) =>
-              settled(queue, job.id)
-            ),
+            [a, b, c].map((job) => settled(queue, job.id)),
             { concurrency: 3 },
           );
 
@@ -168,20 +170,19 @@ describe("queue scheduling", () => {
             Ref.update(started, (current) => [...current, ctx.id]).pipe(
               Effect.andThen(Deferred.await(gate)),
               Effect.as(1),
-            ));
+            ),
+          );
 
           const a = yield* queue.enqueue({ kind: "upload" });
           yield* queue.enqueue({ kind: "upload" });
           const c = yield* queue.enqueue({ kind: "upload" });
 
-          yield* until(Ref.get(started), (ids) =>
-            ids.length === 2);
+          yield* until(Ref.get(started), (ids) => ids.length === 2);
           expect(yield* stateOf(queue, c.id)).toBe("queued");
 
           yield* Deferred.succeed(gate, undefined);
           yield* settled(queue, a.id);
-          yield* until(Ref.get(started), (ids) =>
-            ids.includes(c.id));
+          yield* until(Ref.get(started), (ids) => ids.includes(c.id));
         }),
       { concurrency: 2 },
     ));
@@ -192,7 +193,8 @@ describe("queue results", () => {
     withQueue((queue) =>
       Effect.gen(function* () {
         yield* queue.registry.register("upload", () =>
-          Effect.succeed({ ok: 42 }));
+          Effect.succeed({ ok: 42 }),
+        );
 
         const job = yield* queue.enqueue({ kind: "upload" });
         yield* settled(queue, job.id);
@@ -202,7 +204,7 @@ describe("queue results", () => {
         expect(record.progress).toBe(1);
         expect(record.result).toEqual({ ok: 42 });
         expect(record.error).toBeNull();
-      })
+      }),
     ));
 
   it("stores the failure message in error, reaches failed, and keeps running the next job", () =>
@@ -212,7 +214,8 @@ describe("queue results", () => {
           yield* queue.registry.register("boom", () =>
             Effect.fail(
               new QueueError({ error: "it broke", reason: "invalid_input" }),
-            ));
+            ),
+          );
           yield* queue.registry.register("upload", () => Effect.succeed(1));
 
           const failed = yield* queue.enqueue({ kind: "boom" });
@@ -243,7 +246,7 @@ describe("queue.wait", () => {
 
         const again = yield* queue.wait(job.id);
         expect(again.state).toBe("succeeded");
-      })
+      }),
     ));
 
   it("fails with timeout while the job is still running", () =>
@@ -262,7 +265,7 @@ describe("queue.wait", () => {
         expect(error).toBeInstanceOf(QueueError);
         expect(error.reason).toBe("timeout");
         expect(yield* stateOf(queue, job.id)).toBe("running");
-      })
+      }),
     ));
 
   it("keeps a second waiter alive when the first one times out", () =>
@@ -286,7 +289,7 @@ describe("queue.wait", () => {
         yield* Deferred.succeed(gate, undefined);
         const waited = yield* Effect.timeoutOption(Fiber.join(fiber), 2000);
         expect(waited._tag).toBe("Some");
-      })
+      }),
     ));
 
   it("fails invalid_input for an id that was never enqueued", () =>
@@ -294,7 +297,7 @@ describe("queue.wait", () => {
       Effect.gen(function* () {
         const error = yield* Effect.flip(queue.wait("missing"));
         expect(error.reason).toBe("invalid_input");
-      })
+      }),
     ));
 });
 
@@ -308,12 +311,13 @@ describe("queue.progress", () => {
           ctx.progress(0.5).pipe(
             Effect.flatMap((accepted) => Deferred.succeed(reported, accepted)),
             Effect.andThen(Deferred.await(gate)),
-          ));
+          ),
+        );
 
         const job = yield* queue.enqueue({ kind: "upload" });
         expect(yield* Deferred.await(reported)).toBe(true);
         expect((yield* queue.get(job.id))?.progress).toBe(0.5);
-      })
+      }),
     ));
 
   it("returns false and writes nothing after the job is terminal", () =>
@@ -330,7 +334,7 @@ describe("queue.progress", () => {
 
         expect(yield* late!).toBe(false);
         expect((yield* queue.get(job.id))?.progress).toBe(1);
-      })
+      }),
     ));
 });
 
@@ -345,7 +349,8 @@ describe("queue.pause and queue.resume", () => {
             Ref.update(started, (current) => [...current, ctx.id]).pipe(
               Effect.andThen(Deferred.await(gate)),
               Effect.as(1),
-            ));
+            ),
+          );
 
           const blocker = yield* queue.enqueue({ kind: "upload" });
           const paused = yield* queue.enqueue({ kind: "upload" });
@@ -376,7 +381,8 @@ describe("queue.pause and queue.resume", () => {
             Ref.update(started, (current) => [...current, ctx.id]).pipe(
               Effect.andThen(Deferred.await(gate)),
               Effect.as(1),
-            ));
+            ),
+          );
 
           const blocker = yield* queue.enqueue({ kind: "upload" });
           const job = yield* queue.enqueue({ kind: "upload" });
@@ -406,15 +412,14 @@ describe("queue.pause and queue.resume", () => {
             Ref.update(started, (current) => [...current, ctx.id]).pipe(
               Effect.andThen(sleep(5)),
               Effect.as(1),
-            ));
-          yield* queue.registry.register("hold", () =>
-            Deferred.await(gate));
+            ),
+          );
+          yield* queue.registry.register("hold", () => Deferred.await(gate));
 
           // The `hold` job takes the only permit, so the store's order decides
           // the run order.
           const blocker = yield* queue.enqueue({ kind: "hold" });
-          yield* until(stateOf(queue, blocker.id), (s) =>
-            s === "running");
+          yield* until(stateOf(queue, blocker.id), (s) => s === "running");
 
           const a = yield* queue.enqueue({ kind: "upload" });
           expect(yield* queue.pause(a.id)).toBe(true);
@@ -451,13 +456,14 @@ describe("queue.pause and queue.resume", () => {
                 // The finalizer is slow, so the first run is still unwinding
                 // while the second run has already started.
                 return yield* Effect.onExit(Deferred.await(releaseFirst), () =>
-                  sleep(80)
+                  sleep(80),
                 ).pipe(Effect.andThen(Effect.succeed("run-1")));
               }
               return yield* Deferred.await(releaseSecond).pipe(
                 Effect.andThen(Effect.succeed("run-2")),
               );
-            }));
+            }),
+          );
 
           const job = yield* queue.enqueue({ kind: "upload" });
           yield* Deferred.await(firstEntered);
@@ -490,10 +496,10 @@ describe("queue.pause and queue.resume", () => {
         const cleaned = yield* Ref.make(false);
         const entered = yield* Deferred.make<void>();
         yield* queue.registry.register("upload", () =>
-          Effect.onExit(
-            Deferred.succeed(entered, undefined),
-            () => Ref.set(cleaned, true),
-          ).pipe(Effect.andThen(sleep(60_000))));
+          Effect.onExit(Deferred.succeed(entered, undefined), () =>
+            Ref.set(cleaned, true),
+          ).pipe(Effect.andThen(sleep(60_000))),
+        );
 
         const job = yield* queue.enqueue({ kind: "upload" });
         yield* Deferred.await(entered);
@@ -505,7 +511,7 @@ describe("queue.pause and queue.resume", () => {
         const record = yield* recordOf(queue, job.id);
         expect(record.state).toBe("paused");
         expect(record.error).toBeNull();
-      })
+      }),
     ));
 });
 
@@ -519,9 +525,8 @@ describe("queue.cancel", () => {
 
         yield* queue.registry.register("upload", (ctx) => {
           signal = ctx.signal;
-          return Effect.onExit(
-            Deferred.succeed(entered, undefined),
-            () => Ref.set(cleaned, true),
+          return Effect.onExit(Deferred.succeed(entered, undefined), () =>
+            Ref.set(cleaned, true),
           ).pipe(Effect.andThen(sleep(60_000)));
         });
 
@@ -540,7 +545,7 @@ describe("queue.cancel", () => {
         expect(record.state).toBe("canceled");
         expect(record.error).toBeNull();
         expect(record.result).toBeNull();
-      })
+      }),
     ));
 
   it("cancels a queued job and never runs it", () =>
@@ -553,7 +558,8 @@ describe("queue.cancel", () => {
             Ref.update(started, (current) => [...current, ctx.id]).pipe(
               Effect.andThen(Deferred.await(gate)),
               Effect.as(1),
-            ));
+            ),
+          );
 
           const blocker = yield* queue.enqueue({ kind: "upload" });
           const canceled = yield* queue.enqueue({ kind: "upload" });
@@ -629,11 +635,13 @@ describe("queue.watch", () => {
 
           const seen = yield* Ref.make<Job[][]>([]);
           yield* Effect.forkChild(
-            queue.watch().pipe(
-              Stream.runForEach((jobs) =>
-                Ref.update(seen, (current) => [...current, jobs])
+            queue
+              .watch()
+              .pipe(
+                Stream.runForEach((jobs) =>
+                  Ref.update(seen, (current) => [...current, jobs]),
+                ),
               ),
-            ),
           );
           yield* sleep(20);
 
@@ -664,11 +672,13 @@ describe("queue.watch", () => {
 
           const seen = yield* Ref.make<Job[][]>([]);
           yield* Effect.forkChild(
-            queue.watch().pipe(
-              Stream.runForEach((jobs) =>
-                Ref.update(seen, (current) => [...current, jobs])
+            queue
+              .watch()
+              .pipe(
+                Stream.runForEach((jobs) =>
+                  Ref.update(seen, (current) => [...current, jobs]),
+                ),
               ),
-            ),
           );
           yield* sleep(20);
 
@@ -678,8 +688,8 @@ describe("queue.watch", () => {
                 emissions.map(
                   (jobs) =>
                     jobs.find((entry) => entry.id === job.id)?.state ??
-                      "absent",
-                )
+                    "absent",
+                ),
               ),
             );
 
@@ -713,11 +723,13 @@ describe("queue.watch", () => {
 
           const seen = yield* Ref.make<Job[][]>([]);
           yield* Effect.forkChild(
-            queue.watch({ states: ["queued"] }).pipe(
-              Stream.runForEach((jobs) =>
-                Ref.update(seen, (current) => [...current, jobs])
+            queue
+              .watch({ states: ["queued"] })
+              .pipe(
+                Stream.runForEach((jobs) =>
+                  Ref.update(seen, (current) => [...current, jobs]),
+                ),
               ),
-            ),
           );
           yield* sleep(20);
 
@@ -751,11 +763,13 @@ describe("queue.watch", () => {
           const second = yield* Ref.make<Job[][]>([]);
           const collect = (target: Ref.Ref<Job[][]>) =>
             Effect.forkChild(
-              queue.watch().pipe(
-                Stream.runForEach((jobs) =>
-                  Ref.update(target, (current) => [...current, jobs])
+              queue
+                .watch()
+                .pipe(
+                  Stream.runForEach((jobs) =>
+                    Ref.update(target, (current) => [...current, jobs]),
+                  ),
                 ),
-              ),
             );
 
           yield* collect(first);
@@ -769,10 +783,10 @@ describe("queue.watch", () => {
             Ref.get(target).pipe(
               Effect.map((emissions) =>
                 emissions.some((jobs) =>
-                  jobs.some((entry) =>
-                    entry.id === job.id && entry.state === "paused"
-                  )
-                )
+                  jobs.some(
+                    (entry) => entry.id === job.id && entry.state === "paused",
+                  ),
+                ),
               ),
             );
 
@@ -795,7 +809,8 @@ describe("queue scheduler", () => {
             Effect.andThen(
               Deferred.succeed(entered, undefined),
               Deferred.await(release),
-            ));
+            ),
+          );
 
           const blocked = yield* queue.enqueue({ kind: "upload" });
           yield* Deferred.await(entered);
@@ -841,13 +856,12 @@ describe("queue scope", () => {
       );
       const entered = yield* Deferred.make<void>();
       yield* api.registry.register("upload", () =>
-        Effect.onExit(
-          Deferred.succeed(entered, undefined),
-          () =>
-            Effect.sync(() => {
-              cleaned.current = true;
-            }),
-        ).pipe(Effect.andThen(sleep(60_000))));
+        Effect.onExit(Deferred.succeed(entered, undefined), () =>
+          Effect.sync(() => {
+            cleaned.current = true;
+          }),
+        ).pipe(Effect.andThen(sleep(60_000))),
+      );
 
       const job = yield* api.enqueue({ kind: "upload" });
       id = job.id;

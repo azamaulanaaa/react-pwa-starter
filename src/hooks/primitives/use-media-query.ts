@@ -13,9 +13,7 @@ const BREAKPOINTS = {
 type Breakpoint = keyof typeof BREAKPOINTS;
 
 type BreakpointQuery =
-  | Breakpoint
-  | `max-${Breakpoint}`
-  | `${Breakpoint}:max-${Breakpoint}`;
+  Breakpoint | `max-${Breakpoint}` | `${Breakpoint}:max-${Breakpoint}`;
 
 function resolveMin(value: Breakpoint | number): string {
   const px = typeof value === "number" ? value : BREAKPOINTS[value];
@@ -28,7 +26,6 @@ function resolveMax(value: Breakpoint | number): string {
 }
 
 function parseQuery(
-  // deno-lint-ignore ban-types
   query: BreakpointQuery | MediaQueryInput | (string & {}),
 ): string {
   if (typeof query !== "string") {
@@ -68,7 +65,6 @@ export type MediaQueryInput = {
 };
 
 export function useMediaQuery(
-  // deno-lint-ignore ban-types
   query: BreakpointQuery | MediaQueryInput | (string & {}),
 ): boolean {
   const mediaQuery = parseQuery(query);

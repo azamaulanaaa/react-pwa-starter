@@ -60,8 +60,7 @@ export type TableGenericProps<TData extends RowData = RowData> = {
   rowSelection?: RowSelectionState;
   onRowSelectionChange?: (
     state:
-      | RowSelectionState
-      | ((state: RowSelectionState) => RowSelectionState),
+      RowSelectionState | ((state: RowSelectionState) => RowSelectionState),
   ) => void;
   columnVisibility?: ColumnVisibilityState;
   onColumnVisibilityChange?: (
@@ -98,7 +97,7 @@ export function TableGeneric<TData extends RowData>(
     (updater: Updater<RowSelectionState>) => {
       if (props.rowSelection === undefined) {
         setInternalRowSelection((previous) =>
-          functionalUpdate(updater, previous)
+          functionalUpdate(updater, previous),
         );
       }
       props.onRowSelectionChange?.(updater);
@@ -110,7 +109,7 @@ export function TableGeneric<TData extends RowData>(
     (updater: Updater<ColumnVisibilityState>) => {
       if (props.columnVisibility === undefined) {
         setInternalColumnVisibility((previous) =>
-          functionalUpdate(updater, previous)
+          functionalUpdate(updater, previous),
         );
       }
       props.onColumnVisibilityChange?.(updater);
@@ -151,8 +150,10 @@ export function TableGeneric<TData extends RowData>(
             <Checkbox
               aria-label={t("table_generic_select_all_row")}
               checked={table.getIsAllPageRowsSelected()}
-              indeterminate={table.getIsSomePageRowsSelected() &&
-                !table.getIsAllPageRowsSelected()}
+              indeterminate={
+                table.getIsSomePageRowsSelected() &&
+                !table.getIsAllPageRowsSelected()
+              }
               onCheckedChange={(value) => table.toggleAllRowsSelected(!!value)}
             />
           </TooltipTrigger>
@@ -218,10 +219,12 @@ export function TableGeneric<TData extends RowData>(
             {headerGroup.headers.map((header) => {
               return (
                 <TableHead key={header.id} colSpan={header.colSpan}>
-                  {header.isPlaceholder ? null : flexRender(
-                    header.column.columnDef.header,
-                    header.getContext(),
-                  )}
+                  {header.isPlaceholder
+                    ? null
+                    : flexRender(
+                        header.column.columnDef.header,
+                        header.getContext(),
+                      )}
                 </TableHead>
               );
             })}
@@ -229,35 +232,27 @@ export function TableGeneric<TData extends RowData>(
         ))}
       </TableHeader>
       <TableBody>
-        {table.getRowModel().rows?.length
-          ? (
-            table.getRowModel().rows.map((row) => (
-              <TableRow
-                data-state={row.getIsSelected() && "selected"}
-                key={row.id}
-                ref={props.getRowRefs?.(row.id)}
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id} className="text-foreground">
-                    {flexRender(
-                      cell.column.columnDef.cell,
-                      cell.getContext(),
-                    )}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
-          )
-          : (
-            <TableRow>
-              <TableCell
-                className="h-24 text-center"
-                colSpan={columns.length}
-              >
-                {t("table_generic_empty")}
-              </TableCell>
+        {table.getRowModel().rows?.length ? (
+          table.getRowModel().rows.map((row) => (
+            <TableRow
+              data-state={row.getIsSelected() && "selected"}
+              key={row.id}
+              ref={props.getRowRefs?.(row.id)}
+            >
+              {row.getVisibleCells().map((cell) => (
+                <TableCell key={cell.id} className="text-foreground">
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </TableCell>
+              ))}
             </TableRow>
-          )}
+          ))
+        ) : (
+          <TableRow>
+            <TableCell className="h-24 text-center" colSpan={columns.length}>
+              {t("table_generic_empty")}
+            </TableCell>
+          </TableRow>
+        )}
       </TableBody>
     </Table>
   );

@@ -34,10 +34,7 @@ describe("db persistence: persistent db cycle", () => {
 
     expect(await dbStorage.has(path)).toBe(true);
 
-    const stored = (await dbStorage.getItem(path)) as Record<
-      string,
-      unknown
-    >;
+    const stored = (await dbStorage.getItem(path)) as Record<string, unknown>;
     expect(stored.description).toBe("durable milk");
     expect(typeof stored.created_at).toBe("string");
 
@@ -62,10 +59,7 @@ describe("db persistence: persistent db cycle", () => {
         is_done: true,
       }),
     );
-    const updated = (await dbStorage.getItem(path)) as Record<
-      string,
-      unknown
-    >;
+    const updated = (await dbStorage.getItem(path)) as Record<string, unknown>;
     expect(updated.description).toBe("durable milk 2");
 
     expect(await run(dbMain.task.delete(id))).toBe(true);
@@ -137,9 +131,7 @@ describe("db persistence: failure mapping", () => {
 
   it("maps a rejected load to a DbError failure", async () => {
     const failing = createDbPersistence("failure-test");
-    vi.spyOn(dbStorage, "getKeys").mockRejectedValue(
-      new Error("read denied"),
-    );
+    vi.spyOn(dbStorage, "getKeys").mockRejectedValue(new Error("read denied"));
 
     const exit = await Effect.runPromiseExit(failing.load("task"));
 
@@ -151,13 +143,13 @@ describe("db persistence: failure mapping", () => {
 describe("createPeerSync", () => {
   it("does nothing when BroadcastChannel is unavailable", () => {
     const original = globalThis.BroadcastChannel;
-    // deno-lint-ignore no-explicit-any
     (globalThis as any).BroadcastChannel = undefined;
 
     try {
       const peers = createPeerSync("no-bc");
-      expect(() => peers.publish({ kind: "delete", table: "t", id: "1" }))
-        .not.toThrow();
+      expect(() =>
+        peers.publish({ kind: "delete", table: "t", id: "1" }),
+      ).not.toThrow();
       expect(typeof peers.subscribe(() => {})).toBe("function");
     } finally {
       globalThis.BroadcastChannel = original;
@@ -175,7 +167,12 @@ describe("createPeerSync", () => {
     peers.subscribe((e) => first.push(e));
     peers.subscribe((e) => second.push(e));
 
-    sender.publish({ kind: "set", table: "task", id: "id-1", doc: { n: 1 } } as const);
+    sender.publish({
+      kind: "set",
+      table: "task",
+      id: "id-1",
+      doc: { n: 1 },
+    } as const);
     await flush();
 
     expect(first).toHaveLength(1);

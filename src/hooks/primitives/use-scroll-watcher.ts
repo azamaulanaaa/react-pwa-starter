@@ -27,12 +27,10 @@ export function useScrollWatcher({
 }: UseScrollWatcherOptions) {
   const [viewportNode, setViewportNode] = useState<HTMLDivElement | null>(null);
 
-  const scrollSnapshotRef = useRef<
-    {
-      scrollHeight: number;
-      scrollTop: number;
-    } | null
-  >(null);
+  const scrollSnapshotRef = useRef<{
+    scrollHeight: number;
+    scrollTop: number;
+  } | null>(null);
 
   const handlePositionChange = useEffectEvent((position: ScrollPosition) => {
     onPositionChange?.(position);
@@ -100,11 +98,11 @@ export function useScrollWatcher({
 
   const adjustScrollAnchor = useCallback(() => {
     if (scrollSnapshotRef.current && viewportNode) {
-      const heightDiff = viewportNode.scrollHeight -
-        scrollSnapshotRef.current.scrollHeight;
+      const heightDiff =
+        viewportNode.scrollHeight - scrollSnapshotRef.current.scrollHeight;
       if (heightDiff !== 0) {
-        viewportNode.scrollTop = scrollSnapshotRef.current.scrollTop +
-          heightDiff;
+        viewportNode.scrollTop =
+          scrollSnapshotRef.current.scrollTop + heightDiff;
       }
     }
     scrollSnapshotRef.current = null;

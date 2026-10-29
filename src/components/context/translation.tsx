@@ -60,7 +60,8 @@ export function TranslationProvider({
       let renderer = compileCache.current.get(key);
 
       if (!renderer) {
-        const format = getNestedValue(dictionary, key) ??
+        const format =
+          getNestedValue(dictionary, key) ??
           getNestedValue(fallbackDictionary, key) ??
           key;
 

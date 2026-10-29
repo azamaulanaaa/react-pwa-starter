@@ -71,9 +71,8 @@ export function SelectTrigger({
   size = "default",
   children,
   ...props
-}:
-  & SelectPrimitive.Trigger.Props
-  & VariantProps<typeof selectTriggerVariants>): React.ReactElement {
+}: SelectPrimitive.Trigger.Props &
+  VariantProps<typeof selectTriggerVariants>): React.ReactElement {
   return (
     <SelectPrimitive.Trigger
       className={cn(selectTriggerVariants({ size }), className)}
@@ -121,8 +120,7 @@ export function SelectPopup({
   sideOffset?: SelectPrimitive.Positioner.Props["sideOffset"];
   align?: SelectPrimitive.Positioner.Props["align"];
   alignOffset?: SelectPrimitive.Positioner.Props["alignOffset"];
-  alignItemWithTrigger?:
-    SelectPrimitive.Positioner.Props["alignItemWithTrigger"];
+  alignItemWithTrigger?: SelectPrimitive.Positioner.Props["alignItemWithTrigger"];
   anchor?: SelectPrimitive.Positioner.Props["anchor"];
 }): React.ReactElement {
   return (

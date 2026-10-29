@@ -45,8 +45,9 @@ describe("flattenTaggedError", () => {
   });
 
   it("prefers the string error field over message", () => {
-    expect(flattenTaggedError({ error: "from error", message: "from message" }))
-      .toBe("from error");
+    expect(
+      flattenTaggedError({ error: "from error", message: "from message" }),
+    ).toBe("from error");
   });
 
   it("falls back to message when there is no error field", () => {
@@ -136,10 +137,7 @@ describe("EFFECT_PROXY deserialize guard", () => {
 
   const deserializeResult = (remote: unknown): Promise<unknown> => {
     const { port1, port2 } = newChannel();
-    Comlink.expose(
-      () => remote,
-      port1 as unknown as Comlink.Endpoint,
-    );
+    Comlink.expose(() => remote, port1 as unknown as Comlink.Endpoint);
     // The handler returns the promise from its async body; the transfer
     // handler type widens it to the Effect it stands in for.
     return handlerOf().deserialize(
@@ -255,13 +253,15 @@ describe("EFFECT_PROXY deserialize guard", () => {
   });
 
   it("rejects a success field that is not a boolean", async () => {
-    await expect(deserializeResult({ success: "yes", value: 42 })).rejects
-      .toThrow(NOT_AN_EFFECT_RESULT);
+    await expect(
+      deserializeResult({ success: "yes", value: 42 }),
+    ).rejects.toThrow(NOT_AN_EFFECT_RESULT);
   });
 
   it("resolves the value of a well formed success envelope", async () => {
-    await expect(deserializeResult({ success: true, value: 42 })).resolves
-      .toBe(42);
+    await expect(deserializeResult({ success: true, value: 42 })).resolves.toBe(
+      42,
+    );
   });
 });
 
@@ -332,7 +332,8 @@ describe("EFFECT_STREAM_PROXY transfer handler", () => {
     const { port1, port2 } = newChannel();
     Comlink.expose(
       {
-        failing: (): Stream.Stream<number, Error> => Stream.fail(new Error("nope")),
+        failing: (): Stream.Stream<number, Error> =>
+          Stream.fail(new Error("nope")),
       },
       port1 as unknown as Comlink.Endpoint,
     );

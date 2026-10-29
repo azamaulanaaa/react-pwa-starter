@@ -5,15 +5,11 @@ import { MinusIcon, PlusIcon } from "lucide-react";
 import { cn } from "@/lib/cn.ts";
 import { Label } from "@/components/ui/label.tsx";
 
-export const NumberFieldContext: React.Context<
-  {
-    fieldId: string;
-  } | null
-> = React.createContext<
-  {
-    fieldId: string;
-  } | null
->(null);
+export const NumberFieldContext: React.Context<{
+  fieldId: string;
+} | null> = React.createContext<{
+  fieldId: string;
+} | null>(null);
 
 export function NumberField({
   id,

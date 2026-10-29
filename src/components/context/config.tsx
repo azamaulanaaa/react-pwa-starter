@@ -31,9 +31,12 @@ export const ConfigProvider = ({
   config,
   setConfig,
 }: ConfigProviderProps) => {
-  const updateConfig = useCallback((updates: Partial<Config>) => {
-    setConfig((prev) => ({ ...prev, ...updates }));
-  }, [setConfig]);
+  const updateConfig = useCallback(
+    (updates: Partial<Config>) => {
+      setConfig((prev) => ({ ...prev, ...updates }));
+    },
+    [setConfig],
+  );
 
   const value = useMemo(
     () => ({ config, setConfig, updateConfig }),
@@ -41,9 +44,7 @@ export const ConfigProvider = ({
   );
 
   return (
-    <ConfigContext.Provider value={value}>
-      {children}
-    </ConfigContext.Provider>
+    <ConfigContext.Provider value={value}>{children}</ConfigContext.Provider>
   );
 };
 

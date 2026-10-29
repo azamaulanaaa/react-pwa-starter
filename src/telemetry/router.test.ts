@@ -33,7 +33,7 @@ const makeFakeTracer = (): {
       const record: RecordedSpan = {
         name,
         options,
-        attributes: { ...(options?.attributes ?? {}) },
+        attributes: { ...options?.attributes },
         ended: false,
       };
       spans.push(record);
@@ -96,20 +96,22 @@ const makeFakeMeter = (): {
  * before it imports the module. Otherwise the module uses the real no-op
  * providers.
  */
-const withOtel = async <T>(run: (ctx: {
-  spans: RecordedSpan[];
-  counts: { name: string; value: number; attributes?: unknown }[];
-  records: { name: string; value: number; attributes?: unknown }[];
-  instrumentRouter: typeof import("@/telemetry/router.ts").instrumentRouter;
-}) => T | Promise<T>): Promise<T> => {
+const withOtel = async <T>(
+  run: (ctx: {
+    spans: RecordedSpan[];
+    counts: { name: string; value: number; attributes?: unknown }[];
+    records: { name: string; value: number; attributes?: unknown }[];
+    instrumentRouter: typeof import("@/telemetry/router.ts").instrumentRouter;
+  }) => T | Promise<T>,
+): Promise<T> => {
   const tracerFixture = makeFakeTracer();
   const meterFixture = makeFakeMeter();
-  const tracerSpy = vi.spyOn(trace, "getTracer").mockReturnValue(
-    tracerFixture.tracer,
-  );
-  const meterSpy = vi.spyOn(metrics, "getMeter").mockReturnValue(
-    meterFixture.meter,
-  );
+  const tracerSpy = vi
+    .spyOn(trace, "getTracer")
+    .mockReturnValue(tracerFixture.tracer);
+  const meterSpy = vi
+    .spyOn(metrics, "getMeter")
+    .mockReturnValue(meterFixture.meter);
   vi.resetModules();
 
   try {
@@ -138,18 +140,16 @@ const makeFakeRouter = () => {
     subscribe: (eventType: "onBeforeLoad" | "onResolved", fn: Subscriber) => {
       subscribers[eventType].push(fn);
       return () => {
-        subscribers[eventType] = subscribers[eventType].filter(
-          (s) => s !== fn,
-        );
+        subscribers[eventType] = subscribers[eventType].filter((s) => s !== fn);
       };
     },
     beforeLoad: (pathname: string, pathChanged = true) =>
       subscribers.onBeforeLoad.forEach((s) =>
-        s({ toLocation: { pathname }, pathChanged })
+        s({ toLocation: { pathname }, pathChanged }),
       ),
     resolved: (pathname: string) =>
       subscribers.onResolved.forEach((s) =>
-        s({ toLocation: { pathname }, pathChanged: true })
+        s({ toLocation: { pathname }, pathChanged: true }),
       ),
   };
 };

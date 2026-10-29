@@ -22,7 +22,7 @@ export const dbMain = createDatabase("main", dbMainRaw, {
     ctx.onEvent((event) =>
       Effect.sync(() => {
         peers.publish(event);
-      })
+      }),
     );
 
     // The function applies a peer event to the raw store.
@@ -55,11 +55,10 @@ export const dbMain = createDatabase("main", dbMainRaw, {
               emitLog("ERROR", `Failed to apply peer ${key}`, {
                 "error.source": "db.peer_sync",
                 "error.kind": event.kind,
-                "error.stack": cause instanceof Error
-                  ? cause.stack
-                  : String(cause),
+                "error.stack":
+                  cause instanceof Error ? cause.stack : String(cause),
               });
-            })
+            }),
           ),
         ),
       );

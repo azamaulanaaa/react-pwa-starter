@@ -26,34 +26,36 @@ export const MetadataUploadSchema = Schema.Struct({
   part_size: NonNegativeInt,
   file_total_parts: NonNegativeInt,
 }).pipe(
-  Schema.check(Schema.makeFilter((data) => {
-    if (data.file_size === 0) return "file_size cannot be empty";
-    if (data.part_size === 0) return "part_size cannot be zero";
-    if (data.file_total_parts === 0) return "total_parts cannot be zero";
+  Schema.check(
+    Schema.makeFilter((data) => {
+      if (data.file_size === 0) return "file_size cannot be empty";
+      if (data.part_size === 0) return "part_size cannot be zero";
+      if (data.file_total_parts === 0) return "total_parts cannot be zero";
 
-    if (data.file_total_parts === 1) {
-      if (data.part_size != data.file_size) {
-        return `For a single-part upload, part_size (${data.part_size}) must be equal to the file_size (${data.file_size})`;
-      }
-      if (data.file_size > 10 * 1024 * 1024) {
-        return `For a single-part upload, cannot bigger than 10 MB`;
-      }
-    } else {
-      const isMultipleOf1KB = data.part_size % 1024 === 0;
-      const withinBounds = data.part_size <= 524288;
+      if (data.file_total_parts === 1) {
+        if (data.part_size != data.file_size) {
+          return `For a single-part upload, part_size (${data.part_size}) must be equal to the file_size (${data.file_size})`;
+        }
+        if (data.file_size > 10 * 1024 * 1024) {
+          return `For a single-part upload, cannot bigger than 10 MB`;
+        }
+      } else {
+        const isMultipleOf1KB = data.part_size % 1024 === 0;
+        const withinBounds = data.part_size <= 524288;
 
-      if (!isMultipleOf1KB || !withinBounds) {
-        return "part_size must be a power-of-two multiple of 1 KB up to 512 KB (e.g., 131072, 262144, 524288)";
+        if (!isMultipleOf1KB || !withinBounds) {
+          return "part_size must be a power-of-two multiple of 1 KB up to 512 KB (e.g., 131072, 262144, 524288)";
+        }
+
+        const expectedParts = Math.ceil(data.file_size / data.part_size);
+        if (data.file_total_parts !== expectedParts) {
+          return `Inconsistent math: file_total_parts must be exactly ${expectedParts} for a file of this size split by ${data.part_size} bytes`;
+        }
       }
 
-      const expectedParts = Math.ceil(data.file_size / data.part_size);
-      if (data.file_total_parts !== expectedParts) {
-        return `Inconsistent math: file_total_parts must be exactly ${expectedParts} for a file of this size split by ${data.part_size} bytes`;
-      }
-    }
-
-    return;
-  })),
+      return;
+    }),
+  ),
 );
 export type MetadataUpload = Schema.Schema.Type<typeof MetadataUploadSchema>;
 
@@ -70,8 +72,7 @@ export const InitUpload = (metadata: MetadataUpload) =>
   Effect.gen(function* () {
     const vMetadata = yield* Schema.decodeEffect(MetadataUploadSchema)(
       metadata,
-    )
-      .pipe(Effect.mapError((error) => new FsError({ error })));
+    ).pipe(Effect.mapError((error) => new FsError({ error })));
 
     const id = randomUUID();
 
@@ -96,9 +97,9 @@ export const UploadPart = (metadata: MetadataUploadPart, blob: Blob) =>
 
     const session = yield* Effect.tryPromise({
       try: () =>
-        db.getItem(`uploads:${vMetadata.file_id}:metadata`) as Promise<
-          MetadataUpload
-        >,
+        db.getItem(
+          `uploads:${vMetadata.file_id}:metadata`,
+        ) as Promise<MetadataUpload>,
       catch: () => new FsError({ error: "Upload session not found." }),
     });
     if (!session) {
@@ -131,17 +132,16 @@ export const UploadPart = (metadata: MetadataUploadPart, blob: Blob) =>
       vBlob.size > Math.min(totalSize, totalParts * basePartSize)
     ) {
       return yield* new FsError({
-        error:
-          `Blob size mismatch for part ${currentPartIndex}. Expected at most ${
-            Math.min(totalSize, totalParts * basePartSize)
-          } bytes (declared total ${totalSize} / parts ${totalParts}), but received ${vBlob.size} bytes.`,
+        error: `Blob size mismatch for part ${currentPartIndex}. Expected at most ${Math.min(
+          totalSize,
+          totalParts * basePartSize,
+        )} bytes (declared total ${totalSize} / parts ${totalParts}), but received ${vBlob.size} bytes.`,
       });
     }
 
     if (vBlob.size !== expectedSize) {
       return yield* new FsError({
-        error:
-          `Blob size mismatch for part ${currentPartIndex}. Expected ${expectedSize} bytes, but received ${vBlob.size} bytes.`,
+        error: `Blob size mismatch for part ${currentPartIndex}. Expected ${expectedSize} bytes, but received ${vBlob.size} bytes.`,
       });
     }
 
@@ -169,9 +169,10 @@ export const CompleteUpload = (id: FileId, metadata: FileMetadata) =>
 
     const session = yield* Effect.tryPromise({
       try: () =>
-        db.getItem(`uploads:${vId}:metadata`) as Promise<
-          { file_size: number; file_total_parts: number }
-        >,
+        db.getItem(`uploads:${vId}:metadata`) as Promise<{
+          file_size: number;
+          file_total_parts: number;
+        }>,
       catch: () =>
         new FsError({ error: "Session missing or already finalized." }),
     });
@@ -254,9 +255,9 @@ export const CancelUpload = (id: FileId) =>
 
     const session = yield* Effect.tryPromise({
       try: () =>
-        db.getItem(`uploads:${vId}:metadata`) as Promise<
-          { file_total_parts: number } | null
-        >,
+        db.getItem(`uploads:${vId}:metadata`) as Promise<{
+          file_total_parts: number;
+        } | null>,
       catch: (error) => new FsError({ error }),
     });
 
@@ -309,9 +310,12 @@ export const Get = (id: FileId) =>
 
     const metadata = yield* Effect.tryPromise({
       try: () =>
-        db.getItem(`files:${vId}:metadata`) as Promise<
-          { id: string; name: string; mimetype: string; size: number }
-        >,
+        db.getItem(`files:${vId}:metadata`) as Promise<{
+          id: string;
+          name: string;
+          mimetype: string;
+          size: number;
+        }>,
       catch: (error) => new FsError({ error }),
     });
 
@@ -348,23 +352,29 @@ export const Get = (id: FileId) =>
     };
   });
 
-export class UploadInitEvent
-  extends Schema.TaggedClass<UploadInitEvent>()("Init", {
+export class UploadInitEvent extends Schema.TaggedClass<UploadInitEvent>()(
+  "Init",
+  {
     fileId: Schema.String,
-  }) {}
+  },
+) {}
 
-export class UploadProgressEventDetail
-  extends Schema.TaggedClass<UploadProgressEventDetail>()("Progress", {
+export class UploadProgressEventDetail extends Schema.TaggedClass<UploadProgressEventDetail>()(
+  "Progress",
+  {
     fileId: Schema.String,
     partIndex: Schema.Number,
     totalParts: Schema.Number,
     percent: Schema.Number,
-  }) {}
+  },
+) {}
 
-export class UploadCompleteEvent
-  extends Schema.TaggedClass<UploadCompleteEvent>()("Complete", {
+export class UploadCompleteEvent extends Schema.TaggedClass<UploadCompleteEvent>()(
+  "Complete",
+  {
     fileId: Schema.String,
-  }) {}
+  },
+) {}
 
 export const UploadProgressEvent = Schema.Union([
   UploadInitEvent,
@@ -390,8 +400,8 @@ export const Upload = (
     Effect.gen(function* () {
       const totalSize = blob.size;
 
-      const isSinglePart = totalSize <= 10 * 1024 * 1024 &&
-        totalSize <= partSize;
+      const isSinglePart =
+        totalSize <= 10 * 1024 * 1024 && totalSize <= partSize;
       const actualPartSize = isSinglePart ? totalSize : partSize;
       const totalParts = isSinglePart
         ? 1
@@ -408,7 +418,7 @@ export const Upload = (
           if (exit._tag === "Failure") {
             yield* CancelUpload(fileId).pipe(Effect.ignore({ log: true }));
           }
-        })
+        }),
       );
 
       const initEvent = new UploadInitEvent({ fileId });
@@ -425,11 +435,14 @@ export const Upload = (
               const end = Math.min(start + actualPartSize, totalSize);
               const chunkBlob = blob.slice(start, end);
 
-              yield* UploadPart({
-                file_id: fileId,
-                file_total_part: totalParts,
-                file_part: partIndex,
-              }, chunkBlob);
+              yield* UploadPart(
+                {
+                  file_id: fileId,
+                  file_total_part: totalParts,
+                  file_part: partIndex,
+                },
+                chunkBlob,
+              );
 
               const completedCount = yield* Ref.updateAndGet(
                 completedPartsRef,

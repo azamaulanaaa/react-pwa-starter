@@ -35,7 +35,7 @@ function routePattern(pathname: string): string {
     .map((segment) =>
       /^\d+$/.test(segment) || /^[0-9a-f-]{16,}$/i.test(segment)
         ? ":id"
-        : segment
+        : segment,
     )
     .join("/");
 }

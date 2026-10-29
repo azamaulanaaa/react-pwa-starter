@@ -1,5 +1,4 @@
 [tools]
-deno = "latest"
 node = "latest"
 "npm:@tailwindcss/language-server" = "latest"
 "npm:shadcn" = "latest"

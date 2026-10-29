@@ -10,8 +10,8 @@ export function useReadableStreams<T, P>(
   streamFactory: (param: P) => Promise<ReadableStream<T>>,
   params: P[],
 ): Map<P, StreamState<T>> {
-  const [statesMap, setStatesMap] = useState<Map<P, StreamState<T>>>(() =>
-    new Map()
+  const [statesMap, setStatesMap] = useState<Map<P, StreamState<T>>>(
+    () => new Map(),
   );
 
   useEffect(() => {

@@ -11,8 +11,7 @@
 // repo. At build time, Vite always provides `import.meta.env` as a string map.
 const ENV =
   (import.meta as unknown as { env?: Record<string, string | undefined> })
-    .env ??
-    {};
+    .env ?? {};
 
 function parseBool(value: string | undefined, fallback: boolean): boolean {
   if (value === undefined || value === "") return fallback;

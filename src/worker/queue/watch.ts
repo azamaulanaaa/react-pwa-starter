@@ -45,11 +45,14 @@ export const createWatchBus = (store: JobStore): WatchBus => {
       }),
 
     publish: () =>
-      Effect.forEach([...subscriptions], (subscription) =>
-        Effect.flatMap(
-          store.list(subscription.filter),
-          (jobs) => Queue.offer(subscription.queue, jobs),
-        ), { discard: true }),
+      Effect.forEach(
+        [...subscriptions],
+        (subscription) =>
+          Effect.flatMap(store.list(subscription.filter), (jobs) =>
+            Queue.offer(subscription.queue, jobs),
+          ),
+        { discard: true },
+      ),
   };
 };
 

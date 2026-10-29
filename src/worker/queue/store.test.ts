@@ -165,7 +165,7 @@ describe("store.update", () => {
     await run(
       Effect.all(
         Array.from({ length: 50 }, () =>
-          store.update("a", (job) => ({ ...job, attempt: job.attempt + 1 }))
+          store.update("a", (job) => ({ ...job, attempt: job.attempt + 1 })),
         ),
         { concurrency: "unbounded", discard: true },
       ),

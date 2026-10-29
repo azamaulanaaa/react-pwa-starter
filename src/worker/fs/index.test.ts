@@ -47,9 +47,9 @@ describe("upload stream teardown", () => {
       get: (target, property, receiver) =>
         property === "slice"
           ? (start: number, end: number) =>
-            start === partSize
-              ? new Blob([new Uint8Array(4)])
-              : target.slice(start, end)
+              start === partSize
+                ? new Blob([new Uint8Array(4)])
+                : target.slice(start, end)
           : Reflect.get(target, property, receiver),
     }) as Blob;
 

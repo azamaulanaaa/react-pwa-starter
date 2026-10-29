@@ -18,7 +18,7 @@ const data = [
   { id: 2, name: "Sophia", status: "Online" },
   { id: 3, name: "Yusuf", status: "Offline" },
 ];
-const columns: ColumnDef<TableGenericFeatures, typeof data[number]>[] = [
+const columns: ColumnDef<TableGenericFeatures, (typeof data)[number]>[] = [
   {
     accessorKey: "name",
     header: "Name",
@@ -54,7 +54,9 @@ const columns: ColumnDef<TableGenericFeatures, typeof data[number]>[] = [
   },
 ];
 
-export const Base: Story<TableGenericProps<typeof data[number]>> = (props) => {
+export const Base: Story<TableGenericProps<(typeof data)[number]>> = (
+  props,
+) => {
   const [rowSelections, setRowSelections] = useState<RowSelectionState>({});
   const [columnVisibility, setColumnVisibility] = useState({});
 
@@ -73,7 +75,9 @@ Base.args = {
   columns,
 };
 
-export const Empty: Story<TableGenericProps<typeof data[number]>> = (props) => {
+export const Empty: Story<TableGenericProps<(typeof data)[number]>> = (
+  props,
+) => {
   return <TableGeneric {...props} />;
 };
 Empty.args = { columns, data: [] };

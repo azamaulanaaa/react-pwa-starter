@@ -24,7 +24,7 @@ export function createDbPersistence(root = "db/main"): DbPersistence {
   const keyOf = (table: string, id: Id) => `${root}/${table}/${id}`;
 
   return {
-    save: Effect.fnUntraced(function*(
+    save: Effect.fnUntraced(function* (
       table: string,
       id: Id,
       doc: unknown,
@@ -36,7 +36,7 @@ export function createDbPersistence(root = "db/main"): DbPersistence {
         catch: (error) => new DbError({ error }),
       });
     }),
-    remove: Effect.fnUntraced(function*(
+    remove: Effect.fnUntraced(function* (
       table: string,
       id: Id,
     ): Effect.fn.Return<boolean, DbError> {
@@ -57,7 +57,7 @@ export function createDbPersistence(root = "db/main"): DbPersistence {
 
       return true;
     }),
-    load: Effect.fnUntraced(function*(
+    load: Effect.fnUntraced(function* (
       table: string,
     ): Effect.fn.Return<{ id: Id; value: unknown }[], DbError> {
       const prefix = `${root}/${table}/`;
@@ -75,7 +75,8 @@ export function createDbPersistence(root = "db/main"): DbPersistence {
           const value = yield* Effect.succeed(raw);
 
           return { id: key.slice(prefix.length) as Id, value };
-        }));
+        }),
+      );
     }),
   };
 }
@@ -93,8 +94,10 @@ export function loadSnapshot(
           Effect.tryPromise({
             try: () => temp.set(`${table}:${id}`, value),
             catch: (error) => new DbError({ error }),
-          }));
-      }));
+          }),
+        );
+      }),
+    );
 
     return yield* exportStore(temp);
   });
@@ -127,6 +130,9 @@ export function createPeerSync(root = "db/main"): PeerSync {
 
   channel.onmessage = (message) => {
     const event = message.data as DbEvent;
+    // Snapshot the set so a handler that unsubscribes during dispatch does not
+    // change the handlers that this event visits.
+    // oxlint-disable-next-line unicorn/no-useless-spread
     for (const handler of [...handlers]) handler(event);
   };
 
@@ -143,7 +149,6 @@ export function createPeerSync(root = "db/main"): PeerSync {
 }
 
 export function createDbFs(
-  // deno-lint-ignore no-explicit-any
   tables: Record<string, TableModule<string, any>>,
   root?: string,
 ): DbFs {
@@ -156,12 +161,11 @@ export function createDbFs(
       events.subscribe((event) =>
         event.kind === "set"
           ? persistence.save(event.table, event.id, event.doc)
-          : persistence.remove(event.table, event.id)
+          : persistence.remove(event.table, event.id),
       ),
     hydrate: (store) =>
-      Effect.flatMap(
-        loadSnapshot(tableNames, persistence),
-        (snapshot) => hydrateStore(store, snapshot),
+      Effect.flatMap(loadSnapshot(tableNames, persistence), (snapshot) =>
+        hydrateStore(store, snapshot),
       ),
   };
 }

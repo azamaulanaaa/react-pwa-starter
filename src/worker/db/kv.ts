@@ -44,7 +44,10 @@ export class KvApi extends Context.Service<KvApi, KvService>()(
    * because v4 has no `.Default` layer and no `.Live` layer.
    */
   static readonly layer = (deps: KvDeps) =>
-    Layer.effect(KvApi, Effect.sync(() => createKvApi(deps)));
+    Layer.effect(
+      KvApi,
+      Effect.sync(() => createKvApi(deps)),
+    );
 }
 
 // A non-negative integer. v4 has no `Schema.NonNegativeInt`.
@@ -62,9 +65,11 @@ export const ListParamsSchema = Schema.Struct({
 export type ListParams = Schema.Schema.Type<typeof ListParamsSchema>;
 
 export const KvListParamsSchema = ListParamsSchema.mapFields(
-  Struct.assign(Schema.Struct({
-    query: Schema.optional(Schema.String),
-  }).fields),
+  Struct.assign(
+    Schema.Struct({
+      query: Schema.optional(Schema.String),
+    }).fields,
+  ),
 );
 export type KvListParams = Schema.Schema.Type<typeof KvListParamsSchema>;
 
@@ -135,22 +140,21 @@ export function createKvApi({ open, bus }: KvDeps): KvService {
     exists: (key) =>
       Effect.gen(function* () {
         const store = yield* openFx();
-        return yield* fromPromise(
-          () => store.has(key) as Promise<boolean>,
-        );
+        return yield* fromPromise(() => store.has(key) as Promise<boolean>);
       }),
     gets: (args) =>
       Effect.gen(function* () {
         const params = yield* decodeFx(KvListParamsSchema, args);
         const store = yield* openFx();
-        return yield* fromPromise(() =>
-          store.gets(
-            params.limit ?? null,
-            directionOf(params),
-            params.startCursor ?? null,
-            params.endCursor ?? null,
-            params.query ?? null,
-          ) as Promise<KvEntry[]>
+        return yield* fromPromise(
+          () =>
+            store.gets(
+              params.limit ?? null,
+              directionOf(params),
+              params.startCursor ?? null,
+              params.endCursor ?? null,
+              params.query ?? null,
+            ) as Promise<KvEntry[]>,
         );
       }),
     load: (data) =>
@@ -180,7 +184,8 @@ export function createKvApi({ open, bus }: KvDeps): KvService {
           const tableName = tableOfKey(key);
           if (tableName !== undefined) {
             registry.update(dirtyTables, (current) =>
-              new Set(current).add(tableName));
+              new Set(current).add(tableName),
+            );
           }
         };
 
@@ -204,8 +209,7 @@ export function createKvApi({ open, bus }: KvDeps): KvService {
 
               return removed;
             }),
-          exists: (key) =>
-            fromPromise(() => tx.has(key) as Promise<boolean>),
+          exists: (key) => fromPromise(() => tx.has(key) as Promise<boolean>),
           commit: () =>
             Effect.gen(function* () {
               yield* fromPromise(() => tx.commit());

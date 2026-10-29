@@ -24,12 +24,8 @@ export type FormTaskValue = Schema.Schema.Type<
 
 export type FormTaskProps = {
   defaultValues?: FormTaskValue;
-  onChange?: (
-    value: FormTaskValue,
-  ) => void;
-  onSubmit: (
-    value: FormTaskValue,
-  ) => void | Promise<void>;
+  onChange?: (value: FormTaskValue) => void;
+  onSubmit: (value: FormTaskValue) => void | Promise<void>;
 };
 
 export function FormTask(props: FormTaskProps) {
@@ -81,9 +77,7 @@ export function FormTask(props: FormTaskProps) {
           </Field>
         )}
       </form.Field>
-      <Button type="submit">
-        {t("form_task_insert")}
-      </Button>
+      <Button type="submit">{t("form_task_insert")}</Button>
     </Form>
   );
 }

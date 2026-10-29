@@ -47,13 +47,11 @@ vi.stubGlobal("fetch", async (url: string) => {
     let content: string;
 
     // Read the file. The code uses a different function for each runtime.
-    if (typeof (globalThis as { Deno?: unknown }).Deno !== "undefined") {
-      content = await Deno.readTextFile(fileUrl.toString());
-    } else if (typeof (globalThis as { Bun?: unknown }).Bun !== "undefined") {
+    if (typeof (globalThis as { Bun?: unknown }).Bun !== "undefined") {
       content = await Bun.file(fileUrl).text();
     } else {
-      // Fallback for Node. The code uses a dynamic import. A static import
-      // crashes the other runtimes.
+      // Fallback for Node. The dynamic import keeps the Node built-in out of
+      // the Bun code path.
       const { readFileSync } = await import("node:fs");
       content = readFileSync(fileUrl.toString(), "utf-8");
     }

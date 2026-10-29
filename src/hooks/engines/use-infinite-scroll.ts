@@ -75,7 +75,7 @@ export function useInfiniteScroll<T extends { id: string }>(
     }
 
     return Array.from(uniqueItems.values()).sort((a, b) =>
-      a.id.localeCompare(b.id)
+      a.id.localeCompare(b.id),
     );
   }, [findStreamStates]);
 
@@ -93,12 +93,13 @@ export function useInfiniteScroll<T extends { id: string }>(
     const firstId = debouncedVisibleItems.at(0)?.id;
     const lastId = debouncedVisibleItems.at(-1)?.id;
 
-    const newParams: BaseParams = debouncedVisibleItems.length === 0
-      ? { limit: initialLimit, direction: "next" }
-      : { direction: "next", startCursor: firstId, endCursor: lastId };
+    const newParams: BaseParams =
+      debouncedVisibleItems.length === 0
+        ? { limit: initialLimit, direction: "next" }
+        : { direction: "next", startCursor: firstId, endCursor: lastId };
 
     setOptimizedParams((prev) =>
-      areParamsEqual(prev, newParams) ? prev : newParams
+      areParamsEqual(prev, newParams) ? prev : newParams,
     );
   }, [debouncedVisibleItems, initialLimit]);
 
@@ -132,7 +133,7 @@ export function useInfiniteScroll<T extends { id: string }>(
       }
 
       setScrollParams((prev) =>
-        areParamsEqual(prev, newParams) ? prev : newParams
+        areParamsEqual(prev, newParams) ? prev : newParams,
       );
     },
     [initialLimit],
@@ -150,7 +151,8 @@ export function useInfiniteScroll<T extends { id: string }>(
     const currentTopId = data.at(0)?.id;
     const currentCount = data.length;
 
-    const hasPrependedItems = prevCountRef.current > 0 &&
+    const hasPrependedItems =
+      prevCountRef.current > 0 &&
       currentCount > prevCountRef.current &&
       currentTopId !== prevTopIdRef.current;
 

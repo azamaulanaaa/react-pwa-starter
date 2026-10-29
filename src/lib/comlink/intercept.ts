@@ -36,10 +36,7 @@ export function interceptProxy<T extends object>(
   proxy: T,
   intercept: ProxyCallInterceptor,
 ): T {
-  const interceptNode = (
-    node: unknown,
-    path: string,
-  ): object => {
+  const interceptNode = (node: unknown, path: string): object => {
     // The cache stores one entry per key. Repeated accesses then return the
     // same proxy identity. This matters for consumers that store
     // `proxy.db.task.get` in a variable.
@@ -69,7 +66,8 @@ export function interceptProxy<T extends object>(
               thisArg,
               args,
             ),
-          ));
+          ),
+        );
       },
 
       set(_target, key, value) {
@@ -82,9 +80,7 @@ export function interceptProxy<T extends object>(
         // The trap delegates `new proxy.X(...)`. Comlink sends the CONSTRUCT
         // RPC. The trap does not intercept the call.
         return Reflect.construct(
-          node as new (
-            ...callArgs: unknown[]
-          ) => unknown,
+          node as new (...callArgs: unknown[]) => unknown,
           args,
           newTarget as NewableFunction,
         ) as object;

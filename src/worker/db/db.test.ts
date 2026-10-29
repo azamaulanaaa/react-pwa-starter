@@ -40,9 +40,7 @@ describe("dbMain.task", () => {
 
   it("inserts, reads, updates, deletes", async () => {
     const id = randomUUID();
-    await run(
-      dbMain.task.set(id, { description: "buy milk", is_done: false }),
-    );
+    await run(dbMain.task.set(id, { description: "buy milk", is_done: false }));
 
     const inserted = await run(dbMain.task.get(id));
     expect(inserted.description).toBe("buy milk");
@@ -76,9 +74,7 @@ describe("dbMain.task", () => {
     const id = randomUUID();
     expect(await run(dbMain.task.exists(id))).toBe(false);
 
-    await run(
-      dbMain.task.set(id, { description: "upserted", is_done: true }),
-    );
+    await run(dbMain.task.set(id, { description: "upserted", is_done: true }));
     expect(await run(dbMain.task.exists(id))).toBe(true);
 
     const doc = await run(dbMain.task.get(id));
@@ -190,10 +186,7 @@ describe("dbMain.task", () => {
     // A scan with direction `prev` returns the newest keys first.
     // The scan returns the two newest rows that this test created.
     // The result does not depend on the rows that the earlier tests created.
-    expect(prevPage.map((task) => task.id)).toEqual([
-      pageIds[2],
-      pageIds[1],
-    ]);
+    expect(prevPage.map((task) => task.id)).toEqual([pageIds[2], pageIds[1]]);
     expect(prevPage.at(-1)!.created_at.getTime()).toBeGreaterThanOrEqual(
       nextPage.at(-1)!.created_at.getTime(),
     );
@@ -335,19 +328,19 @@ describe("kv api", () => {
     );
     await run(kvApi.set("docs:visible", { n: 1 }));
 
-    const entries = await run(kvApi.gets({
-      direction: "next",
-      startCursor: `docs:`,
-      endCursor: `docs:\uffff`,
-    }));
+    const entries = await run(
+      kvApi.gets({
+        direction: "next",
+        startCursor: `docs:`,
+        endCursor: `docs:\uffff`,
+      }),
+    );
 
     // The range covers the prefix `docs:` only.
     // The task row that the test wrote above must not appear in the range.
     // The test name states this property.
     expect(entries.map((entry) => entry.key)).toEqual(["docs:visible"]);
-    expect(entries.every((entry) => !entry.key.startsWith("task:"))).toBe(
-      true,
-    );
+    expect(entries.every((entry) => !entry.key.startsWith("task:"))).toBe(true);
   });
 });
 
@@ -414,9 +407,9 @@ describe("watch teardown", () => {
     const { api, listeners } = createWatchedApi();
     const chunks: unknown[][] = [];
 
-    const iterator = Stream.toAsyncIterable(
-      api.watch({ direction: "next" }),
-    )[Symbol.asyncIterator]();
+    const iterator = Stream.toAsyncIterable(api.watch({ direction: "next" }))[
+      Symbol.asyncIterator
+    ]();
     void (async () => {
       for (;;) {
         const result = await iterator.next();
@@ -456,14 +449,18 @@ describe("db event bus", () => {
       ),
     });
 
-    const db = createDatabase("events-test", { collector: CollectorTable }, {
-      setup: (ctx) =>
-        ctx.onEvent((event) =>
-          Effect.sync(() => {
-            collected.push(event);
-          })
-        ),
-    });
+    const db = createDatabase(
+      "events-test",
+      { collector: CollectorTable },
+      {
+        setup: (ctx) =>
+          ctx.onEvent((event) =>
+            Effect.sync(() => {
+              collected.push(event);
+            }),
+          ),
+      },
+    );
 
     const id = randomUUID();
     await run(db.collector.set(id, { description: "watched" }));
@@ -489,7 +486,8 @@ describe("db event bus", () => {
     const stop = bus.subscribe((received) =>
       Effect.sync(() => {
         collected.push(received);
-      }));
+      }),
+    );
 
     await run(bus.emit(event));
     stop();

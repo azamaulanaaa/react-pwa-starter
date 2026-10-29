@@ -63,8 +63,8 @@ export type SidebarContextProps = {
   toggleSidebar: () => void;
 };
 
-export const SidebarContext: React.Context<SidebarContextProps | null> = React
-  .createContext<SidebarContextProps | null>(null);
+export const SidebarContext: React.Context<SidebarContextProps | null> =
+  React.createContext<SidebarContextProps | null>(null);
 
 export function useSidebar(): SidebarContextProps {
   const context = React.useContext(SidebarContext);
@@ -162,11 +162,13 @@ export function SidebarProvider({
           className,
         )}
         data-slot="sidebar-wrapper"
-        style={{
-          "--sidebar-width": SIDEBAR_WIDTH,
-          "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
-          ...style,
-        } as React.CSSProperties}
+        style={
+          {
+            "--sidebar-width": SIDEBAR_WIDTH,
+            "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
+            ...style,
+          } as React.CSSProperties
+        }
         {...props}
       >
         {children}
@@ -213,9 +215,11 @@ export function Sidebar({
           data-sidebar="sidebar"
           data-slot="sidebar"
           side={side}
-          style={{
-            "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
-          } as React.CSSProperties}
+          style={
+            {
+              "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
+            } as React.CSSProperties
+          }
         >
           <SheetHeader className="sr-only">
             <SheetTitle>Sidebar</SheetTitle>
@@ -661,9 +665,11 @@ export function SidebarMenuSkeleton({
       <Skeleton
         className="h-4 max-w-(--skeleton-width) flex-1"
         data-sidebar="menu-skeleton-text"
-        style={{
-          "--skeleton-width": width,
-        } as React.CSSProperties}
+        style={
+          {
+            "--skeleton-width": width,
+          } as React.CSSProperties
+        }
       />
     </div>
   );

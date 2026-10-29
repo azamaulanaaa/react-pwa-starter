@@ -27,9 +27,8 @@ export function Alert({
   className,
   variant,
   ...props
-}:
-  & React.ComponentProps<"div">
-  & VariantProps<typeof alertVariants>): React.ReactElement {
+}: React.ComponentProps<"div"> &
+  VariantProps<typeof alertVariants>): React.ReactElement {
   return (
     <div
       className={cn(alertVariants({ variant }), className)}

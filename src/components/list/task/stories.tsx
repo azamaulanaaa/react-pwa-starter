@@ -12,7 +12,7 @@ export const Base: Story<ListTaskProps> = (props) => {
 
   const handleOnToggleDone = (id: string, is_done: boolean) => {
     setData((data) =>
-      data.map((item) => item.id == id ? { ...item, is_done } : item)
+      data.map((item) => (item.id == id ? { ...item, is_done } : item)),
     );
   };
 

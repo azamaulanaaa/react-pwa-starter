@@ -26,10 +26,8 @@ export const buttonVariants = cva(
           "size-7 rounded-md before:rounded-[calc(var(--radius-md)-1px)] sm:size-6 not-in-data-[slot=input-group]:[&_svg:not([class*='size-'])]:size-4 sm:not-in-data-[slot=input-group]:[&_svg:not([class*='size-'])]:size-3.5",
         lg: "h-10 px-[calc(--spacing(3.5)-1px)] sm:h-9",
         sm: "h-8 gap-1.5 px-[calc(--spacing(2.5)-1px)] sm:h-7",
-        xl:
-          "h-11 px-[calc(--spacing(4)-1px)] text-lg sm:h-10 sm:text-base [&_svg:not([class*='size-'])]:size-5 sm:[&_svg:not([class*='size-'])]:size-4.5",
-        xs:
-          "h-7 gap-1 rounded-md px-[calc(--spacing(2)-1px)] text-sm before:rounded-[calc(var(--radius-md)-1px)] sm:h-6 sm:text-xs [&_svg:not([class*='size-'])]:size-4 sm:[&_svg:not([class*='size-'])]:size-3.5",
+        xl: "h-11 px-[calc(--spacing(4)-1px)] text-lg sm:h-10 sm:text-base [&_svg:not([class*='size-'])]:size-5 sm:[&_svg:not([class*='size-'])]:size-4.5",
+        xs: "h-7 gap-1 rounded-md px-[calc(--spacing(2)-1px)] text-sm before:rounded-[calc(var(--radius-md)-1px)] sm:h-6 sm:text-xs [&_svg:not([class*='size-'])]:size-4 sm:[&_svg:not([class*='size-'])]:size-3.5",
       },
       variant: {
         default:
@@ -40,8 +38,7 @@ export const buttonVariants = cva(
           "border-input bg-popover not-dark:bg-clip-padding text-destructive-foreground shadow-xs/5 not-disabled:not-active:not-data-pressed:before:shadow-[0_1px_--theme(--color-black/4%)] hover:border-destructive/32 hover:bg-destructive/4 data-pressed:border-destructive/32 data-pressed:bg-destructive/4 *:data-[slot=button-loading-indicator]:text-foreground dark:bg-input/32 dark:not-disabled:before:shadow-[0_-1px_--theme(--color-white/2%)] dark:not-disabled:not-active:not-data-pressed:before:shadow-[0_-1px_--theme(--color-white/6%)] [:disabled,:active,[data-pressed]]:shadow-none",
         ghost:
           "border-transparent text-foreground hover:bg-accent data-pressed:bg-accent *:data-[slot=button-loading-indicator]:text-foreground",
-        link:
-          "border-transparent text-foreground underline-offset-4 hover:underline data-pressed:underline *:data-[slot=button-loading-indicator]:text-foreground",
+        link: "border-transparent text-foreground underline-offset-4 hover:underline data-pressed:underline *:data-[slot=button-loading-indicator]:text-foreground",
         outline:
           "border-input bg-popover not-dark:bg-clip-padding text-foreground shadow-xs/5 not-disabled:not-active:not-data-pressed:before:shadow-[0_1px_--theme(--color-black/4%)] hover:bg-accent/50 data-pressed:bg-accent/50 *:data-[slot=button-loading-indicator]:text-foreground dark:bg-input/32 dark:data-pressed:bg-input/64 dark:hover:bg-input/64 dark:not-disabled:before:shadow-[0_-1px_--theme(--color-white/2%)] dark:not-disabled:not-active:not-data-pressed:before:shadow-[0_-1px_--theme(--color-white/6%)] [:disabled,:active,[data-pressed]]:shadow-none",
         secondary:
@@ -57,8 +54,8 @@ export interface ButtonProps extends useRender.ComponentProps<"button"> {
   loading?: boolean;
 }
 
-export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  function ({
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function (
+  {
     className,
     variant,
     size,
@@ -67,35 +64,36 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     loading = false,
     disabled: disabledProp,
     ...props
-  }, ref): React.ReactElement {
-    const isDisabled: boolean = Boolean(loading || disabledProp);
-    const typeValue: React.ButtonHTMLAttributes<HTMLButtonElement>["type"] =
-      render ? undefined : "button";
-
-    const defaultProps = {
-      children: (
-        <>
-          {children}
-          {loading && (
-            <Spinner
-              className="pointer-events-none absolute"
-              data-slot="button-loading-indicator"
-            />
-          )}
-        </>
-      ),
-      className: cn(buttonVariants({ className, size, variant })),
-      "aria-disabled": loading || undefined,
-      "data-loading": loading ? "" : undefined,
-      "data-slot": "button",
-      disabled: isDisabled,
-      type: typeValue,
-    };
-
-    return useRender({
-      defaultTagName: "button",
-      props: mergeProps<"button">({ ref }, defaultProps, props),
-      render,
-    });
   },
-);
+  ref,
+): React.ReactElement {
+  const isDisabled: boolean = Boolean(loading || disabledProp);
+  const typeValue: React.ButtonHTMLAttributes<HTMLButtonElement>["type"] =
+    render ? undefined : "button";
+
+  const defaultProps = {
+    children: (
+      <>
+        {children}
+        {loading && (
+          <Spinner
+            className="pointer-events-none absolute"
+            data-slot="button-loading-indicator"
+          />
+        )}
+      </>
+    ),
+    className: cn(buttonVariants({ className, size, variant })),
+    "aria-disabled": loading || undefined,
+    "data-loading": loading ? "" : undefined,
+    "data-slot": "button",
+    disabled: isDisabled,
+    type: typeValue,
+  };
+
+  return useRender({
+    defaultTagName: "button",
+    props: mergeProps<"button">({ ref }, defaultProps, props),
+    render,
+  });
+});

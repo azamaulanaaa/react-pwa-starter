@@ -37,13 +37,12 @@ const withFreshErrors = async (
     error: [],
     unhandledrejection: [],
   };
-  const addSpy = vi.spyOn(globalThis, "addEventListener").mockImplementation(
-    // deno-lint-ignore no-explicit-any
-    ((type: string, handler: any) => {
-      if (handlers[type]) handlers[type].push(handler);
-      // deno-lint-ignore no-explicit-any
-    }) as any,
-  );
+  const addSpy = vi.spyOn(globalThis, "addEventListener").mockImplementation(((
+    type: string,
+    handler: any,
+  ) => {
+    if (handlers[type]) handlers[type].push(handler);
+  }) as any);
 
   try {
     run({
@@ -51,8 +50,7 @@ const withFreshErrors = async (
       capture: captureGlobalErrors,
       reject: (reason) =>
         handlers.unhandledrejection.forEach((h) => h({ reason })),
-      throwError: (error) =>
-        handlers.error.forEach((h) => h({ error })),
+      throwError: (error) => handlers.error.forEach((h) => h({ error })),
     });
   } finally {
     addSpy.mockRestore();

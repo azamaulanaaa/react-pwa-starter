@@ -8,8 +8,9 @@ type ResolveReturn<T> = ResolveEffect<T, Promise<Awaited<T>>>;
 export type SyncRemoteProxy<T> = {
   [K in keyof T]: T[K] extends (...args: infer Args) => infer Ret
     ? (...args: Args) => ResolveReturn<Ret>
-    : T[K] extends object ? SyncRemoteProxy<T[K]>
-    : Promise<T[K]>;
+    : T[K] extends object
+      ? SyncRemoteProxy<T[K]>
+      : Promise<T[K]>;
 };
 
 export { expose, transfer, wrap } from "comlink";

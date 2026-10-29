@@ -280,9 +280,8 @@ export const createQueue = (
           current.id,
           runJob(current.id).pipe(
             Effect.ensuring(
-              Effect.flatMap(
-                Semaphore.release(permits, 1),
-                () => store.touch(current.id),
+              Effect.flatMap(Semaphore.release(permits, 1), () =>
+                store.touch(current.id),
               ),
             ),
           ),
@@ -419,19 +418,19 @@ export const createQueue = (
             readonly deferred: Deferred.Deferred<Job>;
             readonly owned: boolean;
           };
-          const waiter = yield* Ref.modify(waiters, (map): readonly [
-            Waiter,
-            Map<JobId, Deferred.Deferred<Job>>,
-          ] => {
-            const existing = map.get(jobId);
-            if (existing !== undefined) {
-              return [{ deferred: existing, owned: false }, map];
-            }
-            const created = Deferred.makeUnsafe<Job>();
-            const next = new Map(map);
-            next.set(jobId, created);
-            return [{ deferred: created, owned: true }, next];
-          });
+          const waiter = yield* Ref.modify(
+            waiters,
+            (map): readonly [Waiter, Map<JobId, Deferred.Deferred<Job>>] => {
+              const existing = map.get(jobId);
+              if (existing !== undefined) {
+                return [{ deferred: existing, owned: false }, map];
+              }
+              const created = Deferred.makeUnsafe<Job>();
+              const next = new Map(map);
+              next.set(jobId, created);
+              return [{ deferred: created, owned: true }, next];
+            },
+          );
 
           const body = Effect.gen(function* () {
             const current = yield* store.get(jobId);
@@ -466,10 +465,10 @@ export const createQueue = (
             Effect.ensuring(
               waiter.owned
                 ? Ref.update(waiters, (map) => {
-                  const next = new Map(map);
-                  next.delete(jobId);
-                  return next;
-                })
+                    const next = new Map(map);
+                    next.delete(jobId);
+                    return next;
+                  })
                 : Effect.void,
             ),
           );

@@ -41,11 +41,7 @@ type SidebarLinkProps = LinkProps & {
   label: string;
 };
 
-export function SidebarLink({
-  icon: Icon,
-  label,
-  ...props
-}: SidebarLinkProps) {
+export function SidebarLink({ icon: Icon, label, ...props }: SidebarLinkProps) {
   return (
     <SidebarMenuItem>
       <Link {...props}>
@@ -67,9 +63,7 @@ function Page() {
 
   const [isSidebarOpen, setLocalIsSidebarOpen] = useState(config.isSidebarOpen);
   const setIsSidebarOpen = useCallback(
-    (
-      state: boolean,
-    ) => {
+    (state: boolean) => {
       setLocalIsSidebarOpen(state);
       updateConfig({ isSidebarOpen: state });
     },
@@ -79,9 +73,7 @@ function Page() {
   useEffect(() => {
     const handleFocus = () => updateConfig({ isSidebarOpen });
 
-    // deno-lint-ignore no-window no-window-prefix
     window.addEventListener("focus", handleFocus);
-    // deno-lint-ignore no-window no-window-prefix
     return () => window.removeEventListener("focus", handleFocus);
   }, [isSidebarOpen, updateConfig]);
 
@@ -93,9 +85,8 @@ function Page() {
     })
     .map((match) => {
       const { breadcrumb } = match.staticData;
-      const label = (typeof breadcrumb === "function")
-        ? breadcrumb(match)
-        : breadcrumb;
+      const label =
+        typeof breadcrumb === "function" ? breadcrumb(match) : breadcrumb;
 
       return {
         title: label,
@@ -107,10 +98,7 @@ function Page() {
     <ToastProvider>
       <AnchoredToastProvider>
         <div className="h-screen w-full bg-background text-foreground">
-          <SidebarProvider
-            open={isSidebarOpen}
-            onOpenChange={setIsSidebarOpen}
-          >
+          <SidebarProvider open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
             <Sidebar collapsible="icon">
               <SidebarHeader>
                 <div className="flex items-center gap-2 px-1 py-1 font-semibold">
@@ -152,23 +140,19 @@ function Page() {
 
                         return (
                           <Fragment key={crumb.path}>
-                            {isLast
-                              ? (
-                                <BreadcrumbItem>
-                                  <BreadcrumbPage>
-                                    {crumb.title}
-                                  </BreadcrumbPage>
-                                </BreadcrumbItem>
-                              )
-                              : (
-                                <BreadcrumbItem>
-                                  <BreadcrumbLink
-                                    render={<Link to={crumb.path} />}
-                                  >
-                                    {crumb.title}
-                                  </BreadcrumbLink>
-                                </BreadcrumbItem>
-                              )}
+                            {isLast ? (
+                              <BreadcrumbItem>
+                                <BreadcrumbPage>{crumb.title}</BreadcrumbPage>
+                              </BreadcrumbItem>
+                            ) : (
+                              <BreadcrumbItem>
+                                <BreadcrumbLink
+                                  render={<Link to={crumb.path} />}
+                                >
+                                  {crumb.title}
+                                </BreadcrumbLink>
+                              </BreadcrumbItem>
+                            )}
                             {!isLast && <BreadcrumbSeparator />}
                           </Fragment>
                         );
@@ -176,8 +160,7 @@ function Page() {
                     </BreadcrumbList>
                   </Breadcrumb>
                 </div>
-                <div>
-                </div>
+                <div></div>
               </div>
               <main className="p-2">
                 <Outlet />

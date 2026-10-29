@@ -27,7 +27,8 @@ export const createRegistry = (): Effect.Effect<JobRegistry> =>
         Effect.gen(function* () {
           const vKind = yield* decodeUnknownFx(JobKindSchema, kind);
           yield* Ref.update(handlers, (current) =>
-            new Map(current).set(vKind, handler));
+            new Map(current).set(vKind, handler),
+          );
         }),
       has: (kind) =>
         Effect.gen(function* () {

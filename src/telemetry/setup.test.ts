@@ -24,9 +24,8 @@ vi.mock("@/telemetry/config.ts", () => ({
 describe("setupTelemetry", () => {
   it("registers providers, context, and propagators", async () => {
     const { setupTelemetry } = await import("@/telemetry/index.ts");
-    const { emitLog, getLogger, getTracer } = await import(
-      "@/telemetry/api.ts"
-    );
+    const { emitLog, getLogger, getTracer } =
+      await import("@/telemetry/api.ts");
 
     // Vitest 5 registers its own global tracer provider, and the OTel API
     // rejects an override. Clear the globals first so this test observes the
@@ -49,7 +48,7 @@ describe("setupTelemetry", () => {
 
     expect(getLogger("smoke")).toBeDefined();
     expect(() =>
-      emitLog("INFO", "smoke", { "smoke.test": true })
+      emitLog("INFO", "smoke", { "smoke.test": true }),
     ).not.toThrow();
   });
 });

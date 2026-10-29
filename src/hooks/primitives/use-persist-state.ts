@@ -33,26 +33,21 @@ export function usePersistState<T>(
     }
   }, []);
 
-  const subscribe = useCallback(
-    (callback: () => void) => {
-      const handleStorage = (e: StorageEvent) => {
-        if (e.key === finalNameRef.current || e.key === null) {
-          callback();
-        }
-      };
+  const subscribe = useCallback((callback: () => void) => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === finalNameRef.current || e.key === null) {
+        callback();
+      }
+    };
 
-      // deno-lint-ignore no-window no-window-prefix
-      window.addEventListener("storage", handleStorage);
-      eventTarget.addEventListener(finalNameRef.current, callback);
+    window.addEventListener("storage", handleStorage);
+    eventTarget.addEventListener(finalNameRef.current, callback);
 
-      return () => {
-        // deno-lint-ignore no-window no-window-prefix
-        window.removeEventListener("storage", handleStorage);
-        eventTarget.removeEventListener(finalNameRef.current, callback);
-      };
-    },
-    [],
-  );
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      eventTarget.removeEventListener(finalNameRef.current, callback);
+    };
+  }, []);
 
   const getSnapshot = useCallback(() => {
     try {
@@ -78,24 +73,22 @@ export function usePersistState<T>(
     latestLocalValueRef.current = persistedValue;
   }, [persistedValue]);
 
-  const setPersistedValue = useCallback(
-    (newValue: T | ((prev: T) => T)) => {
-      const nextValue = typeof newValue === "function"
+  const setPersistedValue = useCallback((newValue: T | ((prev: T) => T)) => {
+    const nextValue =
+      typeof newValue === "function"
         ? (newValue as (prev: T) => T)(latestLocalValueRef.current)
         : newValue;
 
-      try {
-        localStorage.setItem(
-          finalNameRef.current,
-          serializerRef.current(nextValue),
-        );
-        eventTarget.dispatchEvent(new Event(finalNameRef.current));
-      } catch (error) {
-        console.error(`Error persisting key "${finalNameRef.current}":`, error);
-      }
-    },
-    [],
-  );
+    try {
+      localStorage.setItem(
+        finalNameRef.current,
+        serializerRef.current(nextValue),
+      );
+      eventTarget.dispatchEvent(new Event(finalNameRef.current));
+    } catch (error) {
+      console.error(`Error persisting key "${finalNameRef.current}":`, error);
+    }
+  }, []);
 
   return [persistedValue, setPersistedValue] as const;
 }

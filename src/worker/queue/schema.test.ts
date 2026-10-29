@@ -46,33 +46,32 @@ describe("resolveConfig", () => {
 describe("JobSchema", () => {
   it("rejects a state outside the six literals", () => {
     expect(() =>
-      Schema.decodeUnknownSync(JobSchema)({ ...job, state: "cancelled" })
+      Schema.decodeUnknownSync(JobSchema)({ ...job, state: "cancelled" }),
     ).toThrow();
   });
 
   it("accepts each of the six states", () => {
-    for (
-      const state of [
-        "queued",
-        "running",
-        "paused",
-        "succeeded",
-        "failed",
-        "canceled",
-      ]
-    ) {
-      expect(
-        Schema.decodeUnknownSync(JobSchema)({ ...job, state }).state,
-      ).toBe(state);
+    for (const state of [
+      "queued",
+      "running",
+      "paused",
+      "succeeded",
+      "failed",
+      "canceled",
+    ]) {
+      expect(Schema.decodeUnknownSync(JobSchema)({ ...job, state }).state).toBe(
+        state,
+      );
     }
   });
 
   it("rejects a progress below 0 and above 1", () => {
     expect(() =>
-      Schema.decodeUnknownSync(JobSchema)({ ...job, progress: -0.1 })
+      Schema.decodeUnknownSync(JobSchema)({ ...job, progress: -0.1 }),
     ).toThrow();
-    expect(() => Schema.decodeUnknownSync(JobSchema)({ ...job, progress: 1.1 }))
-      .toThrow();
+    expect(() =>
+      Schema.decodeUnknownSync(JobSchema)({ ...job, progress: 1.1 }),
+    ).toThrow();
     const progress0 = Schema.decodeUnknownSync(JobSchema)({
       ...job,
       progress: 0,
@@ -87,15 +86,17 @@ describe("JobSchema", () => {
 
   it("rejects a non-finite progress", () => {
     expect(() =>
-      Schema.decodeUnknownSync(JobSchema)({ ...job, progress: Number.NaN })
+      Schema.decodeUnknownSync(JobSchema)({ ...job, progress: Number.NaN }),
     ).toThrow();
   });
 
   it("rejects an attempt below 1 or a non-integer attempt", () => {
-    expect(() => Schema.decodeUnknownSync(JobSchema)({ ...job, attempt: 0 }))
-      .toThrow();
-    expect(() => Schema.decodeUnknownSync(JobSchema)({ ...job, attempt: 1.5 }))
-      .toThrow();
+    expect(() =>
+      Schema.decodeUnknownSync(JobSchema)({ ...job, attempt: 0 }),
+    ).toThrow();
+    expect(() =>
+      Schema.decodeUnknownSync(JobSchema)({ ...job, attempt: 1.5 }),
+    ).toThrow();
   });
 });
 
@@ -109,7 +110,8 @@ describe("EnqueueInputSchema", () => {
 
   it("rejects a missing kind and an empty kind", () => {
     expect(() => Schema.decodeUnknownSync(EnqueueInputSchema)({})).toThrow();
-    expect(() => Schema.decodeUnknownSync(EnqueueInputSchema)({ kind: "" }))
-      .toThrow();
+    expect(() =>
+      Schema.decodeUnknownSync(EnqueueInputSchema)({ kind: "" }),
+    ).toThrow();
   });
 });

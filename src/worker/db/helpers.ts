@@ -10,7 +10,7 @@ export const fromPromise = <A>(
     catch: (error) => new DbError({ error }),
   });
 
-export const decodeFx = Effect.fnUntraced(function*<A, I>(
+export const decodeFx = Effect.fnUntraced(function* <A, I>(
   schema: Schema.Codec<A, I>,
   input: unknown,
 ): Effect.fn.Return<A, DbError> {
@@ -19,7 +19,7 @@ export const decodeFx = Effect.fnUntraced(function*<A, I>(
   );
 });
 
-export const decodeUnknownFx = Effect.fnUntraced(function*<A, I>(
+export const decodeUnknownFx = Effect.fnUntraced(function* <A, I>(
   schema: Schema.Codec<A, I>,
   input: unknown,
 ): Effect.fn.Return<A, DbError> {

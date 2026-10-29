@@ -3,10 +3,12 @@ import { createTableModule } from "@/worker/db/factory.ts";
 import { BaseSchema } from "@/worker/db/schema.ts";
 
 const TaskSchema = BaseSchema.mapFields(
-  Struct.assign(Schema.Struct({
-    description: Schema.NonEmptyString,
-    is_done: Schema.Boolean,
-  }).fields),
+  Struct.assign(
+    Schema.Struct({
+      description: Schema.NonEmptyString,
+      is_done: Schema.Boolean,
+    }).fields,
+  ),
 );
 export type Task = Schema.Schema.Type<typeof TaskSchema>;
 

@@ -18,9 +18,12 @@ export type ImagePreviewProps = {
   fileName?: string;
 };
 
-export const ImagePreview = (
-  { className, src, alt, fileName }: ImagePreviewProps,
-) => {
+export const ImagePreview = ({
+  className,
+  src,
+  alt,
+  fileName,
+}: ImagePreviewProps) => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const altText = alt || "Image preview";
@@ -35,8 +38,8 @@ export const ImagePreview = (
 
       const link = document.createElement("a");
       link.href = url;
-      link.download = fileName || src.split("/").pop()?.split("?")[0] ||
-        "image";
+      link.download =
+        fileName || src.split("/").pop()?.split("?")[0] || "image";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -76,11 +79,7 @@ export const ImagePreview = (
         />
 
         <div className="flex items-center justify-center">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleDownload}
-          >
+          <Button variant="ghost" size="sm" onClick={handleDownload}>
             <DownloadIcon className="h-4 w-4" />
             {t("image_preview_download")}
           </Button>

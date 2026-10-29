@@ -58,49 +58,55 @@ export type ListTaskProps = {
 export function ListTask(props: ListTaskProps) {
   const { t } = useTranslation();
 
-  const columns: ColumnDef<typeof taskTableFeatures, Task>[] = useMemo(() => [
-    {
-      accessorKey: "is_done",
-      cell: ({ row, table }) => {
-        return (
-          <Checkbox
-            checked={row.getValue("is_done")}
-            onCheckedChange={(checked) =>
-              table.options.meta?.onToggleDone?.(row.original.id, !!checked)}
-          />
-        );
+  const columns: ColumnDef<typeof taskTableFeatures, Task>[] = useMemo(
+    () => [
+      {
+        accessorKey: "is_done",
+        cell: ({ row, table }) => {
+          return (
+            <Checkbox
+              checked={row.getValue("is_done")}
+              onCheckedChange={(checked) =>
+                table.options.meta?.onToggleDone?.(row.original.id, !!checked)
+              }
+            />
+          );
+        },
+        header: () => <Check />,
       },
-      header: () => <Check />,
-    },
-    {
-      accessorKey: "description",
-      cell: ({ row }) => (
-        <p className="text-foreground">{row.getValue("description")}</p>
-      ),
-      header: () => t("list_task_description"),
-    },
-    {
-      accessorKey: "id",
-      cell: ({ row, table }) => (
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                aria-label="delete"
-                size="icon"
-                variant="destructive"
-                onClick={() => table.options.meta?.onDelete?.(row.original.id)}
-              />
-            }
-          >
-            <Trash />
-          </TooltipTrigger>
-          <TooltipPopup>Delete</TooltipPopup>
-        </Tooltip>
-      ),
-      header: () => t("list_task_action"),
-    },
-  ], [t]);
+      {
+        accessorKey: "description",
+        cell: ({ row }) => (
+          <p className="text-foreground">{row.getValue("description")}</p>
+        ),
+        header: () => t("list_task_description"),
+      },
+      {
+        accessorKey: "id",
+        cell: ({ row, table }) => (
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  aria-label="delete"
+                  size="icon"
+                  variant="destructive"
+                  onClick={() =>
+                    table.options.meta?.onDelete?.(row.original.id)
+                  }
+                />
+              }
+            >
+              <Trash />
+            </TooltipTrigger>
+            <TooltipPopup>Delete</TooltipPopup>
+          </Tooltip>
+        ),
+        header: () => t("list_task_action"),
+      },
+    ],
+    [t],
+  );
 
   const table = useTable({
     features: taskTableFeatures,
@@ -120,10 +126,12 @@ export function ListTask(props: ListTaskProps) {
             {headerGroup.headers.map((header) => {
               return (
                 <TableHead key={header.id}>
-                  {header.isPlaceholder ? null : flexRender(
-                    header.column.columnDef.header,
-                    header.getContext(),
-                  )}
+                  {header.isPlaceholder
+                    ? null
+                    : flexRender(
+                        header.column.columnDef.header,
+                        header.getContext(),
+                      )}
                 </TableHead>
               );
             })}
@@ -131,25 +139,23 @@ export function ListTask(props: ListTaskProps) {
         ))}
       </TableHeader>
       <TableBody>
-        {table.getRowModel().rows?.length
-          ? (
-            table.getRowModel().rows.map((row) => (
-              <TableRow key={row.id}>
-                {row.getAllCells().map((cell) => (
-                  <TableCell key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
-          )
-          : (
-            <TableRow>
-              <TableCell className="h-24 text-center" colSpan={columns.length}>
-                No results.
-              </TableCell>
+        {table.getRowModel().rows?.length ? (
+          table.getRowModel().rows.map((row) => (
+            <TableRow key={row.id}>
+              {row.getAllCells().map((cell) => (
+                <TableCell key={cell.id}>
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </TableCell>
+              ))}
             </TableRow>
-          )}
+          ))
+        ) : (
+          <TableRow>
+            <TableCell className="h-24 text-center" colSpan={columns.length}>
+              No results.
+            </TableCell>
+          </TableRow>
+        )}
       </TableBody>
     </Table>
   );

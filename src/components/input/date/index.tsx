@@ -36,7 +36,7 @@ function deriveDateFormatFromLocale(locale: string): DateFormat {
     }).formatToParts(new Date());
 
     const firstType = parts.find((p) =>
-      ["year", "month", "day"].includes(p.type)
+      ["year", "month", "day"].includes(p.type),
     )?.type;
 
     if (firstType === "month") return "mm-dd-yyyy";
@@ -57,8 +57,8 @@ function formatDate(date: Date | undefined, format: DateFormat): string {
   return format === "dd-mm-yyyy"
     ? `${d}${SEPARATOR}${m}${SEPARATOR}${y}`
     : format === "mm-dd-yyyy"
-    ? `${m}${SEPARATOR}${d}${SEPARATOR}${y}`
-    : `${y}${SEPARATOR}${m}${SEPARATOR}${d}`;
+      ? `${m}${SEPARATOR}${d}${SEPARATOR}${y}`
+      : `${y}${SEPARATOR}${m}${SEPARATOR}${d}`;
 }
 
 function parseDate(dateStr: string, format: DateFormat): Date | undefined {
@@ -67,7 +67,9 @@ function parseDate(dateStr: string, format: DateFormat): Date | undefined {
   const match = dateStr.match(/^(\d{2,4})-(\d{2})-(\d{2,4})$/);
   if (!match) return undefined;
 
-  let y = 0, m = 0, d = 0;
+  let y = 0,
+    m = 0,
+    d = 0;
 
   if (format === "dd-mm-yyyy") {
     [, d, m, y] = match.map(Number);
@@ -78,8 +80,9 @@ function parseDate(dateStr: string, format: DateFormat): Date | undefined {
   }
 
   const date = new Date(y, m - 1, d);
-  return date.getFullYear() === y && date.getMonth() === m - 1 &&
-      date.getDate() === d
+  return date.getFullYear() === y &&
+    date.getMonth() === m - 1 &&
+    date.getDate() === d
     ? date
     : undefined;
 }
@@ -117,13 +120,14 @@ export function InputDate({
   readOnly = false,
   locale = "en-US",
 }: InputDateProps) {
-  const dateFormat = useMemo(() => deriveDateFormatFromLocale(locale), [
-    locale,
-  ]);
+  const dateFormat = useMemo(
+    () => deriveDateFormatFromLocale(locale),
+    [locale],
+  );
   const formatters = useFormatters(locale);
 
   const [inputValue, setInputValue] = useState(() =>
-    formatDate(value, dateFormat)
+    formatDate(value, dateFormat),
   );
   const [month, setMonth] = useState<Date>(() => value || new Date());
   const [isOpen, setIsOpen] = useState(false);

@@ -35,8 +35,12 @@ export function createTableApi<Name extends string, A extends Base, I>({
   // v4 removed `Schema.omit`. The code rebuilds the struct without the
   // three fields that the worker supplies. `toType` keeps the input on the
   // decoded side, which is what the v3 `typeSchema` call did.
-  const { id, created_at, modified_at, ...rest } = Schema.toType(schema)
-    .schema.fields;
+  const {
+    id: _id,
+    created_at: _created_at,
+    modified_at: _modified_at,
+    ...rest
+  } = Schema.toType(schema).schema.fields;
   const putSchema = Schema.toType(Schema.Struct(rest));
 
   const decodeId = (id: string) => decodeFx(IdSchema, id);
@@ -74,9 +78,10 @@ export function createTableApi<Name extends string, A extends Base, I>({
       });
 
       return yield* Effect.forEach(
-        entries.filter((entry) =>
-          keys.includes(entry.key) &&
-          (minKey === undefined || entry.key >= minKey)
+        entries.filter(
+          (entry) =>
+            keys.includes(entry.key) &&
+            (minKey === undefined || entry.key >= minKey),
         ),
         (entry) => decodeDoc(entry.value),
       );
@@ -85,119 +90,127 @@ export function createTableApi<Name extends string, A extends Base, I>({
 
   return {
     exists: (id: string) =>
-      withKv(Effect.gen(function* () {
-        const kv = yield* KvApi;
-        const decodedId = yield* decodeId(id);
+      withKv(
+        Effect.gen(function* () {
+          const kv = yield* KvApi;
+          const decodedId = yield* decodeId(id);
 
-        return yield* kv.exists(keys.of(decodedId));
-      })),
+          return yield* kv.exists(keys.of(decodedId));
+        }),
+      ),
     get: (id: string) =>
-      withKv(Effect.gen(function* () {
-        const kv = yield* KvApi;
-        const decodedId = yield* decodeId(id);
+      withKv(
+        Effect.gen(function* () {
+          const kv = yield* KvApi;
+          const decodedId = yield* decodeId(id);
 
-        const data = yield* kv.get(keys.of(decodedId));
+          const data = yield* kv.get(keys.of(decodedId));
 
-        if (data == null) {
-          return yield* new DbError({
-            error: `${
-              String(tableName)
-            } item with ID '${decodedId}' not found`,
-          });
-        }
+          if (data == null) {
+            return yield* new DbError({
+              error: `${String(
+                tableName,
+              )} item with ID '${decodedId}' not found`,
+            });
+          }
 
-        return yield* decodeDoc(data);
-      })),
+          return yield* decodeDoc(data);
+        }),
+      ),
     set: (id: string, input: Schema.Schema.Type<typeof putSchema>) =>
-      withKv(Effect.gen(function* () {
-        const kv = yield* KvApi;
-        const decodedId = yield* decodeId(id);
-        const decodedInput = yield* decodeUnknownFx(putSchema, input);
+      withKv(
+        Effect.gen(function* () {
+          const kv = yield* KvApi;
+          const decodedId = yield* decodeId(id);
+          const decodedInput = yield* decodeUnknownFx(putSchema, input);
 
-        const key = keys.of(decodedId);
+          const key = keys.of(decodedId);
 
-        const old = yield* kv.get(key) as Effect.Effect<
-          Record<string, unknown> | null,
-          DbError
-        >;
+          const old = yield* kv.get(key) as Effect.Effect<
+            Record<string, unknown> | null,
+            DbError
+          >;
 
-        const now = new Date().toISOString();
-        const doc = {
-          ...decodedInput,
-          id: decodedId,
-          created_at: old?.created_at ?? now,
-          modified_at: now,
-        };
+          const now = new Date().toISOString();
+          const doc = {
+            ...decodedInput,
+            id: decodedId,
+            created_at: old?.created_at ?? now,
+            modified_at: now,
+          };
 
-        yield* kv.set(key, doc);
+          yield* kv.set(key, doc);
 
-        yield* emit({ kind: "set", table: tableName, id: decodedId, doc });
-      })),
+          yield* emit({ kind: "set", table: tableName, id: decodedId, doc });
+        }),
+      ),
     delete: (id: string) =>
-      withKv(Effect.gen(function* () {
-        const kv = yield* KvApi;
-        const decodedId = yield* decodeId(id);
+      withKv(
+        Effect.gen(function* () {
+          const kv = yield* KvApi;
+          const decodedId = yield* decodeId(id);
 
-        const removed = yield* kv.delete(keys.of(decodedId));
+          const removed = yield* kv.delete(keys.of(decodedId));
 
-        if (removed) {
-          yield* emit({ kind: "delete", table: tableName, id: decodedId });
-        }
+          if (removed) {
+            yield* emit({ kind: "delete", table: tableName, id: decodedId });
+          }
 
-        return removed;
-      })),
+          return removed;
+        }),
+      ),
     watch: (args: ListParams) =>
       Stream.unwrap(
-        withKv(Effect.gen(function* () {
-          const params = yield* decodeFx(ListParamsSchema, args);
+        withKv(
+          Effect.gen(function* () {
+            const params = yield* decodeFx(ListParamsSchema, args);
 
-          // The stream element is the rows array, so the consumer receives one
-          // batch per notification.
-          return Stream.callback<A[], DbError>((queue) =>
-            Effect.gen(function* () {
-              let stopped = false;
-              let generation = 0;
+            // The stream element is the rows array, so the consumer receives one
+            // batch per notification.
+            return Stream.callback<A[], DbError>((queue) =>
+              Effect.gen(function* () {
+                let stopped = false;
+                let generation = 0;
 
-              const push = () => {
-                const current = ++generation;
+                const push = () => {
+                  const current = ++generation;
 
-                // The callback runs in its own fiber, so the layer
-                // provides the service for every push.
-                Effect.runPromise(withKv(queryRows(params))).then(
-                  (rows) => {
-                    if (stopped || current !== generation) return;
-                    Effect.runFork(Queue.offer(queue, rows));
-                  },
-                  (error) => {
-                    if (stopped || current !== generation) return;
-                    Effect.runFork(
-                      Queue.fail(queue, new DbError({ error })),
-                    );
-                  },
+                  // The callback runs in its own fiber, so the layer
+                  // provides the service for every push.
+                  Effect.runPromise(withKv(queryRows(params))).then(
+                    (rows) => {
+                      if (stopped || current !== generation) return;
+                      Effect.runFork(Queue.offer(queue, rows));
+                    },
+                    (error) => {
+                      if (stopped || current !== generation) return;
+                      Effect.runFork(Queue.fail(queue, new DbError({ error })));
+                    },
+                  );
+                };
+
+                push();
+
+                // `Stream.callback` discards the success value of this effect.
+                // The teardown must therefore be a finalizer, so the
+                // subscription is released when the stream ends, fails, or the
+                // consumer cancels it.
+                yield* Effect.acquireRelease(
+                  Effect.sync(() =>
+                    subscribe(tableName, () => {
+                      if (!stopped) push();
+                    }),
+                  ),
+                  (unsubscribe) =>
+                    Effect.sync(() => {
+                      stopped = true;
+                      unsubscribe();
+                    }),
                 );
-              };
-
-              push();
-
-              // `Stream.callback` discards the success value of this effect.
-              // The teardown must therefore be a finalizer, so the
-              // subscription is released when the stream ends, fails, or the
-              // consumer cancels it.
-              yield* Effect.acquireRelease(
-                Effect.sync(() =>
-                  subscribe(tableName, () => {
-                    if (!stopped) push();
-                  })
-                ),
-                (unsubscribe) =>
-                  Effect.sync(() => {
-                    stopped = true;
-                    unsubscribe();
-                  }),
-              );
-            })
-          );
-        })),
+              }),
+            );
+          }),
+        ),
       ),
   };
 }

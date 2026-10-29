@@ -49,9 +49,8 @@ describe("interceptProxy", () => {
 
     let release: ((v: unknown) => void) | undefined;
     const gate = new Promise<unknown>((resolve) => (release = resolve));
-    const proxy = interceptProxy(
-      api,
-      (_path, _args, next) => gate.then(() => next()),
+    const proxy = interceptProxy(api, (_path, _args, next) =>
+      gate.then(() => next()),
     );
 
     const result = proxy.leaf(1);
@@ -64,13 +63,11 @@ describe("interceptProxy", () => {
 
   it("propagates rejections and lets the interceptor see them", async () => {
     let seen: unknown;
-    const proxy = interceptProxy(
-      makeApi(),
-      (_path, _args, next) =>
-        next().catch((error) => {
-          seen = error;
-          throw error;
-        }),
+    const proxy = interceptProxy(makeApi(), (_path, _args, next) =>
+      next().catch((error) => {
+        seen = error;
+        throw error;
+      }),
     );
 
     await expect(proxy.db.task.boom()).rejects.toThrow("kaboom");

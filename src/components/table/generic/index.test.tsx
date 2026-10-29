@@ -33,9 +33,7 @@ const DICTIONARY = {
   table_generic_empty: "No rows",
 };
 
-function renderTable(
-  props: Partial<TableGenericProps<Person>> = {},
-) {
+function renderTable(props: Partial<TableGenericProps<Person>> = {}) {
   const onRowSelectionChange = vi.fn();
 
   render(
@@ -124,9 +122,9 @@ describe("TableGeneric", () => {
 
     fireEvent.click(screen.getByLabelText("Select all rows"));
 
-    const rows = screen.getAllByText(/Ada|Linus/).map((cell) =>
-      cell.closest("tr")
-    );
+    const rows = screen
+      .getAllByText(/Ada|Linus/)
+      .map((cell) => cell.closest("tr"));
     for (const row of rows) {
       expect(row?.getAttribute("data-state")).toBe("selected");
     }

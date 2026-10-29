@@ -47,9 +47,8 @@ export function InputGroupAddon({
   className,
   align = "inline-start",
   ...props
-}:
-  & React.ComponentProps<"div">
-  & VariantProps<typeof inputGroupAddonVariants>): React.ReactElement {
+}: React.ComponentProps<"div"> &
+  VariantProps<typeof inputGroupAddonVariants>): React.ReactElement {
   return (
     <div
       className={cn(inputGroupAddonVariants({ align }), className)}

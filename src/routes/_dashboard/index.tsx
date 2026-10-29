@@ -17,8 +17,8 @@ function Index() {
   );
   const setDebouncedState = useDebouncedCallback(setState, 500);
 
-  const streamFactory = useRef(
-    () => worker.db.task.watch({ direction: "next" }),
+  const streamFactory = useRef(() =>
+    worker.db.task.watch({ direction: "next" }),
   );
   const streamParams = useRef([null]);
   const streams = useReadableStreams(
@@ -28,7 +28,10 @@ function Index() {
 
   const flatData = useMemo(
     () =>
-      streams.values().map((state) => state.data || []).toArray()
+      streams
+        .values()
+        .map((state) => state.data || [])
+        .toArray()
         .flat(),
     [streams],
   );

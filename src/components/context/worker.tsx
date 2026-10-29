@@ -5,7 +5,8 @@ import { type SyncRemoteProxy, wrap } from "@/lib/comlink/index.ts";
 import { instrumentWorkerProxy } from "@/telemetry/comlink.ts";
 export type WorkerType = typeof import("@/worker/main.ts");
 
-const forceDedicated = typeof location !== "undefined" &&
+const forceDedicated =
+  typeof location !== "undefined" &&
   new URLSearchParams(location.search).get("worker") === "dedicated";
 
 export const workerMode: "shared" | "dedicated" =
@@ -16,11 +17,14 @@ export const workerMode: "shared" | "dedicated" =
 const WorkerContext = createContext<null | SyncRemoteProxy<WorkerType>>(null);
 
 const createWorker = (): SyncRemoteProxy<WorkerType> => {
-  const proxy = workerMode === "shared" ? wrapShared() : (wrap(
-    new Worker(new URL("../../worker/main.ts", import.meta.url), {
-      type: "module",
-    }),
-  ) as unknown as SyncRemoteProxy<WorkerType>);
+  const proxy =
+    workerMode === "shared"
+      ? wrapShared()
+      : (wrap(
+          new Worker(new URL("../../worker/main.ts", import.meta.url), {
+            type: "module",
+          }),
+        ) as unknown as SyncRemoteProxy<WorkerType>);
 
   // Every call across the boundary becomes a span.
   // This does nothing until the telemetry starts.

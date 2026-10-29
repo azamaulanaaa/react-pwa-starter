@@ -14,8 +14,8 @@ export function FieldInfo({ field, validatingLabel }: FieldInfoProps) {
     <>
       {field.state.meta.isTouched && !field.state.meta.isValid
         ? field.state.meta.errors.map((err) => (
-          <em key={err.message}>{err.message}</em>
-        ))
+            <em key={err.message}>{err.message}</em>
+          ))
         : null}
       {field.state.meta.isValidating ? t(validatingLabel) : null}
     </>

@@ -7,10 +7,7 @@ import { TranslationProvider } from "@/components/context/translation.tsx";
 import { IntlProvider } from "@/components/context/intl.tsx";
 import dictionary from "../public/locales/en-US.json" with { type: "json" };
 
-export const Provider: GlobalProvider = ({
-  children,
-  globalState,
-}) => {
+export const Provider: GlobalProvider = ({ children, globalState }) => {
   const isDarkMode = globalState.theme === "dark";
   const locale = useNavigatorLanguage();
 
@@ -23,9 +20,7 @@ export const Provider: GlobalProvider = ({
       dictionary={dictionary}
       fallbackDictionary={dictionary}
     >
-      <IntlProvider locale={locale}>
-        {children}
-      </IntlProvider>
+      <IntlProvider locale={locale}>{children}</IntlProvider>
     </TranslationProvider>
   );
 };

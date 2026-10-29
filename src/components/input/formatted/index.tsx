@@ -3,24 +3,22 @@ import { type Ref, useEffect, useState } from "react";
 import { cn } from "@/lib/cn.ts";
 import { Input } from "@/components/ui/input.tsx";
 
-export type InputFormattedProps<T = string> =
-  & Omit<
-    React.InputHTMLAttributes<HTMLInputElement>,
-    "value" | "defaultValue" | "onChange" | "onBlur"
-  >
-  & {
-    ref?: Ref<HTMLInputElement>;
-    className?: string;
-    placeholder?: string;
-    value?: T;
-    defaultValue?: T;
-    onChange?: (value: T) => void;
-    onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
-    formatter?: (value: T) => string;
-    parser?: (value: string) => T;
-    disabled?: boolean;
-    readOnly?: boolean;
-  };
+export type InputFormattedProps<T = string> = Omit<
+  React.InputHTMLAttributes<HTMLInputElement>,
+  "value" | "defaultValue" | "onChange" | "onBlur"
+> & {
+  ref?: Ref<HTMLInputElement>;
+  className?: string;
+  placeholder?: string;
+  value?: T;
+  defaultValue?: T;
+  onChange?: (value: T) => void;
+  onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
+  formatter?: (value: T) => string;
+  parser?: (value: string) => T;
+  disabled?: boolean;
+  readOnly?: boolean;
+};
 
 export function InputFormatted<T = string>({
   ref,
@@ -45,7 +43,7 @@ export function InputFormatted<T = string>({
   const [localText, setLocalText] = useState<string>(() =>
     activeValue !== undefined && activeValue !== null
       ? formatter(activeValue)
-      : ""
+      : "",
   );
 
   useEffect(() => {

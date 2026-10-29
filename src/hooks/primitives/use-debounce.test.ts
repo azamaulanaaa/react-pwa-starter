@@ -89,7 +89,7 @@ describe("useDebouncedCallback", () => {
   it("cancels a pending timer on unmount", () => {
     const callback = vi.fn();
     const { result, unmount } = renderHook(() =>
-      useDebouncedCallback(callback, 100)
+      useDebouncedCallback(callback, 100),
     );
 
     act(() => result.current("a"));

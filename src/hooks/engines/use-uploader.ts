@@ -44,9 +44,7 @@ export type Uploader = (
   options: UploaderOptions,
 ) => Promise<void>;
 
-export function useUploader(
-  uploader: Uploader,
-) {
+export function useUploader(uploader: Uploader) {
   const [states, setFileStates] = useState<FileState[]>([]);
   const controllersRef = useRef<Map<string, AbortController>>(new Map());
 
@@ -63,7 +61,7 @@ export function useUploader(
   const updateFileState = useCallback(
     (id: string, updater: (prev: FileState) => FileState) => {
       setFileStates((prev) =>
-        prev.map((item) => (item.id === id ? updater(item) : item))
+        prev.map((item) => (item.id === id ? updater(item) : item)),
       );
     },
     [],
@@ -78,47 +76,49 @@ export function useUploader(
       const controller = new AbortController();
       controllersRef.current.set(file.id, controller);
 
-      uploaderRef.current(file.name, file.blob, {
-        signal: controller.signal,
+      uploaderRef
+        .current(file.name, file.blob, {
+          signal: controller.signal,
 
-        onProgress: (progress) => {
-          updateFileState(file.id, (prev) => ({
-            ...prev,
-            kind: "progress",
-            progress: Math.min(100, Math.max(0, Math.round(progress))),
-          }));
-        },
+          onProgress: (progress) => {
+            updateFileState(file.id, (prev) => ({
+              ...prev,
+              kind: "progress",
+              progress: Math.min(100, Math.max(0, Math.round(progress))),
+            }));
+          },
 
-        onSuccess: (newId) => {
-          const targetId = newId || file.id;
+          onSuccess: (newId) => {
+            const targetId = newId || file.id;
 
-          setFileStates((prev) =>
-            prev.map((item) =>
-              item.id === file.id
-                ? ({ ...item, id: targetId, kind: "ready" } as FileState)
-                : item
-            )
-          );
+            setFileStates((prev) =>
+              prev.map((item) =>
+                item.id === file.id
+                  ? ({ ...item, id: targetId, kind: "ready" } as FileState)
+                  : item,
+              ),
+            );
 
-          controllersRef.current.delete(file.id);
-        },
+            controllersRef.current.delete(file.id);
+          },
 
-        onError: (error) => {
-          if (error.name === "AbortError") return;
+          onError: (error) => {
+            if (error.name === "AbortError") return;
 
-          updateFileState(file.id, (prev) => ({
-            ...prev,
-            kind: "error",
-            error: error.message || "Upload failed",
-          }));
+            updateFileState(file.id, (prev) => ({
+              ...prev,
+              kind: "error",
+              error: error.message || "Upload failed",
+            }));
 
-          controllersRef.current.delete(file.id);
-        },
-      }).catch((err) => {
-        if (err.name !== "AbortError") {
-          console.error("Unhandled upload error:", err);
-        }
-      });
+            controllersRef.current.delete(file.id);
+          },
+        })
+        .catch((err) => {
+          if (err.name !== "AbortError") {
+            console.error("Unhandled upload error:", err);
+          }
+        });
     },
     [updateFileState],
   );
@@ -153,33 +153,25 @@ export function useUploader(
     setFileStates((prev) => prev.filter((file) => file.id !== id));
   }, []);
 
-  const addReady = useCallback(
-    (files: ReadyFileState | ReadyFileState[]) => {
-      const fileArray = Array.isArray(files) ? files : [files];
-      if (fileArray.length === 0) return;
+  const addReady = useCallback((files: ReadyFileState | ReadyFileState[]) => {
+    const fileArray = Array.isArray(files) ? files : [files];
+    if (fileArray.length === 0) return;
 
-      const incomingIds = new Set(fileArray.map((f) => f.id));
+    const incomingIds = new Set(fileArray.map((f) => f.id));
 
-      incomingIds.forEach((id) => {
-        const controller = controllersRef.current.get(id);
-        if (controller) {
-          controller.abort();
-          controllersRef.current.delete(id);
-        }
-      });
+    incomingIds.forEach((id) => {
+      const controller = controllersRef.current.get(id);
+      if (controller) {
+        controller.abort();
+        controllersRef.current.delete(id);
+      }
+    });
 
-      setFileStates((prev) => {
-        const filteredPrev = prev.filter((item) => !incomingIds.has(item.id));
-        return [...filteredPrev, ...fileArray];
-      });
-    },
-    [],
-  );
+    setFileStates((prev) => {
+      const filteredPrev = prev.filter((item) => !incomingIds.has(item.id));
+      return [...filteredPrev, ...fileArray];
+    });
+  }, []);
 
-  return [
-    states,
-    add,
-    remove,
-    addReady,
-  ] as const;
+  return [states, add, remove, addReady] as const;
 }

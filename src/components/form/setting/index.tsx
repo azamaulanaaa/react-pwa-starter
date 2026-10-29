@@ -106,7 +106,8 @@ export function FormSetting(props: FormSettingProps) {
               items={select_theme_value}
               value={field.state.value}
               onValueChange={(value) =>
-                field.handleChange(value as FormSettingValue["theme"])}
+                field.handleChange(value as FormSettingValue["theme"])
+              }
             >
               <SelectTrigger>
                 <SelectValue />
@@ -120,7 +121,10 @@ export function FormSetting(props: FormSettingProps) {
               </SelectPopup>
             </Select>
             <FieldError match={!field.state.meta.isValid}>
-              <FieldInfo field={field} validatingLabel="form_setting_validating" />
+              <FieldInfo
+                field={field}
+                validatingLabel="form_setting_validating"
+              />
             </FieldError>
           </Field>
         )}
@@ -133,7 +137,8 @@ export function FormSetting(props: FormSettingProps) {
               items={select_locale_value}
               value={field.state.value}
               onValueChange={(value) =>
-                field.handleChange(value as FormSettingValue["locale"])}
+                field.handleChange(value as FormSettingValue["locale"])
+              }
             >
               <SelectTrigger>
                 <SelectValue />
@@ -147,7 +152,10 @@ export function FormSetting(props: FormSettingProps) {
               </SelectPopup>
             </Select>
             <FieldError match={!field.state.meta.isValid}>
-              <FieldInfo field={field} validatingLabel="form_setting_validating" />
+              <FieldInfo
+                field={field}
+                validatingLabel="form_setting_validating"
+              />
             </FieldError>
           </Field>
         )}

@@ -35,7 +35,7 @@ and a prebuilt UI component library. You can use the kit to start an application
 - TanStack Router reads routes from files and splits the code automatically. TanStack Form
   and TanStack Table handle forms and tables.
 - Tailwind CSS 4 + utility-first styling
-- Testing with Vitest 4 (fake-indexeddb included)
+- Testing with Vitest 5 (fake-indexeddb included)
 - Component preview via Ladle
 - Dark mode support
 - The build groups vendor code into chunks to reduce the first load
@@ -44,8 +44,7 @@ and a prebuilt UI component library. You can use the kit to start an application
 
 ### Prerequisites
 
-- Install Node. [mise](https://mise.jdx.dev) manages Node. See `mise.toml`. Deno also
-  formats and lints the code.
+- Install Node. [mise](https://mise.jdx.dev) manages Node. See `mise.toml`.
 - Git
 
 ### Install and run locally
@@ -59,17 +58,20 @@ npm run dev           # start dev server (Vite)
 
 ### Scripts
 
-| Script            | Description                               |
-| ----------------- | ----------------------------------------- |
-| `npm run dev`     | Start the Vite dev server                 |
-| `npm run build`   | Production build (with bundle visualizer) |
-| `npm run preview` | Preview the production build              |
-| `npm run check`   | Type-check with TypeScript                |
-| `npm run test`    | Run tests with Vitest                     |
-| `npm run ladle`   | Serve Ladle component previews            |
+| Script              | Description                               |
+| ------------------- | ----------------------------------------- |
+| `npm run dev`       | Start the Vite dev server                 |
+| `npm run build`     | Production build (with bundle visualizer) |
+| `npm run preview`   | Preview the production build              |
+| `npm run check`     | Type-check with TypeScript                |
+| `npm run test`      | Run tests with Vitest                     |
+| `npm run ladle`     | Serve Ladle component previews            |
+| `npm run fmt`       | Format the code with Prettier             |
+| `npm run fmt:check` | Check formatting without writing changes  |
+| `npm run lint`      | Lint the code with oxlint                 |
 
-Deno formats and lints the code. The commands are `deno fmt` and `deno lint`. The
-configuration is in `deno.json`.
+Prettier formats the code and oxlint lints it. The configurations are in
+`.prettierrc.json`, `.prettierignore`, and `.oxlintrc.json`.
 
 ## Notable dependencies
 
@@ -90,8 +92,9 @@ configuration is in `deno.json`.
 - `vitest` — test runner
 - `@ladle/react` — component preview
 - `uuid` — UUID v7 generation
-- `@types/node`, `@types/bun`, `@types/deno` — type support for Node.js, Bun,
-  and Deno development tooling
+- `prettier`, `oxlint` — formatting and linting
+- `@types/node`, `@types/bun` — type support for Node.js and Bun development
+  tooling
 
 ## Project structure
 
@@ -160,6 +163,7 @@ code moves.
     that breaks silently when the message format changes. The fix is to send
     `{ _tag, message }` across the port and rebuild the tagged error on the
     client, which this bridge does not do today.
+
 - The tracer is a `Context.Reference`, so its default resolves outside any
   Context. `withDevTools` provides the devtools layer around the whole
   transferred Effect run. The layer merges the tracer into the Context of that
@@ -335,7 +339,7 @@ Alloy, Aspire Dashboard, Honeycomb, and Datadog OTLP intake.
 - Build new features from the primitive hooks in `src/hooks/primitives`. Compose the hooks
   into engine hooks in `src/hooks/engines`.
 - Use the path alias `@/` for shorter imports.
-- The file `mise.toml` pins the tool versions. The tools are Node, Deno, the Tailwind
+- The file `mise.toml` pins the tool versions. The tools are Node, the Tailwind
   language server, and the shadcn CLI.
 
 ## Deployment recommendations
@@ -345,7 +349,7 @@ Alloy, Aspire Dashboard, Honeycomb, and Datadog OTLP intake.
   CloudFront.
 - Configure the service worker scope and the asset serving headers correctly. Then the
   precaching works as expected.
-- The project runs in a browser. The type definitions cover Node.js, Bun, and Deno. The
+- The project runs in a browser. The type definitions cover Node.js and Bun. The
   development tools use these types.
 
 ## Contributing
@@ -357,7 +361,8 @@ Contributions are welcome. Use this workflow:
 - Run these commands before you open a PR:
   - npm install
   - npm run check
-  - deno fmt && deno lint
+  - npm run fmt:check
+  - npm run lint
   - npm run test
 - Add a PR description. The description must explain the change and the benefit.
 

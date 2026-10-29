@@ -40,7 +40,7 @@ describe("usePersistState", () => {
     localStorage.setItem(KEY, "{not valid json");
 
     const { result } = renderHook(() =>
-      usePersistState("test_persist", "fallback")
+      usePersistState("test_persist", "fallback"),
     );
 
     expect(result.current[0]).toBe("fallback");
@@ -53,7 +53,7 @@ describe("usePersistState", () => {
       usePersistState("test_persist", 0, {
         serializer: (value: number) => `#${value}`,
         deserializer: (raw: string) => Number(raw.replace("#", "")),
-      })
+      }),
     );
 
     expect(result.current[0]).toBe(42);
@@ -63,12 +63,14 @@ describe("usePersistState", () => {
     const error = new Error("quota exceeded");
     // The jsdom Storage instance ignores an own-property mock, so patch the
     // prototype that the hook's `localStorage` object inherits.
-    const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementation(
-      () => {
+    const setItem = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(() => {
         throw error;
-      },
-    );
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+      });
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
 
     const { result } = renderHook(() => usePersistState("test_persist", 1));
     act(() => result.current[1](2));
