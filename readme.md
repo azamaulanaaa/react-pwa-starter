@@ -120,7 +120,8 @@ src/
 │   ├── engines/       # Higher-level hooks: use-infinite-scroll, use-uploader
 │   └── primitives/    # Small composable hooks (debounce, persist state,
 │                      # media query, dark mode, streams)
-├── lib/               # Comlink helpers, generic API and auth contracts, cn, utilities
+├── lib/               # Comlink helpers, generic API, auth, sync, and file contracts,
+│                      # cn, utilities
 └── worker/
     ├── main.ts        # Worker entry. It exposes { db, fs, queue } through Comlink.
     ├── db/            # Tables, schema, change bus, oxkv, persistence, peer sync
@@ -423,6 +424,57 @@ if (result.kind === "object") {
   await store.write(result.object.key, result.object.data);
 }
 ```
+
+## File transport
+
+- The contract is in `src/lib/fs`. The contract has no storage path and no domain type.
+- `FileTransport` defines `init`, `uploadPart`, `complete`, `cancel`, `progress`, `metadata`,
+  `download`, and `delete`.
+- `FileId` is opaque. The transport does not interpret the value.
+- `FileTransport<TMetadata>` accepts one application metadata type. The default type is
+  `FileMetadata`, which has a `name` and a `mimetype`.
+- The shared schema is in `src/lib/fs/schema.ts`. The worker uses the same schema.
+- The schema has these limits.
+  - The part size must be a multiple of 1 KiB.
+  - The part size must be at most 512 KiB.
+  - A single part must not be larger than 10 MiB.
+  - The part count must match the file size and the part size.
+- The schema error messages start with `The upload failed.` A user can read the cause.
+
+```ts
+import type { FileTransport } from "@/lib/fs";
+
+const transport: FileTransport = createTransport();
+
+const partSize = 512 * 1024;
+const totalParts = Math.max(1, Math.ceil(blob.size / partSize));
+
+const upload = await transport.init({
+  file_size: blob.size,
+  part_size: totalParts === 1 ? blob.size : partSize,
+  file_total_parts: totalParts,
+});
+
+for (let index = 0; index < upload.totalParts; index += 1) {
+  const start = index * partSize;
+  await transport.uploadPart(
+    {
+      file_id: upload.id,
+      file_total_part: upload.totalParts,
+      file_part: index,
+    },
+    blob.slice(start, start + partSize),
+  );
+}
+
+const file = await transport.complete(upload.id, {
+  name: "report.pdf",
+  mimetype: "application/pdf",
+});
+```
+
+For a single-part upload, set `part_size` to `file_size` and set `file_total_parts` to 1.
+A backend adapter maps these calls to its own HTTP routes.
 
 ## Dark mode
 

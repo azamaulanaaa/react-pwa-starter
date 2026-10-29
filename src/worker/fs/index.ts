@@ -1,72 +1,22 @@
 import { Effect, Ref, Schema, Stream } from "effect";
 import { v7 as randomUUID } from "uuid";
 
+import {
+  FileIdSchema,
+  FileMetadataSchema,
+  MetadataUploadPartSchema,
+  MetadataUploadSchema,
+  type FileId,
+  type FileMetadata,
+  type MetadataUpload,
+  type MetadataUploadPart,
+} from "@/lib/fs/schema.ts";
 import { FsError } from "@/worker/fs/error.ts";
 import { fsStorage } from "@/worker/fs/store.ts";
 
 const db = fsStorage;
 
-const FileIdSchema = Schema.NonEmptyString;
-export type FileId = Schema.Schema.Type<typeof FileIdSchema>;
-
-const FileMetadataSchema = Schema.Struct({
-  name: Schema.NonEmptyString,
-  mimetype: Schema.NonEmptyString,
-});
-export type FileMetadata = Schema.Schema.Type<typeof FileMetadataSchema>;
-
-// A non-negative integer. v4 has no `Schema.NonNegativeInt`.
-const NonNegativeInt = Schema.Number.check(
-  Schema.isInt(),
-  Schema.isGreaterThanOrEqualTo(0),
-);
-
-export const MetadataUploadSchema = Schema.Struct({
-  file_size: NonNegativeInt,
-  part_size: NonNegativeInt,
-  file_total_parts: NonNegativeInt,
-}).pipe(
-  Schema.check(
-    Schema.makeFilter((data) => {
-      if (data.file_size === 0) return "file_size cannot be empty";
-      if (data.part_size === 0) return "part_size cannot be zero";
-      if (data.file_total_parts === 0) return "total_parts cannot be zero";
-
-      if (data.file_total_parts === 1) {
-        if (data.part_size != data.file_size) {
-          return `For a single-part upload, part_size (${data.part_size}) must be equal to the file_size (${data.file_size})`;
-        }
-        if (data.file_size > 10 * 1024 * 1024) {
-          return `For a single-part upload, cannot bigger than 10 MB`;
-        }
-      } else {
-        const isMultipleOf1KB = data.part_size % 1024 === 0;
-        const withinBounds = data.part_size <= 524288;
-
-        if (!isMultipleOf1KB || !withinBounds) {
-          return "part_size must be a power-of-two multiple of 1 KB up to 512 KB (e.g., 131072, 262144, 524288)";
-        }
-
-        const expectedParts = Math.ceil(data.file_size / data.part_size);
-        if (data.file_total_parts !== expectedParts) {
-          return `Inconsistent math: file_total_parts must be exactly ${expectedParts} for a file of this size split by ${data.part_size} bytes`;
-        }
-      }
-
-      return;
-    }),
-  ),
-);
-export type MetadataUpload = Schema.Schema.Type<typeof MetadataUploadSchema>;
-
-const MetadataUploadPartSchema = Schema.Struct({
-  file_id: FileIdSchema,
-  file_total_part: NonNegativeInt,
-  file_part: NonNegativeInt,
-});
-export type MetadataUploadPart = Schema.Schema.Type<
-  typeof MetadataUploadPartSchema
->;
+export type { FileId, FileMetadata, MetadataUpload, MetadataUploadPart };
 
 export const InitUpload = (metadata: MetadataUpload) =>
   Effect.gen(function* () {

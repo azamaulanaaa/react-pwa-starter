@@ -182,7 +182,7 @@ describe("fs comlink bridge", () => {
         part_size: 1024,
         file_total_parts: 5,
       }),
-    ).rejects.toThrow(/inconsistent math/i);
+    ).rejects.toThrow(/part count/i);
   });
 
   it("streams a multipart upload where `file_size` is not a multiple of `part_size`", async () => {
