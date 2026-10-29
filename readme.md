@@ -120,7 +120,7 @@ src/
 │   ├── engines/       # Higher-level hooks: use-infinite-scroll, use-uploader
 │   └── primitives/    # Small composable hooks (debounce, persist state,
 │                      # media query, dark mode, streams)
-├── lib/               # Comlink helpers, cn, misc utilities
+├── lib/               # Comlink helpers, generic API client, cn, misc utilities
 └── worker/
     ├── main.ts        # Worker entry. It exposes { db, fs, queue } through Comlink.
     ├── db/            # Tables, schema, change bus, oxkv, persistence, peer sync
@@ -316,6 +316,34 @@ code moves.
   browser language.
 - The `IntlProvider` context formats numbers, currency, percentages, dates, and relative
   times. The context localizes the formats. The context also provides parsing helpers.
+
+## API client
+
+- The generic client is in `src/lib/api`. The client sends JSON and reads JSON. The client
+  has no domain type.
+- The client reads the base URL from `VITE_API_BASE_URL`. The default is `/api` on the same
+  origin. Set the variable to an absolute URL for another host. The client does not name a
+  backend.
+- `createApiClient` accepts a `fetch` function. Tests give a fake function. The default is the
+  global `fetch`.
+- `createApiClient` accepts a `tokenProvider`. The provider implements `getToken`. The client
+  adds `Authorization: Bearer <token>` when the token is not empty. The client adds no header
+  when the token is empty. A React provider can implement the interface.
+- `client.request<T>(path, options)` sends a method, a JSON body, headers, and an abort signal.
+  The function returns the parsed JSON value. The function returns `undefined` for an empty
+  response.
+- A failed response returns an `ApiError`. The error has a `status` and a `message`. The client
+  reads the `{ "error": "..." }` envelope. The status is `null` when no response arrives.
+
+```ts
+import { createApiClient } from "@/lib/api";
+
+const api = createApiClient({
+  tokenProvider: { getToken: () => sessionToken },
+});
+
+const state = await api.request<{ ready: boolean }>("/status");
+```
 
 ## Dark mode
 
