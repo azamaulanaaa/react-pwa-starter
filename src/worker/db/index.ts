@@ -9,6 +9,7 @@ import { fromPromise } from "@/worker/db/helpers.ts";
 import { createDbFs, createPeerSync } from "@/worker/db/persistence.ts";
 import { tableKeys } from "@/worker/db/kv.ts";
 import { type ChangeApplier, createChangeApplier } from "@/worker/db/apply.ts";
+import { type TableClearer, createTableClearer } from "@/worker/db/clear.ts";
 
 const events = createEventBus();
 const dbFs = createDbFs(tables);
@@ -17,6 +18,7 @@ dbFs.attach(events);
 const peers = createPeerSync();
 
 let applier: ChangeApplier | null = null;
+let cleaner: TableClearer | null = null;
 
 export const dbMain = createDatabase("main", tables, {
   events,
@@ -26,6 +28,12 @@ export const dbMain = createDatabase("main", tables, {
       tables,
       kvLayer: ctx.kvLayer,
       emit: ctx.emit,
+    });
+
+    cleaner = createTableClearer({
+      open: ctx.open,
+      persistence: dbFs.persistence,
+      notify: ctx.notify,
     });
 
     ctx.onEvent((event) =>
@@ -91,3 +99,18 @@ export const changes: ChangeApplier = {
   applyPage: (input) => requireApplier().applyPage(input),
   state: (scope) => requireApplier().state(scope),
 };
+
+const requireCleaner = (): TableClearer => {
+  if (cleaner === null) {
+    throw new Error("The table clear operation is not ready.");
+  }
+
+  return cleaner;
+};
+
+/**
+ * Removes every row of the given tables.
+ * The caller gives the table names, so the worker names no domain table.
+ */
+export const clearTables: TableClearer["clearTables"] = (names) =>
+  requireCleaner().clearTables(names);

@@ -32,6 +32,17 @@ export {
   createRefreshLock,
   DEFAULT_REFRESH_LOCK,
 } from "@/lib/auth/refresh.ts";
+export {
+  DEFAULT_RESET_TABLES,
+  resetSession,
+  toResetError,
+} from "@/lib/auth/reset.ts";
+export type {
+  SessionResetFailure,
+  SessionResetInput,
+  SessionResetResult,
+  SessionResetStep,
+} from "@/lib/auth/reset.ts";
 export type {
   RefreshCoordinator,
   RefreshCoordinatorOptions,

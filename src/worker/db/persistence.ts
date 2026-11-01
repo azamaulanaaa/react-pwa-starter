@@ -18,6 +18,7 @@ export type DbPersistence = {
   save: (table: string, id: Id, doc: unknown) => Effect.Effect<void, DbError>;
   remove: (table: string, id: Id) => Effect.Effect<boolean, DbError>;
   load: (table: string) => Effect.Effect<{ id: Id; value: unknown }[], DbError>;
+  clear: (table: string) => Effect.Effect<void, DbError>;
 };
 
 export function createDbPersistence(root = "db/main"): DbPersistence {
@@ -76,6 +77,27 @@ export function createDbPersistence(root = "db/main"): DbPersistence {
 
           return { id: key.slice(prefix.length) as Id, value };
         }),
+      );
+    }),
+    clear: Effect.fnUntraced(function* (
+      table: string,
+    ): Effect.fn.Return<void, DbError> {
+      const prefix = `${root}/${table}/`;
+      const keys = yield* Effect.tryPromise({
+        try: () => storage.getKeys(prefix),
+        catch: (error) => new DbError({ error }),
+      });
+
+      yield* Effect.forEach(
+        keys,
+        (key) =>
+          Effect.tryPromise({
+            try: async () => {
+              await storage.removeItem(key);
+            },
+            catch: (error) => new DbError({ error }),
+          }),
+        { discard: true },
       );
     }),
   };
