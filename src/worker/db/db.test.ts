@@ -197,8 +197,9 @@ describe("dbMain.item", () => {
 });
 
 describe("default database", () => {
-  it("starts with the system tables only", () => {
+  it("starts with the system tables and the outbox table", () => {
     expect(Object.keys(defaultDb as Record<string, unknown>).sort()).toEqual([
+      "outbox",
       "quarantine",
       "sync_state",
     ]);

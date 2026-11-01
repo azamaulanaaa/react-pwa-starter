@@ -3,6 +3,7 @@ import * as Comlink from "comlink";
 
 import { changes, dbMain } from "@/worker/db/index.ts";
 import * as fs from "@/worker/fs/index.ts";
+import { outbox } from "@/worker/outbox/index.ts";
 import { queue } from "@/worker/queue/index.ts";
 
 interface SharedWorkerScope {
@@ -28,7 +29,7 @@ function exposePerConnection<T>(api: T): void {
   };
 }
 
-const api = { changes, db: dbMain, fs, queue };
+const api = { changes, db: dbMain, fs, outbox, queue };
 
 if ("onconnect" in self) {
   exposePerConnection(api);
@@ -36,4 +37,4 @@ if ("onconnect" in self) {
   exposeOnSelf(api);
 }
 
-export { changes, dbMain as db, fs, queue };
+export { changes, dbMain as db, fs, outbox, queue };
