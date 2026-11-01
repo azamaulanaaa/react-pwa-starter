@@ -341,29 +341,36 @@ code moves.
   Arguments cross as plain data, so each method decodes them before use, as
   `createTableApi` does in `src/worker/db/table.ts`. Pass only data that
   structured clone carries.
-- Errors cross as strings. `flattenTaggedError` writes `[tag] message`, or
-  `[tag -> tag] message` for a nested error. The client receives a plain `Error`
-  whose message has two lines. The worker prefixes the first line and
-  `flattenTaggedError` writes the second one, so the shape is:
+- Errors cross as a value, not as text. The `EFFECT_PROXY` error envelope is
+  `{ success: false, error: { tag, message, details? } }`. `flattenTaggedError`
+  reads the tag from the `_tag` field and writes the old `[tag] message` text in
+  `message`. The client receives a `WorkerError` with the `tag` field and the
+  same two-line message, so the shape stays:
 
   ```
   [Worker Error]
   [app/worker/db] <message>
   ```
 
-  The `_tag` does not survive the boundary.
+  A plain error carries `tag: null`. A nested error keeps both tags in
+  `details.tags`, such as `["app/worker/db", "app/worker/fs"]`, and the message
+  keeps the chain as `[app/worker/db -> app/worker/fs] <message>`.
   - The worker declares three tags today: `app/worker/db` on `DbError` in
     `src/worker/db/error.ts`, `app/worker/fs` on `FsError` in
     `src/worker/fs/error.ts`, and `app/worker/queue` on `QueueError` in
-    `src/worker/queue/error.ts`. Only the database one reaches the UI, because
-    no UI code calls the file store or the queue yet.
-    `flattenTaggedError` writes only `[tag] message`, so the client sees a
-    `QueueError` nowhere, including its `reason`.
-  - The moment a second tag reaches the client, stop relying on the tag
-    surviving. Parsing the tag out of the message text works, but it is a guess
-    that breaks silently when the message format changes. The fix is to send
-    `{ _tag, message }` across the port and rebuild the tagged error on the
-    client, which this bridge does not do today.
+    `src/worker/queue/error.ts`. Each error carries a `message` getter, so the
+    tag and the message stay beside each other.
+    Only the database tag reaches the UI today, because no UI code calls the
+    file store or the queue yet.
+  - The client reads the tag from the `error.tag` field. It never parses the tag
+    from the message text. A parse is a guess that breaks silently when the
+    message format changes.
+  - The client accepts the old string error value for one release. It maps that
+    value to a null tag.
+  - The stream handler keeps the same tag. Comlink copies only the `message`,
+    `name`, and `stack` fields from a thrown Error. The worker keeps the payload
+    on a `failure` method and sends the payload as a value. The reader then
+    receives a `WorkerError` with the tag.
 
 - The tracer is a `Context.Reference`, so its default resolves outside any
   Context. `withDevTools` provides the devtools layer around the whole

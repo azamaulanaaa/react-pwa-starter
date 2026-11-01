@@ -193,13 +193,13 @@ export const createQueue = (
           return;
         }
 
-        // `flattenTaggedError` writes `[tag] message`, so the text in the
+        // `flattenTaggedError` returns the old `[tag] message` text, so the
         // record is exactly the text the UI would have received.
         const failure = Cause.findFail(exit.cause);
         yield* transition(id, {
           state: "failed",
           error: Result.isSuccess(failure)
-            ? flattenTaggedError(failure.success.error)
+            ? flattenTaggedError(failure.success.error).message
             : Cause.pretty(exit.cause),
         });
       });

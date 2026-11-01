@@ -19,3 +19,12 @@ export {
   interceptProxy,
   type ProxyCallInterceptor,
 } from "@/lib/comlink/intercept.ts";
+
+export {
+  flattenTaggedError,
+  formatEffectError,
+  WorkerError,
+  type WorkerErrorDetails,
+  type WorkerErrorPayload,
+  workerErrorFromPayload,
+} from "@/lib/comlink/effect.ts";

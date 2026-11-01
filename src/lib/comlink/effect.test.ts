@@ -3,7 +3,9 @@ import { afterEach, describe, expect, it } from "vitest";
 import { Cause, Effect, Stream } from "effect";
 import * as Comlink from "comlink";
 
-import { flattenTaggedError } from "@/lib/comlink/effect.ts";
+import { flattenTaggedError, WorkerError } from "@/lib/comlink/effect.ts";
+import { DbError } from "@/worker/db/error.ts";
+import { FsError } from "@/worker/fs/error.ts";
 
 /** The tests receive these channels. The `afterEach` hook closes every port. */
 const channels: MessageChannel[] = [];
@@ -17,6 +19,15 @@ const newChannel = (): MessageChannel => {
 const nextMessage = <T>(port: MessagePort): Promise<T> =>
   new Promise((resolve) => port.once("message", resolve));
 
+/** The rejection reason of a promise. The test fails when the promise resolves. */
+const failureOf = async (promise: Promise<unknown>): Promise<unknown> =>
+  promise.then(
+    () => {
+      throw new Error("The call resolved, not failed.");
+    },
+    (error: unknown) => error,
+  );
+
 afterEach(() => {
   for (const { port1, port2 } of channels.splice(0)) {
     port1.close();
@@ -26,38 +37,67 @@ afterEach(() => {
 
 describe("flattenTaggedError", () => {
   it("returns the string form of a primitive", () => {
-    expect(flattenTaggedError("boom")).toBe("boom");
-    expect(flattenTaggedError(42)).toBe("42");
-    expect(flattenTaggedError(null)).toBe("null");
-    expect(flattenTaggedError(undefined)).toBe("undefined");
+    expect(flattenTaggedError("boom")).toEqual({
+      tag: null,
+      message: "boom",
+    });
+    expect(flattenTaggedError(42)).toEqual({ tag: null, message: "42" });
+    expect(flattenTaggedError(null)).toEqual({ tag: null, message: "null" });
+    expect(flattenTaggedError(undefined)).toEqual({
+      tag: null,
+      message: "undefined",
+    });
   });
 
   it("collects the tag chain and message of a tagged error", () => {
-    expect(flattenTaggedError({ _tag: "Failure", error: "nope" })).toBe(
-      "[Failure] nope",
-    );
+    expect(flattenTaggedError({ _tag: "Failure", error: "nope" })).toEqual({
+      tag: "Failure",
+      message: "[Failure] nope",
+    });
   });
 
-  it("joins a nested tag chain", () => {
+  it("keeps a nested tag in the error chain", () => {
     const err = { _tag: "Outer", error: { _tag: "Inner", error: "deep" } };
 
-    expect(flattenTaggedError(err)).toBe("[Outer -> Inner] deep");
+    expect(flattenTaggedError(err)).toEqual({
+      tag: "Outer",
+      message: "[Outer -> Inner] deep",
+      details: { tags: ["Outer", "Inner"] },
+    });
+  });
+
+  it("reads a nested tag before the outer message", () => {
+    const err = {
+      _tag: "Outer",
+      message: "[Inner] deep",
+      error: { _tag: "Inner", error: "deep" },
+    };
+
+    expect(flattenTaggedError(err)).toEqual({
+      tag: "Outer",
+      message: "[Outer -> Inner] deep",
+      details: { tags: ["Outer", "Inner"] },
+    });
   });
 
   it("prefers the string error field over message", () => {
     expect(
       flattenTaggedError({ error: "from error", message: "from message" }),
-    ).toBe("from error");
+    ).toEqual({ tag: null, message: "from error" });
   });
 
   it("falls back to message when there is no error field", () => {
-    expect(flattenTaggedError(new Error("kaboom"))).toBe("kaboom");
+    expect(flattenTaggedError(new Error("kaboom"))).toEqual({
+      tag: null,
+      message: "kaboom",
+    });
   });
 
   it("stringifies an error-shaped object it cannot unwrap", () => {
-    expect(flattenTaggedError({ unexpected: true })).toBe(
-      '{"unexpected":true}',
-    );
+    expect(flattenTaggedError({ unexpected: true })).toEqual({
+      tag: null,
+      message: '{"unexpected":true}',
+    });
   });
 });
 
@@ -112,6 +152,98 @@ describe("EFFECT_PROXY transfer handler", () => {
     // apart from the branch for a result that is not an Effect result.
     await expect(remote.defect()).rejects.toThrow(
       /\[Worker Error\]\nError: hard defect/,
+    );
+  });
+
+  it("returns the tag and the message from the worker", async () => {
+    const { port1, port2 } = newChannel();
+    Comlink.expose(
+      {
+        load: (): Effect.Effect<never> =>
+          Effect.fail(new DbError({ error: "no row" })) as Effect.Effect<never>,
+      },
+      port1 as unknown as Comlink.Endpoint,
+    );
+    const remote = Comlink.wrap<{ load(): Promise<never> }>(
+      port2 as unknown as Comlink.Endpoint,
+    );
+
+    const error = await failureOf(remote.load());
+
+    expect(error).toBeInstanceOf(WorkerError);
+    expect(error).toMatchObject({ tag: "app/worker/db" });
+    expect((error as WorkerError).message).toBe(
+      "[Worker Error]\n[app/worker/db] no row",
+    );
+  });
+
+  it("keeps a nested tag in the error chain", async () => {
+    const { port1, port2 } = newChannel();
+    Comlink.expose(
+      {
+        load: (): Effect.Effect<never> =>
+          Effect.fail(
+            new DbError({ error: new FsError({ error: "missing" }) }),
+          ) as Effect.Effect<never>,
+      },
+      port1 as unknown as Comlink.Endpoint,
+    );
+    const remote = Comlink.wrap<{ load(): Promise<never> }>(
+      port2 as unknown as Comlink.Endpoint,
+    );
+
+    const error = await failureOf(remote.load());
+
+    expect(error).toBeInstanceOf(WorkerError);
+    expect((error as WorkerError).tag).toBe("app/worker/db");
+    expect((error as WorkerError).details).toEqual({
+      tags: ["app/worker/db", "app/worker/fs"],
+    });
+    expect((error as WorkerError).message).toBe(
+      "[Worker Error]\n[app/worker/db -> app/worker/fs] missing",
+    );
+  });
+
+  it("sends a plain error without a tag", async () => {
+    const { port1, port2 } = newChannel();
+    Comlink.expose(
+      {
+        load: (): Effect.Effect<never> =>
+          Effect.fail(new Error("plain failure")) as Effect.Effect<never>,
+      },
+      port1 as unknown as Comlink.Endpoint,
+    );
+    const remote = Comlink.wrap<{ load(): Promise<never> }>(
+      port2 as unknown as Comlink.Endpoint,
+    );
+
+    const error = await failureOf(remote.load());
+
+    expect(error).toBeInstanceOf(WorkerError);
+    expect((error as WorkerError).tag).toBeNull();
+    expect((error as WorkerError).details).toBeUndefined();
+    expect((error as WorkerError).message).toBe(
+      "[Worker Error]\nplain failure",
+    );
+  });
+
+  it("shows the same message as before for an existing caller", async () => {
+    const { port1, port2 } = newChannel();
+    Comlink.expose(
+      {
+        load: (): Effect.Effect<never> =>
+          Effect.fail(new DbError({ error: "no row" })) as Effect.Effect<never>,
+      },
+      port1 as unknown as Comlink.Endpoint,
+    );
+    const remote = Comlink.wrap<{ load(): Promise<never> }>(
+      port2 as unknown as Comlink.Endpoint,
+    );
+
+    const error = await failureOf(remote.load());
+
+    expect((error as Error).message).toBe(
+      "[Worker Error]\n[app/worker/db] no row",
     );
   });
 });
@@ -263,6 +395,33 @@ describe("EFFECT_PROXY deserialize guard", () => {
       42,
     );
   });
+
+  it("does not parse the tag from the message text", async () => {
+    const error = await failureOf(
+      deserializeResult({
+        success: false,
+        error: { tag: "real/tag", message: "[fake/tag] boom" },
+      }),
+    );
+
+    expect(error).toBeInstanceOf(WorkerError);
+    expect((error as WorkerError).tag).toBe("real/tag");
+    expect((error as WorkerError).message).toBe(
+      "[Worker Error]\n[fake/tag] boom",
+    );
+  });
+
+  it("accepts the old string payload for one release", async () => {
+    const error = await failureOf(
+      deserializeResult({ success: false, error: "[app/worker/db] old" }),
+    );
+
+    expect(error).toBeInstanceOf(WorkerError);
+    expect((error as WorkerError).tag).toBeNull();
+    expect((error as WorkerError).message).toBe(
+      "[Worker Error]\n[app/worker/db] old",
+    );
+  });
 });
 
 describe("plain value transfer", () => {
@@ -365,6 +524,32 @@ describe("EFFECT_STREAM_PROXY transfer handler", () => {
 
     await expect(reader.read()).rejects.toThrow(/mid-stream boom/);
   });
+
+  it("keeps the tag on a stream error", async () => {
+    const { port1, port2 } = newChannel();
+    const failing = Stream.concat(
+      Stream.make(1),
+      Stream.fail({ _tag: "StreamFailure", error: "mid-stream boom" }),
+    );
+    Comlink.expose(
+      { failing: (): Stream.Stream<number, unknown> => failing },
+      port1 as unknown as Comlink.Endpoint,
+    );
+    const remote = Comlink.wrap<{
+      failing(): Promise<ReadableStream<number>>;
+    }>(port2 as unknown as Comlink.Endpoint);
+
+    const reader = (await remote.failing()).getReader();
+    await reader.read();
+
+    const error = await failureOf(reader.read());
+
+    expect(error).toBeInstanceOf(WorkerError);
+    expect((error as WorkerError).tag).toBe("StreamFailure");
+    expect((error as WorkerError).message).toBe(
+      "[Worker Error]\n[StreamFailure] mid-stream boom",
+    );
+  });
 });
 
 describe("formatEffectError integration", () => {
@@ -373,6 +558,9 @@ describe("formatEffectError integration", () => {
     const failures = cause.reasons.filter(Cause.isFailReason);
     const first = failures[0];
 
-    expect(flattenTaggedError(first.error)).toContain("no session");
+    expect(flattenTaggedError(first.error)).toEqual({
+      tag: "FsError",
+      message: "[FsError] no session",
+    });
   });
 });

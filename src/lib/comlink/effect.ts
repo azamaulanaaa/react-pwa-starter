@@ -9,8 +9,41 @@ export type ResolveEffect<T, Fallback> =
       ? Promise<ReadableStream<A>>
       : Fallback;
 
-export function flattenTaggedError(err: unknown): string {
-  if (!err || typeof err !== "object") return String(err);
+/** The tag chain of a nested error. The chain is outermost first. */
+export type WorkerErrorDetails = {
+  tags: string[];
+};
+
+/**
+ * The error payload that crosses the worker bridge.
+ * The tag is the outermost tag. The value is null when the error has no tag.
+ * The message is the old text form, so an existing caller sees the same text.
+ */
+export type WorkerErrorPayload = {
+  tag: string | null;
+  message: string;
+  details?: WorkerErrorDetails;
+};
+
+/** A tagged error can be nested below another error in the chain. */
+function isTaggedError(value: unknown): value is Record<string, unknown> {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    typeof (value as { _tag?: unknown })._tag === "string"
+  );
+}
+
+/**
+ * Reads the tag chain and the message from an error.
+ * The function reads the tag from the `_tag` field.
+ * The function does not parse the tag from the message text.
+ * The function returns a null tag for an error that has no tag.
+ */
+export function flattenTaggedError(err: unknown): WorkerErrorPayload {
+  if (!err || typeof err !== "object") {
+    return { tag: null, message: String(err) };
+  }
   const tags: string[] = [];
   let current: unknown = err;
   let message = "";
@@ -18,20 +51,99 @@ export function flattenTaggedError(err: unknown): string {
   while (current && typeof current === "object") {
     const obj = current as Record<string, unknown>;
     if (typeof obj._tag === "string") tags.push(obj._tag);
+
+    // A nested tagged error keeps its place in the chain. The outer error can
+    // also carry a message, so the walk reads the nested tag first.
+    if (isTaggedError(obj.error)) {
+      current = obj.error;
+      continue;
+    }
     if (typeof obj.error === "string") {
       message = obj.error;
       break;
-    } else if (obj.message) {
-      message = String(obj.message);
-      break;
-    } else if (obj.error && typeof obj.error === "object") {
-      current = obj.error;
-    } else {
-      message = JSON.stringify(current);
+    }
+    if (typeof obj.message === "string" && obj.message !== "") {
+      message = obj.message;
       break;
     }
+    if (obj.error && typeof obj.error === "object") {
+      current = obj.error;
+      continue;
+    }
+    message = JSON.stringify(current);
+    break;
   }
-  return tags.length ? `[${tags.join(" -> ")}] ${message}` : message;
+
+  const payload: WorkerErrorPayload = {
+    tag: tags[0] ?? null,
+    message: tags.length ? `[${tags.join(" -> ")}] ${message}` : message,
+  };
+  if (tags.length > 1) payload.details = { tags };
+  return payload;
+}
+
+/**
+ * Rebuilds the error that the UI receives from a worker payload.
+ * The function reads the tag from the payload `tag` field.
+ * The function never reads the tag from the message text.
+ * An old string payload maps to a null tag for one release.
+ */
+export function workerErrorFromPayload(payload: unknown): WorkerError {
+  if (typeof payload === "string") {
+    return new WorkerError({ tag: null, message: payload });
+  }
+  if (payload !== null && typeof payload === "object") {
+    const record = payload as Record<string, unknown>;
+    const tag = typeof record.tag === "string" ? record.tag : null;
+    const message =
+      typeof record.message === "string" ? record.message : String(payload);
+    const details = readDetails(record.details);
+    return new WorkerError(
+      details === undefined ? { tag, message } : { tag, message, details },
+    );
+  }
+  return new WorkerError({ tag: null, message: String(payload) });
+}
+
+/** Reads the nested tag chain from an untrusted details value. */
+function readDetails(value: unknown): WorkerErrorDetails | undefined {
+  if (value === null || typeof value !== "object") return undefined;
+  const tags = (value as { tags?: unknown }).tags;
+  if (!Array.isArray(tags)) return undefined;
+  if (!tags.every((tag) => typeof tag === "string")) return undefined;
+  return { tags };
+}
+
+/** The error that the UI receives from a failed worker call. */
+export class WorkerError extends Error {
+  /** The outermost worker error tag. The value is null when there is no tag. */
+  readonly tag: string | null;
+
+  /** The tag chain of a nested error. The field is absent for one tag. */
+  readonly details?: WorkerErrorDetails;
+
+  /**
+   * Builds a worker error.
+   * The message keeps the old two-line text for an existing caller.
+   */
+  constructor(payload: WorkerErrorPayload) {
+    super(`[Worker Error]\n${payload.message}`);
+    this.name = "WorkerError";
+    this.tag = payload.tag;
+    if (payload.details !== undefined) this.details = payload.details;
+  }
+}
+
+export function formatEffectError(
+  cause: Cause.Cause<unknown>,
+): WorkerErrorPayload {
+  const failures = cause.reasons.filter(Cause.isFailReason);
+  return failures.length === 0
+    ? {
+        tag: null,
+        message: Cause.pretty(cause) || "An unexpected worker defect occurred.",
+      }
+    : flattenTaggedError(failures[0].error);
 }
 
 /**
@@ -54,13 +166,6 @@ function withDevTools<A, E, R>(
     : program;
 }
 
-export function formatEffectError(cause: Cause.Cause<unknown>): string {
-  const failures = cause.reasons.filter(Cause.isFailReason);
-  return failures.length === 0
-    ? Cause.pretty(cause) || "An unexpected worker defect occurred."
-    : flattenTaggedError(failures[0].error);
-}
-
 const NAME_STREAM = "EFFECT_STREAM_PROXY";
 if (!Comlink.transferHandlers.has(NAME_STREAM)) {
   Comlink.transferHandlers.set(NAME_STREAM, {
@@ -73,18 +178,27 @@ if (!Comlink.transferHandlers.has(NAME_STREAM)) {
       const { port1, port2 } = new MessageChannel();
       const iterator =
         Stream.toAsyncIterable(streamInstance)[Symbol.asyncIterator]();
+      let failure: WorkerErrorPayload | undefined;
 
       const remoteIterator = {
         async next() {
           try {
+            failure = undefined;
             return await iterator.next();
           } catch (err) {
-            throw new Error(flattenTaggedError(err));
+            // Comlink copies only message, name, and stack from a thrown
+            // Error. The `failure` method sends the payload as a value, so
+            // the tag survives the port.
+            failure = flattenTaggedError(err);
+            throw new WorkerError(failure);
           }
         },
         async return() {
           if (typeof iterator.return === "function") await iterator.return();
           return { value: undefined, done: true };
+        },
+        failure() {
+          return failure;
         },
       };
 
@@ -96,6 +210,7 @@ if (!Comlink.transferHandlers.has(NAME_STREAM)) {
       const remoteIterator = Comlink.wrap<{
         next(): Promise<IteratorResult<unknown>>;
         return(): Promise<IteratorResult<unknown>>;
+        failure(): Promise<WorkerErrorPayload | undefined>;
       }>(port);
 
       // The remote end is a Comlink async iterator, not a local Stream. This
@@ -118,8 +233,18 @@ if (!Comlink.transferHandlers.has(NAME_STREAM)) {
               await Effect.runPromise(Queue.end(queue));
             } catch (err) {
               remoteFinished = true;
+              // Read the payload that the worker kept beside the thrown
+              // error. The thrown error lost the tag at the port.
+              const payload = await remoteIterator
+                .failure()
+                .catch(() => undefined);
               await Effect.runPromise(
-                Queue.fail(queue, new Error(flattenTaggedError(err))),
+                Queue.fail(
+                  queue,
+                  new WorkerError(
+                    payload === undefined ? flattenTaggedError(err) : payload,
+                  ),
+                ),
               );
             }
           };
@@ -203,16 +328,14 @@ if (!Comlink.transferHandlers.has(NAME_EFFECT)) {
             typeof result !== "object" ||
             typeof (result as { success?: unknown }).success !== "boolean"
           ) {
-            throw new Error(
-              `[Worker Error]\nThe worker returned a value that is not an Effect result.`,
-            );
+            throw new WorkerError({
+              tag: null,
+              message:
+                "The worker returned a value that is not an Effect result.",
+            });
           }
           if (!(result as { success: boolean }).success) {
-            throw new Error(
-              `[Worker Error]\n${String(
-                (result as { error?: unknown }).error,
-              )}`,
-            );
+            throw workerErrorFromPayload((result as { error?: unknown }).error);
           }
           return (result as { value: unknown }).value;
         } finally {
