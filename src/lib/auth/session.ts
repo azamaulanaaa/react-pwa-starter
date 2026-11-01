@@ -1,5 +1,19 @@
 import type { Session } from "@/lib/auth/types.ts";
 
+/** The time before the session expiry when the provider refreshes the session. */
+export const REFRESH_LEAD_MS = 60_000;
+
+/**
+ * Returns the delay before the refresh timer fires.
+ * The function returns zero when the refresh time has passed.
+ */
+export function refreshDelayMs(
+  session: Session,
+  now: number = Date.now(),
+): number {
+  return Math.max(0, session.expiresAt - now - REFRESH_LEAD_MS);
+}
+
 /**
  * Reports whether a session has expired.
  * The function uses the current time when the caller gives none.

@@ -7,6 +7,7 @@ import {
   SessionProvider,
   useSession,
 } from "@/components/context/session.tsx";
+import { RETURN_TO_KEY } from "@/lib/auth/index.ts";
 import type {
   LoginOptions,
   Session,
@@ -78,15 +79,17 @@ type RenderSessionOptions = {
   fake: ReturnType<typeof createFakeProvider>;
   loginPath?: string;
   onUnauthenticated?: (loginPath: string) => void;
+  navigate?: (path: string) => void;
 };
 
 function renderSession({
   fake,
   loginPath = "/sign-in",
   onUnauthenticated,
+  navigate,
 }: RenderSessionOptions) {
   render(
-    <SessionProvider provider={fake.provider}>
+    <SessionProvider provider={fake.provider} navigate={navigate}>
       <SessionProbe />
       <RequireSession
         loginPath={loginPath}
@@ -170,5 +173,17 @@ describe("useSession", () => {
     await waitFor(() =>
       expect(onUnauthenticated).toHaveBeenCalledWith("/sign-in"),
     );
+  });
+
+  it("returns to the stored path after login", async () => {
+    window.sessionStorage.setItem(RETURN_TO_KEY, "/team");
+    const fake = createFakeProvider(ALICE);
+    const navigate = vi.fn();
+
+    renderSession({ fake, navigate });
+
+    expect(await screen.findByText("Alice")).toBeDefined();
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith("/team"));
+    expect(window.sessionStorage.getItem(RETURN_TO_KEY)).toBeNull();
   });
 });

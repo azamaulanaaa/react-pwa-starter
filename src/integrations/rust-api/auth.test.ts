@@ -1,10 +1,22 @@
 import { describe, expect, it, vi } from "vitest";
 
+import {
+  createMemorySessionStorage,
+  createSessionCache,
+  DEFAULT_OFFLINE_GRACE_MS,
+  RETURN_TO_KEY,
+  SESSION_CACHE_KEY,
+  SessionError,
+} from "@/lib/auth/index.ts";
+import type { SessionChannel } from "@/lib/auth/index.ts";
+import type { RefreshLock } from "@/lib/auth/index.ts";
 import { createRustApiSessionProvider } from "@/integrations/rust-api/auth.ts";
 import {
   createMemoryTokenStore,
   createRustApiClient,
 } from "@/integrations/rust-api/client.ts";
+
+const NOW = 2_000_000_000_000;
 
 /** Builds a JSON response for a fake fetch. */
 function jsonResponse(body: unknown, status = 200): Response {
@@ -12,6 +24,34 @@ function jsonResponse(body: unknown, status = 200): Response {
     status,
     headers: { "Content-Type": "application/json" },
   });
+}
+
+/** Creates a lock that runs one callback at a time. */
+function createSerialLock(): RefreshLock {
+  let tail: Promise<unknown> = Promise.resolve();
+
+  return {
+    request<T>(_name: string, callback: () => Promise<T>): Promise<T> {
+      const run = tail.then(callback, callback);
+      tail = run.then(
+        () => undefined,
+        () => undefined,
+      );
+
+      return run;
+    },
+  };
+}
+
+/** Creates a channel that does nothing. */
+function createQuietChannel(): SessionChannel {
+  return {
+    publish() {},
+    subscribe() {
+      return () => {};
+    },
+    close() {},
+  };
 }
 
 describe("rust-api session provider", () => {
@@ -153,5 +193,249 @@ describe("rust-api session provider", () => {
     await provider.logout();
 
     expect(tokens.getToken()).toBeNull();
+  });
+
+  it("loads the cached session when the network is down", async () => {
+    const cache = createSessionCache(createMemorySessionStorage());
+    cache.write({
+      userId: "user-1",
+      expiresAt: NOW - 1_000,
+      lastVerifiedAt: NOW - 1_000,
+      epoch: 1,
+    });
+    const client = createRustApiClient({
+      baseUrl: "https://api.test",
+      fetch: vi.fn(async () => {
+        throw new TypeError("The network is down.");
+      }),
+    });
+    const provider = createRustApiSessionProvider({
+      cache,
+      client,
+      navigate: vi.fn(),
+      now: () => NOW,
+    });
+
+    const session = await provider.getSession();
+
+    expect(session?.user.id).toBe("user-1");
+    expect(session?.expiresAt).toBeGreaterThan(NOW);
+  });
+
+  it("does not load a cached session after the grace window", async () => {
+    const cache = createSessionCache(createMemorySessionStorage());
+    cache.write({
+      userId: "user-1",
+      expiresAt: NOW - 1_000,
+      lastVerifiedAt: NOW - DEFAULT_OFFLINE_GRACE_MS - 1,
+      epoch: 1,
+    });
+    const client = createRustApiClient({
+      baseUrl: "https://api.test",
+      fetch: vi.fn(async () => {
+        throw new TypeError("The network is down.");
+      }),
+    });
+    const provider = createRustApiSessionProvider({
+      cache,
+      client,
+      navigate: vi.fn(),
+      now: () => NOW,
+    });
+
+    await expect(provider.getSession()).rejects.toBeInstanceOf(SessionError);
+  });
+
+  it("uses the cached session when the server returns 503", async () => {
+    const cache = createSessionCache(createMemorySessionStorage());
+    cache.write({
+      userId: "user-1",
+      expiresAt: NOW - 1_000,
+      lastVerifiedAt: NOW - 1_000,
+      epoch: 1,
+    });
+    const client = createRustApiClient({
+      baseUrl: "https://api.test",
+      fetch: vi.fn(async () => jsonResponse({ error: "unavailable" }, 503)),
+    });
+    const provider = createRustApiSessionProvider({
+      cache,
+      client,
+      navigate: vi.fn(),
+      now: () => NOW,
+    });
+
+    const session = await provider.getSession();
+
+    expect(session?.user.id).toBe("user-1");
+  });
+
+  it("does not use the cached session when the server returns 403", async () => {
+    const cache = createSessionCache(createMemorySessionStorage());
+    cache.write({
+      userId: "user-1",
+      expiresAt: NOW - 1_000,
+      lastVerifiedAt: NOW - 1_000,
+      epoch: 1,
+    });
+    const client = createRustApiClient({
+      baseUrl: "https://api.test",
+      fetch: vi.fn(async () => jsonResponse({ error: "forbidden" }, 403)),
+    });
+    const provider = createRustApiSessionProvider({
+      cache,
+      client,
+      navigate: vi.fn(),
+      now: () => NOW,
+    });
+
+    await expect(provider.getSession()).rejects.toBeInstanceOf(SessionError);
+  });
+
+  it("clears the cache on logout", async () => {
+    const cache = createSessionCache(createMemorySessionStorage());
+    cache.write({
+      userId: "user-1",
+      expiresAt: NOW + 1_000,
+      lastVerifiedAt: NOW,
+      epoch: 1,
+    });
+    const client = createRustApiClient({
+      baseUrl: "https://api.test",
+      fetch: vi.fn(async () => new Response(null, { status: 204 })),
+    });
+    const provider = createRustApiSessionProvider({
+      cache,
+      client,
+      navigate: vi.fn(),
+      now: () => NOW,
+    });
+
+    await provider.logout();
+
+    expect(cache.read()).toBeNull();
+  });
+
+  it("clears the cache when the user id changes", async () => {
+    const storage = createMemorySessionStorage();
+    const remove = vi.spyOn(storage, "removeItem");
+    const cache = createSessionCache(storage);
+    cache.write({
+      userId: "user-1",
+      expiresAt: NOW + 1_000,
+      lastVerifiedAt: NOW,
+      epoch: 4,
+    });
+    const client = createRustApiClient({
+      baseUrl: "https://api.test",
+      fetch: vi.fn(async () =>
+        jsonResponse({
+          sub: "user-2",
+          iss: "issuer",
+          aud: ["app"],
+          exp: Math.floor(NOW / 1000) + 3_600,
+        }),
+      ),
+    });
+    const provider = createRustApiSessionProvider({
+      cache,
+      client,
+      navigate: vi.fn(),
+      now: () => NOW,
+    });
+
+    const session = await provider.getSession();
+
+    expect(session?.user.id).toBe("user-2");
+    expect(cache.read()?.userId).toBe("user-2");
+    expect(cache.read()?.epoch).toBe(5);
+    expect(remove).toHaveBeenCalledWith(SESSION_CACHE_KEY);
+  });
+
+  it("refreshes once when three tabs run at the same time", async () => {
+    const cache = createSessionCache(createMemorySessionStorage());
+    const lock = createSerialLock();
+    const fakeFetch = vi.fn(
+      async (input: RequestInfo | URL, _init?: RequestInit) => {
+        const url = String(input);
+
+        if (url.endsWith("/auth/refresh")) {
+          return jsonResponse({
+            success: true,
+            token: "new-token",
+            error: null,
+          });
+        }
+
+        return jsonResponse({
+          sub: "user-1",
+          iss: "issuer",
+          aud: ["app"],
+          exp: Math.floor(NOW / 1000) + 3_600,
+        });
+      },
+    );
+    const providers = [0, 1, 2].map(() =>
+      createRustApiSessionProvider({
+        cache,
+        channel: createQuietChannel(),
+        client: createRustApiClient({
+          baseUrl: "https://api.test",
+          fetch: fakeFetch,
+        }),
+        lock,
+        now: () => NOW,
+      }),
+    );
+
+    const sessions = await Promise.all(
+      providers.map((provider) => provider.refresh()),
+    );
+    const refreshCalls = fakeFetch.mock.calls.filter(([input]) =>
+      String(input).endsWith("/auth/refresh"),
+    );
+
+    expect(refreshCalls).toHaveLength(1);
+    expect(sessions.map((session) => session?.user.id)).toEqual([
+      "user-1",
+      "user-1",
+      "user-1",
+    ]);
+  });
+
+  it("stores the return path before the login redirect", async () => {
+    const returnToStorage = createMemorySessionStorage();
+    const navigate = vi.fn();
+    const client = createRustApiClient({
+      baseUrl: "https://api.test",
+      fetch: vi.fn(),
+    });
+    const provider = createRustApiSessionProvider({
+      client,
+      navigate,
+      returnToStorage,
+    });
+
+    await provider.login({ returnTo: "/team" });
+
+    expect(returnToStorage.getItem(RETURN_TO_KEY)).toBe("/team");
+    expect(navigate).toHaveBeenCalledWith("https://api.test/auth/login");
+  });
+
+  it("does not store an unsafe return path", async () => {
+    const returnToStorage = createMemorySessionStorage();
+    const client = createRustApiClient({
+      baseUrl: "https://api.test",
+      fetch: vi.fn(),
+    });
+    const provider = createRustApiSessionProvider({
+      client,
+      navigate: vi.fn(),
+      returnToStorage,
+    });
+
+    await provider.login({ returnTo: "https://evil.test" });
+
+    expect(returnToStorage.getItem(RETURN_TO_KEY)).toBeNull();
   });
 });

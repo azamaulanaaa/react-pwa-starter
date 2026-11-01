@@ -539,6 +539,30 @@ const provider: SessionContract = {
 </SessionProvider>;
 ```
 
+### Session durability
+
+- The session cache is in `src/lib/auth/cache.ts`. The record holds `userId`, `expiresAt`,
+  `lastVerifiedAt`, and `epoch`. The record does not hold the token. The cookie is the
+  credential.
+- `getSession` calls the network with a five-second limit. When the network fails, the call
+  times out, or the server returns a `5xx` response, the call returns the cached session when
+  the last check is inside the offline grace window. The call does not use the cache for `401`,
+  `403`, or `404`. The default grace window is seven days. The expiry of the cached session is
+  the end of the grace window.
+- The session is offline-unverified after the token expiry. The next network call must confirm
+  the session. A `401` on the flush must pause the outbox and ask for a login.
+- `writeSessionCache` removes the old record when the user id changes. `clearSessionCache`
+  removes the record on logout.
+- The refresh timer fires 60 seconds before `expiresAt`. `refreshDelayMs` returns the delay.
+- `createRefreshCoordinator` runs one refresh across tabs. It uses `navigator.locks` when the
+  browser provides it. The fallback is a storage mutex with a time limit.
+- The adapter sends each new session through `createSessionChannel`. The channel uses
+  `BroadcastChannel`. The fallback uses a storage event. A tab applies the event without a new
+  network call. A tab that misses the event calls `getSession` on its next mount.
+- The login path is client side. `login` stores `LoginOptions.returnTo` in session storage.
+  `SessionProvider` removes the value and opens the path after a successful login.
+- The cache stores metadata only. Do not store the token in local storage.
+
 ## Replica reader
 
 - The generic reader is in `src/lib/sync`. The reader has no domain type.
@@ -655,10 +679,17 @@ A backend adapter maps these calls to its own HTTP routes.
 - `getSession` calls `GET /auth/me`. The adapter maps `sub` to the user id and `exp` seconds to
   `expiresAt` milliseconds. A `401` response returns null.
 - `refresh` calls `POST /auth/refresh`. The browser sends the `refresh_token` cookie. The
-  adapter stores the new token and calls `getSession` again. A rejected refresh returns null.
-- `logout` calls `POST /auth/logout` and clears the in-memory token.
-- The rust-api login route has no return path parameter. The adapter does not send
-  `LoginOptions.returnTo`.
+  adapter stores the new token and reads the session again. A rejected refresh returns null.
+  The refresh runs one time across tabs.
+- `logout` calls `POST /auth/logout`, clears the in-memory token, and clears the session cache.
+- The rust-api login route has no return path parameter. The adapter stores
+  `LoginOptions.returnTo` in session storage. `SessionProvider` removes the value and opens the
+  path after a successful login.
+- `getSession` keeps session metadata in the cache. It falls back to the cache when the network
+  fails and the record is inside the seven-day grace window.
+- A refresh in one tab sets a new cookie. The tab sends the new session through the channel.
+  The other tabs apply the new session. A tab that misses the event calls `getSession` on its
+  next mount.
 
 ```ts
 import { createRustApiClient } from "@/integrations/rust-api/client.ts";

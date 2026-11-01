@@ -7,10 +7,7 @@ import { vi } from "vitest";
 // This setup installs a minimal in-memory Storage. DOM tests can then run source
 // that uses `localStorage` directly. Node-environment test files have no window,
 // so they are not affected.
-if (
-  typeof window !== "undefined" &&
-  typeof window.localStorage === "undefined"
-) {
+if (typeof window !== "undefined") {
   const createMemoryStorage = (): Storage => {
     const map = new Map<string, string>();
 
@@ -32,7 +29,13 @@ if (
     };
   };
 
-  vi.stubGlobal("localStorage", createMemoryStorage());
+  if (typeof window.localStorage === "undefined") {
+    vi.stubGlobal("localStorage", createMemoryStorage());
+  }
+
+  if (typeof window.sessionStorage === "undefined") {
+    vi.stubGlobal("sessionStorage", createMemoryStorage());
+  }
 }
 
 // Get the root directory in a way that works in all runtimes
