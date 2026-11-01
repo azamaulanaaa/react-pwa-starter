@@ -197,8 +197,11 @@ describe("dbMain.item", () => {
 });
 
 describe("default database", () => {
-  it("starts without a table", () => {
-    expect(Object.keys(defaultDb as Record<string, unknown>)).toEqual([]);
+  it("starts with the system tables only", () => {
+    expect(Object.keys(defaultDb as Record<string, unknown>).sort()).toEqual([
+      "quarantine",
+      "sync_state",
+    ]);
   });
 });
 

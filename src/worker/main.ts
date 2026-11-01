@@ -1,7 +1,7 @@
 import "@/lib/comlink/index.ts";
 import * as Comlink from "comlink";
 
-import { dbMain } from "@/worker/db/index.ts";
+import { changes, dbMain } from "@/worker/db/index.ts";
 import * as fs from "@/worker/fs/index.ts";
 import { queue } from "@/worker/queue/index.ts";
 
@@ -28,7 +28,7 @@ function exposePerConnection<T>(api: T): void {
   };
 }
 
-const api = { db: dbMain, fs, queue };
+const api = { changes, db: dbMain, fs, queue };
 
 if ("onconnect" in self) {
   exposePerConnection(api);
@@ -36,4 +36,4 @@ if ("onconnect" in self) {
   exposeOnSelf(api);
 }
 
-export { dbMain as db, fs, queue };
+export { changes, dbMain as db, fs, queue };

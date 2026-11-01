@@ -11,3 +11,11 @@ export type {
   ReplicaTransport,
   ReplicaTransportReadResult,
 } from "@/lib/sync/types.ts";
+export { ChangeFeedError } from "@/lib/sync/changes.ts";
+export type {
+  ChangeFeed,
+  ChangeFeedErrorReason,
+  ChangePage,
+  ChangePullInput,
+  ChangeRow,
+} from "@/lib/sync/changes.ts";

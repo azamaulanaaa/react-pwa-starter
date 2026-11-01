@@ -36,11 +36,16 @@ type ModuleContext = {
   onEvent: (handler: EventHandler) => () => void;
 };
 
+/** Defines the schema shape that a table module exposes to the apply step. */
+export type TableSchema = Schema.Codec<any, any> &
+  Schema.Struct<Schema.Struct.Fields>;
+
 export type TableModule<
   Name extends string,
   Api extends Record<string, ApiFunction<any, any, any>>,
 > = {
   name: Name;
+  schema: TableSchema;
   api: (ctx: ModuleContext) => Api;
 };
 
@@ -75,6 +80,7 @@ export const createTableModule = <
 }): TableModule<Name, ReturnType<typeof createTableApi<Name, A, I>>> => {
   return {
     name: config.name,
+    schema: config.schema,
     api: (ctx) =>
       createTableApi({
         tableName: config.name,
