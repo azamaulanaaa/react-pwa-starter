@@ -1,3 +1,5 @@
+import type { ClockSampler } from "@/lib/time/types.ts";
+
 /** Defines the HTTP methods that the client sends. */
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -46,6 +48,11 @@ export interface ApiClientOptions {
   fetch?: FetchFunction;
   /** The token source. The client sends no bearer header when this is absent. */
   tokenProvider?: TokenProvider;
+  /**
+   * The server clock sampler.
+   * The client samples every response when this is present.
+   */
+  clock?: ClockSampler;
 }
 
 /**

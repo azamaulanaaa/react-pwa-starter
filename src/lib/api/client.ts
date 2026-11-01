@@ -46,6 +46,7 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
   const baseUrl = resolveApiBaseUrl(options.baseUrl);
   const fetchImpl: FetchFunction = options.fetch ?? globalThis.fetch;
   const tokenProvider = options.tokenProvider;
+  const clockSampler = options.clock;
 
   return {
     async request<T>(
@@ -67,6 +68,7 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       }
 
       let response: Response;
+      const startedAtMs = Date.now();
       try {
         response = await fetchImpl(joinUrl(baseUrl, path), {
           method: requestOptions.method ?? "GET",
@@ -81,6 +83,8 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
           { cause },
         );
       }
+
+      clockSampler?.sampleFrom(response, startedAtMs);
 
       if (!response.ok) {
         throw await apiErrorFromResponse(response);

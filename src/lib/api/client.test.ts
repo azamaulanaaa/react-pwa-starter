@@ -126,4 +126,53 @@ describe("createApiClient", () => {
     expect(init?.body).toBe(JSON.stringify({ name: "Sample" }));
     expect(headers.get("Content-Type")).toBe("application/json");
   });
+
+  it("samples the server clock from a response", async () => {
+    const headerValue = "1793361600000";
+    const sampleFrom = vi.fn(
+      (_response: Response, _startedAtMs: number) => undefined,
+    );
+    const fakeFetch = vi.fn(
+      async () =>
+        new Response("{}", {
+          status: 200,
+          headers: { "X-Server-Time-Ms": headerValue },
+        }),
+    );
+    const client = createApiClient({
+      baseUrl: "https://api.test",
+      fetch: fakeFetch,
+      clock: { sampleFrom },
+    });
+
+    await client.request("/items");
+
+    expect(sampleFrom).toHaveBeenCalledTimes(1);
+    const [response, startedAtMs] = sampleFrom.mock.calls[0]!;
+
+    expect(response.headers.get("X-Server-Time-Ms")).toBe(headerValue);
+    expect(typeof startedAtMs).toBe("number");
+  });
+
+  it("samples the server clock from a failed response", async () => {
+    const sampleFrom = vi.fn(
+      (_response: Response, _startedAtMs: number) => undefined,
+    );
+    const fakeFetch = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ error: "The item is missing." }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        }),
+    );
+    const client = createApiClient({
+      baseUrl: "https://api.test",
+      fetch: fakeFetch,
+      clock: { sampleFrom },
+    });
+
+    await expect(client.request("/items/404")).rejects.toBeInstanceOf(ApiError);
+
+    expect(sampleFrom).toHaveBeenCalledTimes(1);
+  });
 });
