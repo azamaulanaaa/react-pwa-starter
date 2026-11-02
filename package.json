@@ -74,6 +74,8 @@
     "vitest": "^5.0.5"
   },
   "overrides": {
+    "@trickfilm400/rollup-plugin-off-main-thread": "^4.0.0",
+    "glob": "^14.0.3",
     "react-inspector": "^9.0.0"
   }
 }
