@@ -32,6 +32,11 @@ application adds its own domain code.
   runs one instance, and all tabs share that instance.
 - oxkv (WASM key-value store) for offline-first persistence
 - Cross-tab data sync via change bus / peer sync (`src/worker/db`)
+- Durable outbox with idempotent retries and automatic flush
+- Change feed pull and apply pages with a stored cursor
+- Report client with poll, artifact cache, and the `useReport` hook
+- Server clock and organization time zone helpers (`src/lib/time`)
+- Camera, geolocation, and JPEG image hooks (`src/hooks/engines`, `src/lib/image.ts`)
 - Chunked file storage API with strict part-size validation
 - Custom translation layer (micromustache templates) with en-US and id-ID locales. The
   layer formats numbers, dates, and currency with Intl.
@@ -47,16 +52,13 @@ application adds its own domain code.
 
 ### Prerequisites
 
-- Install Node. [mise](https://mise.jdx.dev) manages Node. See `mise.toml`.
-- Git
+- Install Node. [mise](https://mise.jdx.dev) manages Node. See `mise.toml`. Install Git.
 
 ### Install and run locally
 
 ```bash
 git clone https://github.com/azamaulanaaa/react-pwa-starter.git
-cd react-pwa-starter
-npm install
-npm run dev           # start dev server (Vite)
+cd react-pwa-starter && npm install && npm run dev
 ```
 
 ### Scripts
@@ -129,30 +131,13 @@ otlp_endpoint = "http://localhost:4318/v1/traces"
   `http://localhost:4317`. Both services can send to one collector. The collector
   must allow CORS from `http://localhost:5173` for the browser exporter.
 
-Start the backend:
-
-```bash
-mise install
-cargo run -- serve --config config.toml
-```
-
-In a second terminal, check readiness:
-
-```bash
-curl http://localhost:8080/ready
-```
-
-A `200` response from `/ready` means the backend is ready.
+Start the backend with `mise install`, then
+`cargo run -- serve --config config.toml`. Check readiness with
+`curl http://localhost:8080/ready`. A `200` response means the backend is ready.
 
 ### Configure and start the frontend
 
-Copy the example environment file:
-
-```bash
-cp .env.example .env
-```
-
-Set these values in `.env`:
+Copy `.env.example` to `.env` and set these values:
 
 ```dotenv
 VITE_API_BASE_URL=/api
@@ -164,14 +149,7 @@ VITE_RUST_API_BASE_URL=http://localhost:8080
 `src/integrations/rust-api`. The values above are also the defaults when a
 variable is unset.
 
-Start the frontend:
-
-```bash
-npm install
-npm run dev
-```
-
-Open `http://localhost:5173`.
+Run `npm install`, then `npm run dev`, and open `http://localhost:5173`.
 
 ### Sign in and keep the session
 
@@ -191,20 +169,13 @@ application, or open `http://localhost:8080/auth/login` directly.
 5. `POST /auth/logout` clears the `auth_token` cookie. The adapter also clears the
    in-memory token.
 
-The rust-api adapter sends `credentials: "include"` on every request. The
-backend cookies then cross the two local origins. The adapter does not persist
-the token across page loads.
+The adapter sends `credentials: "include"` on every request. The backend cookies
+cross the two local origins. It does not persist the token across page loads.
 
 ### Run validation
 
-`npm run dev` starts only the dev server. Run the frontend tests, build, and type
-check with the normal scripts:
-
-```bash
-npm run test
-npm run build
-npm run check
-```
+`npm run dev` starts only the dev server. Run `npm run test`, `npm run build`,
+and `npm run check` for the frontend tests, build, and type check.
 
 ## Notable dependencies
 
@@ -214,9 +185,10 @@ npm run check
 - `vite-plugin-pwa`, `workbox-window` — PWA/service worker
 - `comlink`, `vite-plugin-comlink` — worker communication
 - `oxkv` — WASM key-value store for offline persistence
+- `idb-keyval` — IndexedDB key-value store for report artifacts
 - `unstorage` (IndexedDB driver) — storage utilities used by the worker file
   store
-- `effect` — schema validation, streams, and error handling (v3.22+)
+- `effect` — schema validation, streams, and error handling (v4.0.2)
 - `micromustache` — mustache-style interpolation for translations
 - `@tanstack/react-router`, `@tanstack/react-form`, `@tanstack/react-table` —
   routing, forms, and data tables
@@ -250,16 +222,19 @@ src/
 │   ├── context/       # Providers: config, intl, session, translation, worker
 │   └── image/         # Image preview
 ├── hooks/
-│   ├── engines/       # Higher-level hooks: use-infinite-scroll, use-uploader
+│   ├── engines/       # Higher-level hooks: use-infinite-scroll, use-uploader,
+│   │                  # use-report, use-camera, use-geolocation
 │   └── primitives/    # Small composable hooks (debounce, persist state,
 │                      # media query, dark mode, streams)
-├── lib/               # Comlink helpers, generic API, auth, sync, and file contracts,
-│                      # cn, utilities
+├── lib/               # Comlink helpers, generic API, auth, sync, outbox, report,
+│                      # time, pwa, and file contracts, cn, utilities
 ├── integrations/      # Optional backend adapters (rust-api). The core does not import them.
 └── worker/
-    ├── main.ts        # Worker entry. It exposes { db, fs, queue } through Comlink.
-    ├── db/            # Tables, schema, change bus, oxkv, persistence, peer sync
+    ├── main.ts        # Worker entry. It exposes { changes, db, fs, outbox, queue }.
+    ├── db/            # Tables, schema, change bus, change apply, oxkv,
+    │                  # persistence, peer sync
     ├── fs/            # Chunked file storage (multi-part uploads)
+    ├── outbox/        # Durable writes: schema, registry, backoff, runtime
     └── queue/         # Job queue: schema, registry, store, watch bus, scheduler
 ```
 
@@ -269,13 +244,8 @@ The task example in `src/examples/task` shows a form, a list, a schema, a table
 module, and a route. The default app does not import this code. The task route is
 not in the default route tree.
 
-Copy the example into an application:
-
-```bash
-mkdir -p src/features
-cp -R src/examples/task src/features/task
-cp src/features/task/route.tsx src/routes/_dashboard/index.tsx
-```
+Create `src/features`, copy `src/examples/task` to `src/features/task`, then copy
+its `route.tsx` to `src/routes/_dashboard/index.tsx`.
 
 Then complete these steps:
 
@@ -307,14 +277,8 @@ application supplies the table modules at startup.
    Effect Schema.
 2. Export a table map from a registration module. The example map is in
    `src/examples/task/register.ts`.
-3. Add the table map to the `tables` object in
-   `src/worker/db/database/main.ts`:
-
-   ```ts
-   import { taskTables } from "@/examples/task/register.ts";
-
-   export const tables = { ...taskTables };
-   ```
+3. Add the map to the `tables` object in `src/worker/db/database/main.ts`. The
+   task example above shows the import and the spread.
 
 `src/worker/db/index.ts` passes the same object to `createDatabase` and
 `createDbFs`. An empty `tables` object starts without a table and without an
@@ -327,85 +291,67 @@ to the default app.
 This section names files and symbols, not line numbers, so it stays true when the
 code moves.
 
-- The worker owns the database, the file store, and the job queue.
-  `src/worker/main.ts` exposes `{ db, fs, queue }`.
-  `src/components/context/worker.tsx` reaches the worker over a
-  Comlink endpoint. In shared mode it wraps the shared port. In dedicated mode
-  it wraps the Worker itself.
+- The worker owns the database, the file store, the job queue, the durable
+  outbox, and the change applier. `src/worker/main.ts` exposes
+  `{ changes, db, fs, outbox, queue }`. `src/components/context/worker.tsx`
+  reaches the worker over a Comlink endpoint. In shared mode it wraps the shared
+  port. In dedicated mode it wraps the Worker itself.
 - `src/lib/comlink/effect.ts` registers two transfer handlers. `EFFECT_PROXY`
   handles Effects and `EFFECT_STREAM_PROXY` handles Streams.
   `src/lib/comlink/std.ts` registers a handler for plain functions.
 - An Effect is never cloned across the port. `EFFECT_PROXY` keeps the Effect in
   the worker, exposes a function over a `MessageChannel`, and runs it there. It
-  returns a plain envelope, `{ success, value }` or `{ success, error }`.
-  Arguments cross as plain data, so each method decodes them before use, as
-  `createTableApi` does in `src/worker/db/table.ts`. Pass only data that
-  structured clone carries.
-- Errors cross as a value, not as text. The `EFFECT_PROXY` error envelope is
-  `{ success: false, error: { tag, message, details? } }`. `flattenTaggedError`
-  reads the tag from the `_tag` field and writes the old `[tag] message` text in
-  `message`. The client receives a `WorkerError` with the `tag` field and the
-  same two-line message, so the shape stays:
+  returns `{ success, value }` or `{ success, error }`. Arguments cross as plain
+  data, so each method decodes them before use, as `createTableApi` does in
+  `src/worker/db/table.ts`.
+- Errors cross as a value. The error envelope is
+  `{ success: false, error: { tag, message, details? } }`. The client receives a
+  `WorkerError` with the `tag` field and a two-line message:
 
   ```
   [Worker Error]
   [app/worker/db] <message>
   ```
 
-  A plain error carries `tag: null`. A nested error keeps both tags in
+  A plain error has `tag: null`. A nested error keeps both tags in
   `details.tags`, such as `["app/worker/db", "app/worker/fs"]`, and the message
   keeps the chain as `[app/worker/db -> app/worker/fs] <message>`.
-  - The worker declares three tags today: `app/worker/db` on `DbError` in
-    `src/worker/db/error.ts`, `app/worker/fs` on `FsError` in
-    `src/worker/fs/error.ts`, and `app/worker/queue` on `QueueError` in
-    `src/worker/queue/error.ts`. Each error carries a `message` getter, so the
-    tag and the message stay beside each other.
-    Only the database tag reaches the UI today, because no UI code calls the
-    file store or the queue yet.
-  - The client reads the tag from the `error.tag` field. It never parses the tag
-    from the message text. A parse is a guess that breaks silently when the
-    message format changes.
-  - The client accepts the old string error value for one release. It maps that
-    value to a null tag.
-  - The stream handler keeps the same tag. Comlink copies only the `message`,
-    `name`, and `stack` fields from a thrown Error. The worker keeps the payload
-    on a `failure` method and sends the payload as a value. The reader then
-    receives a `WorkerError` with the tag.
+  - The worker declares four tags: `app/worker/db` on `DbError`,
+    `app/worker/fs` on `FsError`, `app/worker/queue` on `QueueError`, and
+    `app/worker/outbox` on `OutboxError`. Each error carries a `message` getter.
+  - The client reads the tag from `error.tag`. It never parses the tag from the
+    message text. It accepts the old string error value for one release and maps
+    that value to a null tag.
+  - The stream handler keeps the same tag. Comlink copies only `message`, `name`,
+    and `stack` from a thrown Error. The worker keeps the payload on a `failure`
+    method and sends the payload as a value.
 
-- The tracer is a `Context.Reference`, so its default resolves outside any
-  Context. `withDevTools` provides the devtools layer around the whole
-  transferred Effect run. The layer merges the tracer into the Context of that
-  run and of no other. Nothing changes the default tracer for the process.
-  Effects started on other paths, such as the stream bridge or the plain
-  function handler, keep the default tracer.
-- `effectProxyContext` in `src/lib/comlink/effect.ts` is the shared Context that
-  every transferred Effect runs under. It is module-private and empty today. Add
-  a worker-side service to it and every transferred Effect can read it without
-  changing the run path again.
+- The tracer is a `Context.Reference`. `withDevTools` provides the devtools
+  layer around one transferred Effect run. Other paths, such as the stream
+  bridge, keep the default tracer. `effectProxyContext` in
+  `src/lib/comlink/effect.ts` is the shared Context that every transferred
+  Effect runs under. Add a worker-side service to it and every transferred
+  Effect can read it.
 - The default UI makes no database calls. The optional task example in
   `src/examples/task/route.tsx` shows five calls: `watch`, `set` twice, `get`,
   and `delete`. The file store and the job queue are built, tested, and
   bridged. No UI code calls either one.
 - `register` in `src/worker/queue/index.ts` is worker-side only and is not on
-  the exposed `queue` object. A handler is a closure, so only a module the
-  worker imports can register one. A `kind` is usable only in a build where
-  some module called `register` for it, and `enqueue` for an unregistered kind
-  fails immediately instead of queueing into a guaranteed failure.
-- Cancelling the reader on the UI side stops the reader and releases the worker's
-  stream. The `EFFECT_STREAM_PROXY` finalizer runs on every terminal path, which
-  are the end of the data, a failure, and a cancel. It calls the remote `return`
-  only on the cancel path, and that call closes the worker's stream fiber. The
-  finalizer closes the port on all three paths. Cancelling a `queue.watch`
-  reader releases the worker's subscription. It stops no job.
-- A transferred Effect has no cancel path. Nothing interrupts the worker run when
-  the caller stops awaiting it. The worker runs it to completion. A queue job is
-  different: it runs on a fiber the queue runtime owns, never on the caller's
-  fiber, so dropping the `enqueue` call stops nothing. `pause`, `resume`, and
-  `cancel` are three separate short worker calls that mutate the queue's own
-  state.
+  the exposed `queue` object. A handler is a closure, so only a module that the
+  worker imports can register one. `enqueue` for an unregistered kind fails at
+  once.
+- Cancelling the reader on the UI side stops the reader and releases the
+  worker's stream. The `EFFECT_STREAM_PROXY` finalizer runs on the end of the
+  data, a failure, and a cancel. It calls the remote `return` only on the cancel
+  path. Cancelling a `queue.watch` reader releases the worker's subscription. It
+  stops no job.
+- A transferred Effect has no cancel path. The worker runs it to completion. A
+  queue job runs on a fiber that the queue runtime owns, so dropping the
+  `enqueue` call stops nothing. `pause`, `resume`, and `cancel` are three
+  separate worker calls that mutate the queue's own state.
 - The queue runtime (`src/worker/queue/runtime.ts`) is built once under an
-  explicit scope that lives for the life of the worker. It is not a `Layer`:
-  `Layer.effect` rebuilds per call, so the queue would reset on every call.
+  explicit scope that lives for the life of the worker. It is not a `Layer`,
+  because `Layer.effect` rebuilds per call and would reset the queue.
 
 ## Service worker & update UX
 
@@ -416,7 +362,7 @@ code moves.
 
 ## Worker: database and offline persistence
 
-- `src/worker/main.ts` exposes `{ db, fs, queue }` over Comlink. It detects whether it runs as a
+- `src/worker/main.ts` exposes `{ changes, db, fs, outbox, queue }` over Comlink. It detects whether it runs as a
   SharedWorker or a Dedicated worker.
   - As a SharedWorker, every tab connects to one shared instance through its own
     MessagePort.
@@ -443,11 +389,50 @@ code moves.
   - Retry is not in v1. A handler that wants it calls `Effect.retry` inside
     itself, where it knows whether the failure was transient.
 
+## Durable outbox
+
+- The worker outbox is in `src/worker/outbox`. The shared types are in
+  `src/lib/outbox`. `src/worker/main.ts` exposes it as `outbox`.
+- The API has `enqueue`, `get`, `list`, `status`, `watch`, `flush`, and `resume`.
+  `register` is worker-side only. `enqueue` fails for an unknown kind.
+- An operation has a UUIDv7 `id`. The id is also the idempotency key, so a second
+  send is safe. `createdAt` is the server-corrected time when given.
+- The state type is `pending`, `sending`, `failed`, `conflict`, or `done`.
+  `sending` is durable before the call. A restart returns it to `pending`.
+- A `2xx` response removes the row. A `401` pauses the flusher and sets
+  `signInRequired`. A `409` or a conflict code moves the row to `conflict`. A
+  permanent `4xx` code moves it to `failed`. Every other response retries.
+- Retry uses exponential backoff. The base is 1000 ms and the cap is 300000 ms.
+  The jitter is 50 to 100 percent. The head row blocks the queue until it ends.
+- `status` returns `pending`, `sending`, `failed`, and `conflict` counts. It also
+  returns `paused` and `signInRequired`. `useOutbox` reads the counts.
+- `useAutoFlush` flushes on the `online` event, on a visible tab, and after a
+  login. It also flushes every 60 seconds while a write is pending and the tab
+  is visible and online. `useConnectivity` supplies both states.
+
 ## Persistent state management
 
 - The project includes a `usePersistState` hook. The hook stores state in `localStorage`.
 - The app can debounce state updates with `useDebouncedCallback`. The default delay is
   500ms. The hook writes the state to `localStorage` after the delay.
+
+## Device hooks
+
+- `useCamera` in `src/hooks/engines/use-camera.ts` starts the camera only when
+  the caller calls `start`. It requests the front camera with no audio.
+- The camera status is `idle`, `starting`, `ready`, or `error`. The error is
+  `denied`, `not_found`, `busy`, `unavailable`, or `capture_failed`.
+- The hook stops every track on unmount and on `stop`. It stops a stream that
+  arrives after unmount, and a stream with no video track. By default, `capture`
+  returns a JPEG blob.
+- `useGeolocation` in `src/hooks/engines/use-geolocation.ts` requests one
+  position. It asks on mount by default, with high accuracy, a 15-second limit,
+  and no cached position.
+- The status is `idle`, `locating`, `success`, or `error`. The error is `denied`,
+  `unavailable`, `timeout`, or `unsupported`. The hook keeps the last
+  coordinates and accuracy. It ignores a late result after unmount.
+- `src/lib/image.ts` encodes JPEG. The long edge is at most 720 px. It lowers the
+  quality from 0.7 to try to fit 300 KiB. The quality does not go below 0.4.
 
 ## Schema validation with Effect
 
@@ -481,18 +466,29 @@ code moves.
 - `client.request<T>(path, options)` sends a method, a JSON body, headers, and an abort signal.
   The function returns the parsed JSON value. The function returns `undefined` for an empty
   response.
-- A failed response returns an `ApiError`. The error has a `status` and a `message`. The client
-  reads the `{ "error": "..." }` envelope. The status is `null` when no response arrives.
+- `createApiClient` accepts a `clock` sampler. The client samples every response with it.
+- A failed response returns an `ApiError`. The error has `status`, `message`, `code`, and
+  `details`. The client reads the `{ "error": "...", "code": "...", "details": ... }` envelope.
+  `code` is `null` and `details` is `undefined` when the body omits them. The status is `null`
+  when no response arrives.
 
 ```ts
 import { createApiClient } from "@/lib/api";
 
-const api = createApiClient({
-  tokenProvider: { getToken: () => sessionToken },
-});
-
-const state = await api.request<{ ready: boolean }>("/status");
+const api = createApiClient({ tokenProvider: { getToken: () => token } });
 ```
+
+## Server clock
+
+- `createServerClock` in `src/lib/time/clock.ts` adds an offset to local time.
+  `serverTimeFromResponse` reads `X-Server-Time-Ms` first, then `Date` (one-second
+  resolution). `offsetFromSample` removes half of the round trip.
+- The clock stores the offset and its measurement time under `app.server-clock.v1` in
+  `localStorage`. The memory storage is the fallback. `isStale` reports true after one hour.
+- `organizationDay` returns the organization-local date as `YYYY-MM-DD`. `shiftWindow`
+  returns `{ startMs, endMs, day }`. Both use `Intl` and the given time zone, not the device
+  time zone. A shift crosses midnight when `overnight` is true or the end is not later than
+  the start. The window belongs to the start date.
 
 ## Session provider
 
@@ -500,12 +496,9 @@ const state = await api.request<{ ready: boolean }>("/status");
   and its helpers.
 - The `Session` type has a `user` identity and an `expiresAt` time. The time uses Unix epoch
   milliseconds. An expired session counts as missing.
-- The `SessionProvider` interface has four methods:
-  - `getSession` returns the current session. The method returns null when no session
-    exists.
-  - `login` starts the login flow. The flow can open a redirect.
-  - `logout` ends the session.
-  - `refresh` renews the session. The method returns the new session.
+- The `SessionProvider` interface has four methods: `getSession`, `login`, `logout`, and
+  `refresh`. `getSession` returns null when no session exists. `refresh` returns the new
+  session.
 - The core has no identity provider detail. An adapter implements the interface for one
   backend. The core names no OIDC provider and no backend path.
 - The React layer is in `src/components/context/session.tsx`. The module exports
@@ -526,10 +519,10 @@ import {
 import type { SessionProvider as SessionContract } from "@/lib/auth";
 
 const provider: SessionContract = {
-  getSession: async () => readSession(),
-  login: async (options) => startLogin(options?.returnTo),
-  logout: async () => endSession(),
-  refresh: async () => renewSession(),
+  getSession: async () => null,
+  login: async () => {},
+  logout: async () => {},
+  refresh: async () => null,
 };
 
 <SessionProvider provider={provider}>
@@ -563,6 +556,22 @@ const provider: SessionContract = {
   `SessionProvider` removes the value and opens the path after a successful login.
 - The cache stores metadata only. Do not store the token in local storage.
 
+### Logout reset
+
+- `resetSession` in `src/lib/auth/reset.ts` runs the logout reset in a fixed
+  order: outbox check, tables, report cache, runtime caches, session cache,
+  logout. The default tables are `sync_state` and `quarantine`. The outbox is not
+  in the list, so an unsent write stays.
+- A `pending` or `sending` outbox row blocks the reset. The result is
+  `outbox_pending` and no clear step runs.
+- A failed step does not stop the later steps. The reset reports the first
+  failure after every step runs.
+- `clearRuntimeCaches` removes every cache name that does not start with
+  `workbox-precache`. The precache that holds the app shell stays.
+- `useSafeLogout` calls `resetSession` and exposes `running` and `error`.
+  `useSessionReset` runs the same reset when the user id changes. It does not
+  clear the session cache and does not log out.
+
 ## Replica reader
 
 - The generic reader is in `src/lib/sync`. The reader has no domain type.
@@ -584,18 +593,25 @@ const provider: SessionContract = {
 import { createReplicaReader } from "@/lib/sync";
 
 const reader = createReplicaReader(transport);
-
 const status = await reader.status();
-const next = await reader.advance();
-const objects = await reader.manifest();
-const result = await reader.readObject("primary", {
-  etag: localEtag,
-});
-
-if (result.kind === "object") {
-  await store.write(result.object.key, result.object.data);
-}
+const result = await reader.readObject("primary", { etag: localEtag });
 ```
+
+### Change feed
+
+- `src/lib/sync/changes.ts` defines `ChangeFeed.pull({ scope, since, limit? })`.
+- A page has `rows`, `next`, `hasMore`, `oldestSeq`, and `serverTimeMs`. A row
+  has `table`, `key`, `seq`, `deleted`, and `value`. The `next` value is the
+  exclusive cursor for the next call.
+- The transport throws `ChangeFeedError` with `reason: "resync_required"` when
+  the server returns status 410.
+- The worker exposes `changes.applyPage` and `changes.state`. `applyPage` writes
+  the page rows and the cursor in one transaction.
+- A `since` value below `oldestSeq` returns `resync_required`. A `page.next` below
+  `since`, or a full page with no advance, returns `rejected`.
+- An unknown table or an invalid row goes to the `quarantine` table. The result
+  reports `applied`, `deleted`, and `quarantined` counts.
+- `state(scope)` returns the stored `sync_state` cursor or null.
 
 ## File transport
 
@@ -606,21 +622,17 @@ if (result.kind === "object") {
 - `FileTransport<TMetadata>` accepts one application metadata type. The default type is
   `FileMetadata`, which has a `name` and a `mimetype`.
 - The shared schema is in `src/lib/fs/schema.ts`. The worker uses the same schema.
-- The schema has these limits.
-  - The part size must be a multiple of 1 KiB.
-  - The part size must be at most 512 KiB.
-  - A single part must not be larger than 10 MiB.
-  - The part count must match the file size and the part size.
+- For one part, the part size equals the file size, which is at most 10 MiB.
+  For more parts, the part size is a multiple of 1 KiB and at most 512 KiB. The
+  part count must match the file size and the part size.
 - The schema error messages start with `The upload failed.` A user can read the cause.
 
 ```ts
 import type { FileTransport } from "@/lib/fs";
 
 const transport: FileTransport = createTransport();
-
 const partSize = 512 * 1024;
 const totalParts = Math.max(1, Math.ceil(blob.size / partSize));
-
 const upload = await transport.init({
   file_size: blob.size,
   part_size: totalParts === 1 ? blob.size : partSize,
@@ -628,14 +640,13 @@ const upload = await transport.init({
 });
 
 for (let index = 0; index < upload.totalParts; index += 1) {
-  const start = index * partSize;
   await transport.uploadPart(
     {
       file_id: upload.id,
       file_total_part: upload.totalParts,
       file_part: index,
     },
-    blob.slice(start, start + partSize),
+    blob.slice(index * partSize, (index + 1) * partSize),
   );
 }
 
@@ -646,7 +657,23 @@ const file = await transport.complete(upload.id, {
 ```
 
 For a single-part upload, set `part_size` to `file_size` and set `file_total_parts` to 1.
-A backend adapter maps these calls to its own HTTP routes.
+
+## Report client
+
+- The generic client is in `src/lib/report`. `createReportClient` takes a
+  `transport`, a file transport, and an optional cache.
+- `create(input)` starts one job and returns `{ id }`. `get(id)` returns the job
+  state. `run(input)` reads the cache. On a miss it starts the job, polls it,
+  and downloads the artifact.
+- The poll waits `[1000, 2000, 4000, 8000, 15000]` ms. It stops after 10 minutes
+  and returns a failed job with code `timeout`.
+- `createReportCache` uses `idb-keyval`. It stores one artifact by report id and
+  month, plus a month index by site. The cache keeps the blob and the file
+  record.
+- `useReport(client)` returns `state`, `job`, `blob`, `start`, and `abort`. It
+  aborts the run when the screen closes.
+- `run` accepts an `AbortSignal` and an `onJob` callback. An empty month fails
+  before the request.
 
 ## rust-api adapter
 
@@ -695,10 +722,9 @@ A backend adapter maps these calls to its own HTTP routes.
 import { createRustApiClient } from "@/integrations/rust-api/client.ts";
 import { createRustApiSessionProvider } from "@/integrations/rust-api/auth.ts";
 
-const client = createRustApiClient({
-  baseUrl: import.meta.env.VITE_RUST_API_BASE_URL,
+const provider = createRustApiSessionProvider({
+  client: createRustApiClient(),
 });
-const provider = createRustApiSessionProvider({ client });
 ```
 
 ### Replica reader
@@ -722,12 +748,8 @@ const provider = createRustApiSessionProvider({ client });
 import { createRustApiClient } from "@/integrations/rust-api/client.ts";
 import { createRustApiReplicaReader } from "@/integrations/rust-api/sync.ts";
 
-const client = createRustApiClient();
-const reader = createRustApiReplicaReader({ client });
-
+const reader = createRustApiReplicaReader({ client: createRustApiClient() });
 const status = await reader.status();
-if (status.pending) await reader.advance();
-const objects = await reader.manifest();
 ```
 
 ### File transport
@@ -751,44 +773,37 @@ import { createRustApiFileTransport } from "@/integrations/rust-api/fs.ts";
 
 const client = createRustApiClient();
 const transport = createRustApiFileTransport({ client });
-
-const download = await transport.download("file-id", { start: 0, end: 1023 });
 ```
 
 ## Dark mode
 
-- The hook `useSystemDarkMode` detects the theme. The hook uses the `prefers-color-scheme`
-  media query. The app supports dark mode.
-- The config context stores the theme and the locale preferences. The settings page lets the
-  user edit these preferences.
+- The hook `useSystemDarkMode` detects the theme with the `prefers-color-scheme` media query.
+  The config context stores the theme and locale preferences. The settings page lets the user
+  edit them.
 
 ## Testing
 
-- Vitest 5 uses the setup file `src/vitest.setup.ts`. The storage tests use fake-indexeddb.
-- Tests live next to their modules. For example, `src/worker/db/*.test.ts` and
-  `src/examples/task/*.test.ts`.
+- Vitest 5 uses `src/vitest.setup.ts`. The storage tests use fake-indexeddb. Tests live
+  next to their modules, such as `src/worker/db/*.test.ts`.
 - Run tests with `npm run test`.
 
 ## Component previews (Ladle)
 
-- Each component has a `stories.tsx` file. Ladle serves the stories in
-  `src/components` and `src/examples`. The configuration is in `.ladle/`.
-- Run `npm run ladle` to open the previews.
+- Each component has a `stories.tsx` file. Ladle serves stories in `src/components` and
+  `src/examples`. The configuration is in `.ladle/`. Run `npm run ladle` to open the
+  previews.
 
 ## Bundle Analysis
 
-- The project includes rollup-plugin-visualizer. The plugin analyzes the bundle size.
-- Run `npm run build`. Then check the generated report. Use the report to reduce the bundle
-  size.
-- The build groups vendor dependencies into separate chunks. The groups are react, router,
-  tanstack-ui, visuals, effect, database, worker, pwa, otel, and util. See `VENDOR_GROUPS` in
-  `vite.config.ts`.
+- The project includes rollup-plugin-visualizer. Run `npm run build`, then check the
+  generated report to reduce the bundle size.
+- The build groups vendor dependencies into chunks: react, router, tanstack-ui, visuals,
+  effect, database, worker, pwa, otel, and util. See `VENDOR_GROUPS` in `vite.config.ts`.
 
 ## Observability (OpenTelemetry)
 
 The app uses browser OpenTelemetry. The SDK records traces, metrics, and logs. It exports the
-data through OTLP/HTTP to any collector. The collectors are Jaeger, Grafana Tempo, Grafana
-Alloy, Aspire Dashboard, Honeycomb, and Datadog OTLP intake.
+data through OTLP/HTTP to any collector.
 
 - The SDK is in the lazy chunk `vendor-otel`. `src/main.tsx` imports the chunk after the
   first paint. The SDK does not block the first page load.
@@ -816,24 +831,15 @@ Alloy, Aspire Dashboard, Honeycomb, and Datadog OTLP intake.
   `withSpan(name, fn)`. They are no-ops until the SDK initializes. The call sites do not need
   a state check. Never import `src/telemetry/index.ts` statically. A static import adds the
   SDK to the eager graph.
-- Your collector must allow CORS from the app origin. This example configures the OTLP HTTP
-  receiver of Grafana Alloy:
-
-  ```alloy
-  otlp "http" {
-    default_grpc_endpoint = "localhost:4317"
-    default_http_endpoint = "localhost:4318"
-    cors_allowed_origins  = ["https://your-app-origin"]
-  }
-  ```
+- Your collector must allow CORS from the app origin.
 
 ## Development tips
 
 - Routes are generated into `routeTree.gen.ts`. Add route modules under `src/routes`. The
   TanStack Router vite plugin regenerates the tree automatically. The plugin also splits the
   code automatically.
-- Use the `WorkerProvider` context to access the worker API (`db`, `fs`). Put the heavy logic
-  in the worker. The UI stays responsive.
+- Use the `WorkerProvider` context to access the worker API (`changes`, `db`, `fs`,
+  `outbox`, `queue`). Put the heavy logic in the worker. The UI stays responsive.
 - Build new features from the primitive hooks in `src/hooks/primitives`. Compose the hooks
   into engine hooks in `src/hooks/engines`.
 - Use the path alias `@/` for shorter imports.
@@ -842,13 +848,11 @@ Alloy, Aspire Dashboard, Honeycomb, and Datadog OTLP intake.
 
 ## Deployment recommendations
 
-- Run `npm run build` to build the static assets. Deploy the assets to a static host that
-  supports HTTPS. The hosts are Netlify, Vercel, GitHub Pages with HTTPS, and S3 with
-  CloudFront.
-- Configure the service worker scope and the asset serving headers correctly. Then the
-  precaching works as expected.
-- The project runs in a browser. The type definitions cover Node.js and Bun. The
-  development tools use these types.
+- Run `npm run build` and deploy the static assets to a static host with HTTPS. The hosts
+  are Netlify, Vercel, GitHub Pages, and S3 with CloudFront.
+- Configure the service worker scope and the asset serving headers. Then the precaching
+  works as expected.
+- The project runs in a browser. The type definitions cover Node.js and Bun.
 
 ## Contributing
 
@@ -856,13 +860,9 @@ Contributions are welcome. Use this workflow:
 
 - Fork the project and create a feature branch.
 - Keep the changes small and focused. Update or add the tests where it matters.
-- Run these commands before you open a PR:
-  - npm install
-  - npm run check
-  - npm run fmt:check
-  - npm run lint
-  - npm run test
-- Add a PR description. The description must explain the change and the benefit.
+- Run `npm install`, `npm run check`, `npm run fmt:check`, `npm run lint`, and
+  `npm run test` before you open a PR.
+- Add a PR description that explains the change and the benefit.
 
 ## License
 
