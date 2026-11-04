@@ -80,13 +80,16 @@ export interface RustApiClient {
 /**
  * Returns the rust-api base URL.
  * The function reads `VITE_RUST_API_BASE_URL` when the caller gives no URL.
+ * The function uses the `env` values when the caller gives them.
  * The function returns the local default when the value is empty.
  */
-export function resolveRustApiBaseUrl(baseUrl?: string): string {
-  const env = (
+export function resolveRustApiBaseUrl(
+  baseUrl?: string,
+  env: Record<string, string | undefined> = (
     import.meta as unknown as { env?: Record<string, string | undefined> }
-  ).env;
-  const candidate = baseUrl ?? env?.VITE_RUST_API_BASE_URL ?? "";
+  ).env ?? {},
+): string {
+  const candidate = baseUrl ?? env.VITE_RUST_API_BASE_URL ?? "";
   const value = candidate.trim();
 
   return (value === "" ? DEFAULT_RUST_API_BASE_URL : value).replace(/\/+$/, "");

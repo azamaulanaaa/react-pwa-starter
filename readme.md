@@ -141,13 +141,15 @@ Copy `.env.example` to `.env` and set these values:
 
 ```dotenv
 VITE_API_BASE_URL=/api
+VITE_RUST_API_ENABLED=true
 VITE_RUST_API_BASE_URL=http://localhost:8080
 ```
 
 `VITE_API_BASE_URL` sets the base URL for the generic client in `src/lib/api`.
+`VITE_RUST_API_ENABLED` mounts the optional rust-api session provider. The default
+is `false`, so a normal development run sends no request to the rust-api.
 `VITE_RUST_API_BASE_URL` sets the base URL for the optional adapter in
-`src/integrations/rust-api`. The values above are also the defaults when a
-variable is unset.
+`src/integrations/rust-api`. The default is `http://localhost:8080`.
 
 Run `npm install`, then `npm run dev`, and open `http://localhost:5173`.
 
@@ -708,6 +710,11 @@ For a single-part upload, set `part_size` to `file_size` and set `file_total_par
 
 - The adapter is optional. The code is in `src/integrations/rust-api`. The core does not
   import the adapter.
+- The adapter is off by default. `VITE_RUST_API_ENABLED` turns it on. The switch accepts
+  `1`, `true`, `yes`, or `on`. `src/app.tsx` mounts the session provider only when the
+  switch is on. A normal development run sends no request to the rust-api.
+- `createRustApiBackend` is the composition root. The function creates one client and one
+  token store. The `session`, `replica`, and `files` adapters use the shared client.
 - The adapter reads the base URL from `VITE_RUST_API_BASE_URL`. The default is
   `http://localhost:8080`. The client strips a trailing slash.
 - The client sends `credentials: "include"` on every call. The rust-api `auth_token` cookie
@@ -726,6 +733,37 @@ For a single-part upload, set `part_size` to `file_size` and set `file_total_par
   npx openapi-typescript /tmp/rust-api-openapi.json \
     -o src/integrations/rust-api/generated/openapi.d.ts
   ```
+
+### Backend composition root
+
+```ts
+import { createRustApiBackend } from "@/integrations/rust-api/backend.ts";
+
+const backend = createRustApiBackend();
+
+const session = await backend.session.getSession();
+const status = await backend.replica.status();
+const file = await backend.files.metadata("file-id");
+```
+
+The boundary gives the same backend object to route components. The hook returns null
+when the switch is off.
+
+```tsx
+import { useRustApiBackend } from "@/components/context/rust-api.tsx";
+
+function ReplicaStatus() {
+  const backend = useRustApiBackend();
+
+  if (backend === null) return <span>Rust API is off</span>;
+
+  return <span>{backend.client.baseUrl}</span>;
+}
+```
+
+The factory accepts `env`, `baseUrl`, `fetch`, `tokens`, and `session` options.
+A test can give a fake environment and a fake fetch.
+`createRustApiBackendIfEnabled` returns null when `VITE_RUST_API_ENABLED` is off.
 
 ### Session provider
 
@@ -756,12 +794,10 @@ For a single-part upload, set `part_size` to `file_size` and set `file_total_par
   next mount.
 
 ```ts
-import { createRustApiClient } from "@/integrations/rust-api/client.ts";
-import { createRustApiSessionProvider } from "@/integrations/rust-api/auth.ts";
+import { createRustApiBackend } from "@/integrations/rust-api/backend.ts";
 
-const provider = createRustApiSessionProvider({
-  client: createRustApiClient(),
-});
+const backend = createRustApiBackend();
+const provider = backend.session;
 ```
 
 ### Replica reader
@@ -794,11 +830,10 @@ const provider = createRustApiSessionProvider({
 - The adapter keeps the manifest rules. The core reader stays generic.
 
 ```ts
-import { createRustApiClient } from "@/integrations/rust-api/client.ts";
-import { createRustApiReplicaReader } from "@/integrations/rust-api/sync.ts";
+import { createRustApiBackend } from "@/integrations/rust-api/backend.ts";
 
-const reader = createRustApiReplicaReader({ client: createRustApiClient() });
-const status = await reader.status();
+const backend = createRustApiBackend();
+const status = await backend.replica.status();
 ```
 
 ### File transport
@@ -821,11 +856,10 @@ const status = await reader.status();
 - The transport does not attach a file to a domain row. That rule belongs to the application.
 
 ```ts
-import { createRustApiClient } from "@/integrations/rust-api/client.ts";
-import { createRustApiFileTransport } from "@/integrations/rust-api/fs.ts";
+import { createRustApiBackend } from "@/integrations/rust-api/backend.ts";
 
-const client = createRustApiClient();
-const transport = createRustApiFileTransport({ client });
+const backend = createRustApiBackend();
+const transport = backend.files;
 ```
 
 ## Dark mode

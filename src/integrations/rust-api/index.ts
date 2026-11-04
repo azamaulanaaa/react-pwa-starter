@@ -11,6 +11,17 @@ export type {
   RustApiTokenStore,
 } from "@/integrations/rust-api/client.ts";
 
+export {
+  createRustApiBackend,
+  createRustApiBackendIfEnabled,
+  isRustApiEnabled,
+} from "@/integrations/rust-api/backend.ts";
+export type {
+  RustApiBackend,
+  RustApiBackendOptions,
+  RustApiEnv,
+} from "@/integrations/rust-api/backend.ts";
+
 export { createRustApiSessionProvider } from "@/integrations/rust-api/auth.ts";
 export type { RustApiSessionOptions } from "@/integrations/rust-api/auth.ts";
 
