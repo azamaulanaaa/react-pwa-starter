@@ -6,6 +6,9 @@ export const KIB = 1024;
 /** Defines the largest part size for a multipart upload. */
 export const MAX_UPLOAD_PART_SIZE = 512 * KIB;
 
+/** Defines the largest part count for a multipart upload. */
+export const MAX_MULTIPART_PARTS = 10_000;
+
 /** Defines the largest file size for a single-part upload. */
 export const MAX_SINGLE_PART_SIZE = 10 * 1024 * KIB;
 
@@ -63,6 +66,10 @@ export const UploadInitSchema = Schema.Struct({
 
       if (!isMultipleOf1KiB || !withinBounds) {
         return "The upload failed. The part size must be a multiple of 1 KiB and at most 512 KiB.";
+      }
+
+      if (data.file_total_parts > MAX_MULTIPART_PARTS) {
+        return `The upload failed. The part count must not be larger than ${MAX_MULTIPART_PARTS}.`;
       }
 
       const expectedParts = Math.ceil(data.file_size / data.part_size);

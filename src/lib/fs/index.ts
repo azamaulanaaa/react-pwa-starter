@@ -2,6 +2,7 @@ export {
   FileIdSchema,
   FileMetadataSchema,
   KIB,
+  MAX_MULTIPART_PARTS,
   MAX_SINGLE_PART_SIZE,
   MAX_UPLOAD_PART_SIZE,
   MetadataUploadPartSchema,

@@ -207,6 +207,65 @@ describe("fs comlink bridge", () => {
     expect(uploaded).toEqual(bytes);
   });
 
+  it("slices the last part to the remaining bytes", async () => {
+    const partSize = 1024;
+    const size = 2500;
+    const bytes = new Uint8Array(size).map((_, i) => (i * 31) % 256);
+    const source = new Blob([bytes], { type: "application/octet-stream" });
+    const ranges: Array<[number, number]> = [];
+
+    const blob = new Proxy(source, {
+      get: (target, property, receiver) =>
+        property === "slice"
+          ? (start: number, end: number) => {
+              ranges.push([start, end]);
+              return target.slice(start, end);
+            }
+          : Reflect.get(target, property, receiver),
+    }) as Blob;
+
+    const events: fs.UploadProgressEvent[] = [];
+    for await (const event of Stream.toAsyncIterable(
+      fs.Upload("short-last.bin", blob, partSize),
+    )) {
+      events.push(event);
+    }
+
+    ranges.sort((left, right) => left[0] - right[0]);
+    expect(ranges).toEqual([
+      [0, 1024],
+      [1024, 2048],
+      [2048, 2500],
+    ]);
+    expect(events.at(-1)?._tag).toBe("Complete");
+  });
+
+  it("rejects a padded last part and accepts the shorter last part", async () => {
+    const remote = createTestFs();
+    const partSize = 1024;
+    const size = 2500;
+    const totalParts = 3;
+    const id: string = await remote.InitUpload({
+      file_size: size,
+      part_size: partSize,
+      file_total_parts: totalParts,
+    });
+
+    await expect(
+      remote.UploadPart(
+        { file_id: id, file_total_part: totalParts, file_part: 2 },
+        new Blob([new Uint8Array(partSize)]),
+      ),
+    ).rejects.toThrow(/expected 452 bytes/i);
+
+    await expect(
+      remote.UploadPart(
+        { file_id: id, file_total_part: totalParts, file_part: 2 },
+        new Blob([new Uint8Array(452)]),
+      ),
+    ).resolves.toBe(true);
+  });
+
   it("fails completion and keeps the session when a part is missing", async () => {
     const remote = createTestFs();
     const store = fsStorage;

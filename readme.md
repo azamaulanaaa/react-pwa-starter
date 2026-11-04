@@ -650,8 +650,10 @@ const result = await reader.readObject("primary", { etag: localEtag });
   `FileMetadata`, which has a `name` and a `mimetype`.
 - The shared schema is in `src/lib/fs/schema.ts`. The worker uses the same schema.
 - For one part, the part size equals the file size, which is at most 10 MiB.
-  For more parts, the part size is a multiple of 1 KiB and at most 512 KiB. The
-  part count must match the file size and the part size.
+  For more parts, the part size is a multiple of 1 KiB and at most 512 KiB.
+  The part count is `ceil(file_size / part_size)` and must not be larger than
+  10,000. Every part except the last part has `part_size` bytes. The last part
+  has the remaining bytes. Do not pad the last part.
 - The schema error messages start with `The upload failed.` A user can read the cause.
 
 ```ts
@@ -792,6 +794,10 @@ const status = await reader.status();
 - `createRustApiFileTransport` implements the core `FileTransport` contract.
 - `init` calls `POST /fs/uploads`. The adapter validates the declaration with the shared
   schema before the request.
+- The server accepts a shorter last part. Every part except the last part has `part_size`
+  bytes. The last part has `file_size - (file_total_parts - 1) * part_size` bytes. The
+  server rejects a padded last part with status `400`.
+- The server rejects a multipart part count above 10,000 and a part size above 512 KiB.
 - `uploadPart` calls `PUT /fs/uploads/{id}/parts/{index}` and sends the part as raw bytes.
 - `complete` calls `POST /fs/uploads/{id}/complete` and then reads `/fs/files/{id}/meta`.
 - `cancel` calls `DELETE /fs/uploads/{id}`.
