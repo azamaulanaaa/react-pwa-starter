@@ -403,7 +403,7 @@ describe("rust-api session provider", () => {
     ]);
   });
 
-  it("stores the return path before the login redirect", async () => {
+  it("adds a safe return path to the login URL for a same-origin API", async () => {
     const returnToStorage = createMemorySessionStorage();
     const navigate = vi.fn();
     const client = createRustApiClient({
@@ -414,6 +414,46 @@ describe("rust-api session provider", () => {
       client,
       navigate,
       returnToStorage,
+      spaOrigin: "https://api.test",
+    });
+
+    await provider.login({ returnTo: "/team?tab=1#members" });
+
+    expect(navigate).toHaveBeenCalledWith(
+      "https://api.test/auth/login?return_to=%2Fteam%3Ftab%3D1%23members",
+    );
+    expect(returnToStorage.getItem(RETURN_TO_KEY)).toBeNull();
+  });
+
+  it("adds return_to for a relative API URL", async () => {
+    const navigate = vi.fn();
+    const client = createRustApiClient({
+      baseUrl: "/api",
+      fetch: vi.fn(),
+    });
+    const provider = createRustApiSessionProvider({
+      client,
+      navigate,
+      spaOrigin: "https://app.test",
+    });
+
+    await provider.login({ returnTo: "/team" });
+
+    expect(navigate).toHaveBeenCalledWith("/api/auth/login?return_to=%2Fteam");
+  });
+
+  it("does not send return_to when the API origin differs from the SPA", async () => {
+    const returnToStorage = createMemorySessionStorage();
+    const navigate = vi.fn();
+    const client = createRustApiClient({
+      baseUrl: "https://api.test",
+      fetch: vi.fn(),
+    });
+    const provider = createRustApiSessionProvider({
+      client,
+      navigate,
+      returnToStorage,
+      spaOrigin: "https://app.test",
     });
 
     await provider.login({ returnTo: "/team" });
@@ -422,20 +462,49 @@ describe("rust-api session provider", () => {
     expect(navigate).toHaveBeenCalledWith("https://api.test/auth/login");
   });
 
-  it("does not store an unsafe return path", async () => {
+  it.each([
+    "https://evil.test/team",
+    "//evil.test/team",
+    "/\\evil.test/team",
+    "/%5Cevil.test/team",
+  ])("does not send an unsafe return path: %s", async (returnTo) => {
     const returnToStorage = createMemorySessionStorage();
+    const navigate = vi.fn();
     const client = createRustApiClient({
       baseUrl: "https://api.test",
       fetch: vi.fn(),
     });
     const provider = createRustApiSessionProvider({
       client,
-      navigate: vi.fn(),
+      navigate,
       returnToStorage,
+      spaOrigin: "https://api.test",
     });
 
-    await provider.login({ returnTo: "https://evil.test" });
+    await provider.login({ returnTo });
 
+    expect(navigate).toHaveBeenCalledWith("https://api.test/auth/login");
+    expect(returnToStorage.getItem(RETURN_TO_KEY)).toBeNull();
+  });
+
+  it("clears an old return path when the login has no returnTo", async () => {
+    const returnToStorage = createMemorySessionStorage();
+    returnToStorage.setItem(RETURN_TO_KEY, "/old");
+    const navigate = vi.fn();
+    const client = createRustApiClient({
+      baseUrl: "https://api.test",
+      fetch: vi.fn(),
+    });
+    const provider = createRustApiSessionProvider({
+      client,
+      navigate,
+      returnToStorage,
+      spaOrigin: "https://api.test",
+    });
+
+    await provider.login();
+
+    expect(navigate).toHaveBeenCalledWith("https://api.test/auth/login");
     expect(returnToStorage.getItem(RETURN_TO_KEY)).toBeNull();
   });
 });

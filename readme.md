@@ -156,21 +156,46 @@ Run `npm install`, then `npm run dev`, and open `http://localhost:5173`.
 The adapter does not render a login route. Call `provider.login()` from the
 application, or open `http://localhost:8080/auth/login` directly.
 
-1. `GET /auth/login` redirects the browser to the OIDC provider.
+1. `GET /auth/login?return_to=<encoded path>` stores the path in the short-lived
+   `oidc_return_to` cookie and redirects the browser to the OIDC provider. The
+   path must be relative and start with one `/`. The server returns `400` for an
+   absolute URL, a protocol-relative path, a backslash, or a control character.
 2. The provider redirects to `GET /auth/callback`. The callback sets the
    `auth_token` cookie. It also sets `refresh_token` when the provider sends one.
-   The callback returns an `AuthResponse` JSON body.
+   With `return_to`, the callback returns `302` to that relative path. On failure
+   it adds `?error=<code>`. Without `return_to`, the callback returns an
+   `AuthResponse` JSON body.
 3. `GET /auth/me` is the session guard. A `401` response means no session. The
    adapter maps `sub` to the user id and `exp` seconds to `expiresAt`
    milliseconds.
 4. `POST /auth/refresh` renews the session from the `refresh_token` cookie. Call
    it before `exp`. A `401` response means the session is gone, so send the user
    to login again. The adapter keeps the new token in memory.
-5. `POST /auth/logout` clears the `auth_token` cookie. The adapter also clears the
-   in-memory token.
+5. `POST /auth/logout` clears `auth_token` and `refresh_token`. The server also
+   starts a best-effort RFC 7009 revocation. The adapter clears the in-memory
+   token and the session cache.
+
+The callback redirect uses the stable error codes `access_denied`,
+`authentication_failed`, `security_cookies_missing`, and `invalid_state`. The
+callback keeps an existing query and fragment.
 
 The adapter sends `credentials: "include"` on every request. The backend cookies
 cross the two local origins. It does not persist the token across page loads.
+
+The `return_to` value is a relative path. The browser resolves the `302` against
+the API origin. The adapter sends `return_to` only when the API URL has the same
+origin as the SPA. The `spaOrigin` option overrides the browser origin.
+
+For a cross-origin API, the adapter keeps the path in session storage and opens
+`/auth/login` without `return_to`. The callback then returns JSON on the API
+origin. The user must return to the SPA manually. `SessionProvider` reads the
+stored path on the next mount and opens it. The local setup has this limit:
+`http://localhost:5173` and `http://localhost:8080` are cross-origin, so the
+upstream `302` cannot return the browser to the SPA.
+
+`SameSite=Lax` requires the SPA and the API to be same-site. A different port on
+the same host is same-site. A different registrable domain is not same-site. A
+SPA on a different registrable domain must use the bearer token.
 
 ### Run validation
 
@@ -552,8 +577,10 @@ const provider: SessionContract = {
 - The adapter sends each new session through `createSessionChannel`. The channel uses
   `BroadcastChannel`. The fallback uses a storage event. A tab applies the event without a new
   network call. A tab that misses the event calls `getSession` on its next mount.
-- The login path is client side. `login` stores `LoginOptions.returnTo` in session storage.
-  `SessionProvider` removes the value and opens the path after a successful login.
+- The login path is client side. When the API is same-origin with the SPA, `login` sends
+  `LoginOptions.returnTo` as the rust-api `return_to` query parameter. For a cross-origin API,
+  `login` stores the path in session storage instead. `SessionProvider` removes the value and
+  opens the path after a successful login.
 - The cache stores metadata only. Do not store the token in local storage.
 
 ### Logout reset
@@ -701,17 +728,25 @@ For a single-part upload, set `part_size` to `file_size` and set `file_total_par
 ### Session provider
 
 - `createRustApiSessionProvider` implements the core `SessionProvider` contract.
-- `login` sends the browser to `GET /auth/login`. The OIDC provider redirects to
-  `/auth/callback`. The callback sets the `auth_token` cookie and returns an `AuthResponse`.
+- `login` sends the browser to `GET /auth/login`. When the API and the SPA share an origin and
+  `LoginOptions.returnTo` is a safe relative path, the URL includes
+  `return_to=<encoded path>`. The callback sets the cookies and returns `302` to the path.
+  Without `return_to`, the callback returns an `AuthResponse` JSON body.
+- The adapter sends `return_to` only for a same-origin API. The relative `302` uses the API
+  origin. For a cross-origin API, `login` keeps the path in session storage and opens
+  `/auth/login` without `return_to`. The callback shows JSON on the API origin, and the user
+  must return to the SPA manually. `SessionProvider` opens the stored path on the next mount.
+  The browser origin is the default. The `spaOrigin` option sets a different SPA origin.
+- The adapter rejects an unsafe return path before it sends the query. The server returns `400`
+  for the same values.
 - `getSession` calls `GET /auth/me`. The adapter maps `sub` to the user id and `exp` seconds to
   `expiresAt` milliseconds. A `401` response returns null.
 - `refresh` calls `POST /auth/refresh`. The browser sends the `refresh_token` cookie. The
   adapter stores the new token and reads the session again. A rejected refresh returns null.
   The refresh runs one time across tabs.
 - `logout` calls `POST /auth/logout`, clears the in-memory token, and clears the session cache.
-- The rust-api login route has no return path parameter. The adapter stores
-  `LoginOptions.returnTo` in session storage. `SessionProvider` removes the value and opens the
-  path after a successful login.
+  The server clears `auth_token` and `refresh_token` and starts a best-effort revocation. The
+  adapter needs no extra call for the revocation.
 - `getSession` keeps session metadata in the cache. It falls back to the cache when the network
   fails and the record is inside the seven-day grace window.
 - A refresh in one tab sets a new cookie. The tab sends the new session through the channel.

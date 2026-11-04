@@ -25,7 +25,9 @@ import {
 } from "@/lib/auth/refresh.ts";
 import {
   browserSessionStorage,
+  clearReturnTo,
   rememberReturnTo,
+  safeReturnTo,
   type ReturnToStorage,
 } from "@/lib/auth/return-to.ts";
 
@@ -54,6 +56,8 @@ export interface RustApiSessionOptions {
   lock?: RefreshLock;
   /** The storage for the login return path. The default uses session storage. */
   returnToStorage?: ReturnToStorage;
+  /** The SPA origin. The default uses the browser origin. */
+  spaOrigin?: string;
   /** Returns the current time. The default is `Date.now`. */
   now?: () => number;
   /** The offline grace window in milliseconds. The default is seven days. */
@@ -71,6 +75,45 @@ function openLocation(url: string): void {
   }
 
   window.location.assign(url);
+}
+
+/** Returns the origin of the current browser page. The function returns null outside a browser. */
+function browserOrigin(): string | null {
+  if (typeof window === "undefined") return null;
+
+  return window.location.origin;
+}
+
+/** Returns the origin of a URL. The function returns null for an invalid URL. */
+function originOf(value: string | null): string | null {
+  if (value === null || value === "") return null;
+
+  try {
+    return new URL(value).origin;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Reports whether a URL has the same origin as the SPA.
+ * The function returns false when the SPA origin is unknown or the URL is invalid.
+ */
+function isSameOrigin(url: string, spaOrigin: string | null): boolean {
+  if (spaOrigin === null) return false;
+
+  try {
+    return new URL(url, spaOrigin).origin === spaOrigin;
+  } catch {
+    return false;
+  }
+}
+
+/** Adds the return path to a login URL as an encoded query parameter. */
+function withReturnTo(url: string, returnTo: string): string {
+  const separator = url.includes("?") ? "&" : "?";
+
+  return `${url}${separator}return_to=${encodeURIComponent(returnTo)}`;
 }
 
 /** Reads a JSON body and reports a session error when the body is not JSON. */
@@ -160,6 +203,7 @@ export function createRustApiSessionProvider(
   const cache =
     options.cache ?? createSessionCache(options.cacheStorage ?? undefined);
   const returnToStorage = options.returnToStorage ?? browserSessionStorage();
+  const spaOrigin = originOf(options.spaOrigin ?? browserOrigin());
   const channel =
     options.channel ?? createSessionChannel(DEFAULT_SESSION_CHANNEL);
   const coordinator = createRefreshCoordinator({
@@ -247,8 +291,24 @@ export function createRustApiSessionProvider(
 
     async login(loginOptions?: LoginOptions): Promise<void> {
       client.tokens.setToken(null);
-      rememberReturnTo(loginOptions?.returnTo, returnToStorage);
-      navigate(client.url("/auth/login"));
+
+      const loginUrl = client.url("/auth/login");
+      const returnTo = safeReturnTo(loginOptions?.returnTo);
+
+      clearReturnTo(returnToStorage);
+
+      // The upstream 302 uses the API origin. Send return_to only when that
+      // origin is also the SPA origin, so the browser lands on the SPA.
+      if (returnTo !== null && isSameOrigin(loginUrl, spaOrigin)) {
+        navigate(withReturnTo(loginUrl, returnTo));
+
+        return;
+      }
+
+      // A cross-origin API cannot redirect to the SPA. Keep the path for the
+      // next SPA mount instead. The user returns to the SPA manually.
+      rememberReturnTo(returnTo ?? undefined, returnToStorage);
+      navigate(loginUrl);
     },
 
     async logout(): Promise<void> {

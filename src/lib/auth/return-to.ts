@@ -25,13 +25,21 @@ export function browserSessionStorage(): ReturnToStorage | null {
 /**
  * Returns a safe relative path.
  * The function rejects an empty value, an absolute URL, and a protocol-relative path.
+ * The function also rejects a backslash, an encoded backslash, and a control character.
  */
 export function safeReturnTo(value: string | undefined): string | null {
   if (value === undefined) return null;
 
   const path = value.trim();
 
-  if (path === "" || !path.startsWith("/") || path.startsWith("//")) {
+  if (
+    path === "" ||
+    !path.startsWith("/") ||
+    path.startsWith("//") ||
+    path.includes("\\") ||
+    /%5c/i.test(path) ||
+    /[\u0000-\u001f\u007f]/.test(path)
+  ) {
     return null;
   }
 
