@@ -59,4 +59,18 @@ describe("rust-api client", () => {
   it("returns the local default when the environment gives no URL", () => {
     expect(resolveRustApiBaseUrl("")).toBe("http://localhost:8080");
   });
+
+  it("keeps request URLs relative for a same-origin base URL", () => {
+    expect(resolveRustApiBaseUrl("/")).toBe("");
+    expect(resolveRustApiBaseUrl("/api/")).toBe("/api");
+
+    const fakeFetch = vi.fn(
+      async (_input: RequestInfo | URL, _init?: RequestInit) =>
+        jsonResponse({ ready: true }),
+    );
+    const client = createRustApiClient({ baseUrl: "/", fetch: fakeFetch });
+
+    expect(client.url("/auth/login")).toBe("/auth/login");
+    expect(client.url("fs/list")).toBe("/fs/list");
+  });
 });

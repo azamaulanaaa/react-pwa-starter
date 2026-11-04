@@ -94,7 +94,7 @@ an S3 bucket, set the S3 backend to `memory`.
 Create `config.toml` in the `rust-api` checkout:
 
 ```toml
-public_address = "http://localhost:8080"
+public_address = "http://localhost:5173"
 listen_port = 8080
 
 [authorization]
@@ -110,19 +110,17 @@ backend = "memory"
 bucket = "local"
 region = "us-east-1"
 
-[http]
-allowed_origins = ["http://localhost:5173"]
-
 [observability]
 otlp_endpoint = "http://localhost:4318/v1/traces"
 ```
 
 - The `public_address` value builds the OIDC redirect. Register
-  `http://localhost:8080/auth/callback` as the redirect URI at the provider. For
-  local development, set `public_address = "http://localhost:8080"`.
-- The `[http].allowed_origins` value must name the frontend dev origin. The Vite
-  dev server uses `http://localhost:5173`. The backend always allows credentials.
-  Set `RUST_API_ALLOWED_ORIGINS=http://localhost:5173` to override the file value.
+  `http://localhost:5173/auth/callback` as the redirect URI at the provider. For
+  local development, set `public_address = "http://localhost:5173"`. The Vite dev
+  server proxies `/auth` to the backend, so the callback lands on the SPA origin.
+- You do not need `RUST_API_ALLOWED_ORIGINS` with the proxy. The SPA and the API
+  share one origin, so the browser sends no CORS preflight. Keep the
+  `[http].allowed_origins` value only for a direct cross-origin setup.
 - The `[observability].otlp_endpoint` value is optional. The rust-api OTLP export
   is off by default. The default frontend endpoint is `http://localhost:4318`, and
   the SDK adds `/v1/traces`, `/v1/metrics`, and `/v1/logs` to it. The rust-api
@@ -131,7 +129,7 @@ otlp_endpoint = "http://localhost:4318/v1/traces"
   `http://localhost:4317`. Both services can send to one collector. The collector
   must allow CORS from `http://localhost:5173` for the browser exporter.
 
-Start the backend with `mise install`, then
+Start the backend on port 8080 with `mise install`, then
 `cargo run -- serve --config config.toml`. Check readiness with
 `curl http://localhost:8080/ready`. A `200` response means the backend is ready.
 
@@ -142,7 +140,7 @@ Copy `.env.example` to `.env` and set these values:
 ```dotenv
 VITE_API_BASE_URL=/api
 VITE_RUST_API_ENABLED=true
-VITE_RUST_API_BASE_URL=http://localhost:8080
+VITE_RUST_API_BASE_URL=/
 ```
 
 `VITE_API_BASE_URL` sets the base URL for the generic client in `src/lib/api`.
@@ -150,13 +148,37 @@ VITE_RUST_API_BASE_URL=http://localhost:8080
 is `false`, so a normal development run sends no request to the rust-api.
 `VITE_RUST_API_BASE_URL` sets the base URL for the optional adapter in
 `src/integrations/rust-api`. The default is `http://localhost:8080`.
+`/` means the SPA origin. The local setup above uses the proxy value `/`.
 
-Run `npm install`, then `npm run dev`, and open `http://localhost:5173`.
+The Vite dev server runs on `http://localhost:5173` and proxies `/auth`, `/fs`,
+and `/sync` to `http://localhost:8080`. Start the backend on 8080, then run
+`npm install` and `npm run dev`, and open `http://localhost:5173`.
+
+Because the SPA and the API share one origin, the OIDC callback returns to
+`http://localhost:5173/auth/callback`. The `return_to` redirect also stays on
+the SPA origin.
+
+A production deployment needs the same mapping in a reverse proxy. For
+example, with nginx:
+
+```nginx
+location /auth/ { proxy_pass http://rust-api:8080; }
+location /fs/   { proxy_pass http://rust-api:8080; }
+location /sync/ { proxy_pass http://rust-api:8080; }
+```
+
+Or with Caddy:
+
+```caddyfile
+handle /auth/* { reverse_proxy rust-api:8080 }
+handle /fs/*   { reverse_proxy rust-api:8080 }
+handle /sync/* { reverse_proxy rust-api:8080 }
+```
 
 ### Sign in and keep the session
 
 The adapter does not render a login route. Call `provider.login()` from the
-application, or open `http://localhost:8080/auth/login` directly.
+application, or open `http://localhost:5173/auth/login` directly.
 
 1. `GET /auth/login?return_to=<encoded path>` stores the path in the short-lived
    `oidc_return_to` cookie and redirects the browser to the OIDC provider. The
@@ -181,19 +203,21 @@ The callback redirect uses the stable error codes `access_denied`,
 `authentication_failed`, `security_cookies_missing`, and `invalid_state`. The
 callback keeps an existing query and fragment.
 
-The adapter sends `credentials: "include"` on every request. The backend cookies
-cross the two local origins. It does not persist the token across page loads.
+The adapter sends `credentials: "include"` on every request. The Vite proxy
+forwards the cookies to the backend, so the browser sees one origin. The adapter
+does not persist the token across page loads.
 
 The `return_to` value is a relative path. The browser resolves the `302` against
 the API origin. The adapter sends `return_to` only when the API URL has the same
-origin as the SPA. The `spaOrigin` option overrides the browser origin.
+origin as the SPA. The `spaOrigin` option overrides the browser origin. With the
+dev proxy, `/` gives a same-origin API, so the callback returns to the SPA.
 
-For a cross-origin API, the adapter keeps the path in session storage and opens
-`/auth/login` without `return_to`. The callback then returns JSON on the API
-origin. The user must return to the SPA manually. `SessionProvider` reads the
-stored path on the next mount and opens it. The local setup has this limit:
-`http://localhost:5173` and `http://localhost:8080` are cross-origin, so the
-upstream `302` cannot return the browser to the SPA.
+For a direct cross-origin API, the adapter keeps the path in session storage and
+opens `/auth/login` without `return_to`. The callback then returns JSON on the
+API origin. The user must return to the SPA manually. `SessionProvider` reads the
+stored path on the next mount and opens it. A direct cross-origin setup must set
+`VITE_RUST_API_BASE_URL` to the absolute API URL, register the API callback URL
+at the provider, and set `RUST_API_ALLOWED_ORIGINS` to the SPA origin.
 
 `SameSite=Lax` requires the SPA and the API to be same-site. A different port on
 the same host is same-site. A different registrable domain is not same-site. A
@@ -716,7 +740,8 @@ For a single-part upload, set `part_size` to `file_size` and set `file_total_par
 - `createRustApiBackend` is the composition root. The function creates one client and one
   token store. The `session`, `replica`, and `files` adapters use the shared client.
 - The adapter reads the base URL from `VITE_RUST_API_BASE_URL`. The default is
-  `http://localhost:8080`. The client strips a trailing slash.
+  `http://localhost:8080`. `/` means the SPA origin, which the Vite dev proxy uses.
+  The client strips a trailing slash.
 - The client sends `credentials: "include"` on every call. The rust-api `auth_token` cookie
   is the primary credential. The client can also send a bearer token from an in-memory store.
 - The adapter has no task logic. It does not import `src/examples`.

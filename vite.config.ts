@@ -151,6 +151,16 @@ export default defineConfig(({ command }) => ({
     format: "es",
     plugins: () => [comlink()],
   },
+  // The dev server forwards the rust-api routes to the local backend.
+  // The SPA and the API then share one origin, so the OIDC callback and
+  // `return_to` stay on the SPA origin. This block does not apply to a build.
+  server: {
+    proxy: {
+      "/auth": { target: "http://localhost:8080", changeOrigin: true },
+      "/fs": { target: "http://localhost:8080", changeOrigin: true },
+      "/sync": { target: "http://localhost:8080", changeOrigin: true },
+    },
+  },
   build: {
     rolldownOptions: {
       output: sharedOutputOptions,
