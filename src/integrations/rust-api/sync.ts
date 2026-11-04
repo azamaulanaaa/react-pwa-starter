@@ -29,7 +29,7 @@ export interface RustApiSyncOptions {
  * The generic reader in `src/lib/sync` does not hold these rules.
  */
 export interface RustApiSyncTransport extends ReplicaTransport {
-  /** Removes the cached status and manifest. The next calls fetch new data. */
+  /** Removes all cached data. The next calls fetch new data. */
   reset(): void;
 }
 
@@ -41,14 +41,19 @@ function encodeObjectKey(key: string): string {
     .join("/");
 }
 
-/** Maps one status body to the generic status. */
+/**
+ * Maps one status body to the generic status.
+ * `ReplicaStatus.appliedSeq` stays a number, so a null `applied_seq` maps to 0.
+ * A null `applied_seq` means that no build ran. The adapter reports pending in that case,
+ * because the first advance must run before `manifest.json` exists.
+ */
 function toStatus(body: SyncStatusResponse): ReplicaStatus {
   const appliedSeq = body.applied_seq ?? 0;
 
   return {
     appliedSeq,
     head: body.head,
-    pending: appliedSeq < body.head,
+    pending: body.applied_seq === null || body.applied_seq < body.head,
   };
 }
 
@@ -65,9 +70,35 @@ function isReplicaManifest(body: unknown): body is ReplicaManifest {
 }
 
 /**
+ * Reports whether an ETag is the synthetic token from a manifest entry.
+ * The manifest has no per-object ETag, so the token cannot match the server ETag.
+ */
+function isManifestToken(etag: string, key: string): boolean {
+  return etag.startsWith("manifest:") && etag.endsWith(`:${key}`);
+}
+
+/**
+ * Returns the ETag to send in `If-None-Match`.
+ * An explicit real ETag from the caller wins. A cached real ETag replaces the synthetic
+ * manifest token or an absent ETag. The adapter sends the cached ETag for every object,
+ * including an immutable object, so the server can return a `304` without a body.
+ */
+function selectRequestETag(
+  key: string,
+  requested: string | undefined,
+  cached: string | undefined,
+): string | undefined {
+  if (requested !== undefined && requested !== "") {
+    if (!isManifestToken(requested, key)) return requested;
+  }
+
+  return cached;
+}
+
+/**
  * Returns the manifest entries in the manifest order.
  * The manifest has no per-object ETag, so the adapter uses a version token.
- * The first object read returns the server ETag.
+ * The transport replaces the token with the real ETag from the first object read.
  */
 function toManifestEntries(manifest: ReplicaManifest): ReplicaManifestEntry[] {
   const version = String(manifest.version);
@@ -86,7 +117,7 @@ function toManifestEntries(manifest: ReplicaManifest): ReplicaManifestEntry[] {
 
 /**
  * Creates the rust-api replica transport.
- * The transport caches the status and the manifest ETag.
+ * The transport caches the status, the manifest ETag, the advance response, and object ETags.
  * The transport does not advance more than one step per call.
  */
 export function createRustApiSyncTransport(
@@ -98,6 +129,9 @@ export function createRustApiSyncTransport(
   let cachedStatusETag: string | null = null;
   let cachedManifest: ReplicaManifestEntry[] | null = null;
   let cachedManifestETag: string | null = null;
+  let cachedAdvanceStatus: ReplicaStatus | null = null;
+  let cachedAdvanceETag: string | null = null;
+  const objectETags = new Map<string, string>();
 
   const fetchStatus = async (
     requestOptions: ReplicaRequestOptions = {},
@@ -140,10 +174,40 @@ export function createRustApiSyncTransport(
     status: (requestOptions) => fetchStatus(requestOptions),
 
     async advance(requestOptions = {}): Promise<ReplicaStatus> {
+      const headers = new Headers();
+      if (cachedAdvanceStatus !== null && cachedAdvanceETag !== null) {
+        headers.set("If-None-Match", cachedAdvanceETag);
+      }
+
       const response = await client.requestRaw("/sync/sync", {
         method: "POST",
+        headers,
         signal: requestOptions.signal,
       });
+
+      if (response.status === 304) {
+        if (cachedAdvanceStatus === null) {
+          throw new ApiError(
+            "The sync failed. The server returned 304 without a cached advance.",
+            304,
+          );
+        }
+
+        // The advance ETag covers `applied_seq` and `pending`, but not `head`. The head can
+        // move after the first status call. Read the current head and recompute the reader
+        // pending flag before the adapter returns the cached advance result.
+        const current = await fetchStatus(requestOptions, false);
+        const status: ReplicaStatus = {
+          appliedSeq: cachedAdvanceStatus.appliedSeq,
+          head: current.head,
+          pending:
+            cachedAdvanceStatus.pending ||
+            cachedAdvanceStatus.appliedSeq < current.head,
+        };
+
+        cachedAdvanceStatus = status;
+        return status;
+      }
 
       if (!response.ok) {
         throw await apiErrorFromResponse(response);
@@ -152,11 +216,18 @@ export function createRustApiSyncTransport(
       const body = (await response.json()) as SyncAdvanceResponse;
       const current = await fetchStatus(requestOptions, false);
 
-      return {
+      // Upstream uses `pending` for a queued full rebuild. The reader uses `pending` for
+      // changes to apply. Both conditions must set the reader flag.
+      const status: ReplicaStatus = {
         appliedSeq: body.applied_seq,
         head: current.head,
-        pending: body.pending,
+        pending: body.pending || body.applied_seq < current.head,
       };
+
+      cachedAdvanceStatus = status;
+      cachedAdvanceETag = response.headers.get("ETag");
+
+      return status;
     },
 
     async manifest(
@@ -206,9 +277,12 @@ export function createRustApiSyncTransport(
       key: string,
       readOptions: ReplicaReadOptions = {},
     ): Promise<ReplicaTransportReadResult> {
+      const cachedETag = objectETags.get(key);
+      const requestETag = selectRequestETag(key, readOptions.etag, cachedETag);
+
       const headers = new Headers();
-      if (readOptions.etag !== undefined && readOptions.etag !== "") {
-        headers.set("If-None-Match", readOptions.etag);
+      if (requestETag !== undefined) {
+        headers.set("If-None-Match", requestETag);
       }
 
       const response = await client.requestRaw(
@@ -220,11 +294,14 @@ export function createRustApiSyncTransport(
       );
 
       if (response.status === 304) {
-        const etag = response.headers.get("ETag") ?? readOptions.etag;
+        const etag = response.headers.get("ETag") ?? requestETag;
 
-        return etag === undefined
-          ? { kind: "not-modified" }
-          : { kind: "not-modified", etag };
+        if (etag === undefined) {
+          return { kind: "not-modified" };
+        }
+
+        objectETags.set(key, etag);
+        return { kind: "not-modified", etag };
       }
 
       if (!response.ok) {
@@ -232,12 +309,17 @@ export function createRustApiSyncTransport(
       }
 
       const data = new Uint8Array(await response.arrayBuffer());
+      const etag = response.headers.get("ETag") ?? "";
+
+      if (etag !== "") {
+        objectETags.set(key, etag);
+      }
 
       return {
         kind: "object",
         object: {
           key,
-          etag: response.headers.get("ETag") ?? "",
+          etag,
           data,
         },
       };
@@ -248,6 +330,9 @@ export function createRustApiSyncTransport(
       cachedStatusETag = null;
       cachedManifest = null;
       cachedManifestETag = null;
+      cachedAdvanceStatus = null;
+      cachedAdvanceETag = null;
+      objectETags.clear();
     },
   };
 }

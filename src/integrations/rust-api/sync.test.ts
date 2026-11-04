@@ -55,6 +55,21 @@ describe("rust-api replica reader", () => {
     expect(fakeFetch).toHaveBeenCalledTimes(2);
   });
 
+  it("reports pending for a replica that never ran a build", async () => {
+    const fakeFetch = vi.fn(async () =>
+      jsonResponse({ prefix: "p", applied_seq: null, head: 0 }),
+    );
+    const client = createRustApiClient({
+      baseUrl: "https://api.test",
+      fetch: fakeFetch,
+    });
+    const reader = createRustApiReplicaReader({ client });
+
+    const status = await reader.status();
+
+    expect(status).toEqual({ appliedSeq: 0, head: 0, pending: true });
+  });
+
   it("returns pending from an advance call", async () => {
     const fakeFetch = vi.fn(
       async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -77,6 +92,104 @@ describe("rust-api replica reader", () => {
     const status = await reader.advance();
 
     expect(status).toEqual({ appliedSeq: 3, head: 5, pending: true });
+  });
+
+  it("reports pending when an advance queues a rebuild at the head", async () => {
+    const fakeFetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/sync/sync")) {
+        return jsonResponse({ prefix: "p", applied_seq: 5, pending: true });
+      }
+
+      return jsonResponse({ prefix: "p", applied_seq: 5, head: 5 });
+    });
+    const client = createRustApiClient({
+      baseUrl: "https://api.test",
+      fetch: fakeFetch,
+    });
+    const reader = createRustApiReplicaReader({ client });
+
+    const status = await reader.advance();
+
+    expect(status).toEqual({ appliedSeq: 5, head: 5, pending: true });
+  });
+
+  it("reports pending when an advance leaves changes to apply", async () => {
+    const fakeFetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/sync/sync")) {
+        return jsonResponse({ prefix: "p", applied_seq: 3, pending: false });
+      }
+
+      return jsonResponse({ prefix: "p", applied_seq: 3, head: 5 });
+    });
+    const client = createRustApiClient({
+      baseUrl: "https://api.test",
+      fetch: fakeFetch,
+    });
+    const reader = createRustApiReplicaReader({ client });
+
+    const status = await reader.advance();
+
+    expect(status).toEqual({ appliedSeq: 3, head: 5, pending: true });
+  });
+
+  it("refreshes the head for a 304 advance response", async () => {
+    let advances = 0;
+    let statuses = 0;
+    const fakeFetch = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+
+        if (url.endsWith("/sync/sync")) {
+          advances += 1;
+
+          if (advances === 1) {
+            expect(new Headers(init?.headers).get("If-None-Match")).toBeNull();
+
+            return new Response(
+              JSON.stringify({ prefix: "p", applied_seq: 5, pending: false }),
+              {
+                status: 200,
+                headers: {
+                  "Content-Type": "application/json",
+                  ETag: '"advance-5"',
+                },
+              },
+            );
+          }
+
+          expect(new Headers(init?.headers).get("If-None-Match")).toBe(
+            '"advance-5"',
+          );
+
+          return new Response(null, {
+            status: 304,
+            headers: { ETag: '"advance-5"' },
+          });
+        }
+
+        statuses += 1;
+
+        return jsonResponse({
+          prefix: "p",
+          applied_seq: 5,
+          head: statuses === 1 ? 5 : 7,
+        });
+      },
+    );
+    const client = createRustApiClient({
+      baseUrl: "https://api.test",
+      fetch: fakeFetch,
+    });
+    const reader = createRustApiReplicaReader({ client });
+
+    const first = await reader.advance();
+    const second = await reader.advance();
+
+    expect(first).toEqual({ appliedSeq: 5, head: 5, pending: false });
+    expect(second).toEqual({ appliedSeq: 5, head: 7, pending: true });
+    expect(fakeFetch).toHaveBeenCalledTimes(4);
   });
 
   it("keeps the manifest order and reuses the manifest ETag", async () => {
@@ -161,6 +274,97 @@ describe("rust-api replica reader", () => {
     });
 
     expect(result).toEqual({ kind: "not-modified", etag: '"v1"' });
+  });
+
+  it("reuses a real object ETag from the cache", async () => {
+    let reads = 0;
+    const key = "replica/state.json";
+    const fakeFetch = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        expect(String(input)).toBe(`https://api.test/sync/db/${key}`);
+        reads += 1;
+
+        if (reads === 1) {
+          expect(new Headers(init?.headers).get("If-None-Match")).toBeNull();
+
+          return new Response(new Uint8Array([1, 2, 3]), {
+            status: 200,
+            headers: { ETag: '"real-1"' },
+          });
+        }
+
+        expect(new Headers(init?.headers).get("If-None-Match")).toBe(
+          '"real-1"',
+        );
+
+        return new Response(null, {
+          status: 304,
+          headers: { ETag: '"real-1"' },
+        });
+      },
+    );
+    const client = createRustApiClient({
+      baseUrl: "https://api.test",
+      fetch: fakeFetch,
+    });
+    const reader = createRustApiReplicaReader({ client });
+    const manifestToken = `manifest:7:${key}`;
+
+    const first = await reader.readObject(key, { etag: manifestToken });
+    const second = await reader.readObject(key, { etag: manifestToken });
+
+    expect(first).toEqual({
+      kind: "object",
+      object: { key, etag: '"real-1"', data: new Uint8Array([1, 2, 3]) },
+    });
+    expect(second).toEqual({ kind: "not-modified", etag: '"real-1"' });
+  });
+
+  it("reuses a real ETag for an immutable object", async () => {
+    const key = "e000003/sst/L0/00000009.sst";
+    let reads = 0;
+    const fakeFetch = vi.fn(
+      async (_input: RequestInfo | URL, init?: RequestInit) => {
+        reads += 1;
+
+        if (reads === 1) {
+          expect(new Headers(init?.headers).get("If-None-Match")).toBeNull();
+
+          return new Response(new Uint8Array([1]), {
+            status: 200,
+            headers: { ETag: '"real-1"' },
+          });
+        }
+
+        expect(new Headers(init?.headers).get("If-None-Match")).toBe(
+          '"real-1"',
+        );
+
+        return new Response(null, {
+          status: 304,
+          headers: { ETag: '"real-1"' },
+        });
+      },
+    );
+    const client = createRustApiClient({
+      baseUrl: "https://api.test",
+      fetch: fakeFetch,
+    });
+    const reader = createRustApiReplicaReader({ client });
+
+    const first = await reader.readObject(key, {
+      etag: `manifest:7:${key}`,
+    });
+    const second = await reader.readObject(key, {
+      etag: `manifest:7:${key}`,
+    });
+
+    expect(first).toEqual({
+      kind: "object",
+      object: { key, etag: '"real-1"', data: new Uint8Array([1]) },
+    });
+    expect(second).toEqual({ kind: "not-modified", etag: '"real-1"' });
+    expect(fakeFetch).toHaveBeenCalledTimes(2);
   });
 
   it("reads one object and keeps the path separators", async () => {

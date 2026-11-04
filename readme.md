@@ -769,16 +769,28 @@ const provider = createRustApiSessionProvider({
 - `createRustApiReplicaReader` implements the core `ReplicaReader` contract.
 - `status` calls `GET /sync/status`. The adapter caches the body and the `ETag`. The next
   call sends `If-None-Match`. A `304` response returns the cached status.
-- The status has no `pending` field. The adapter sets `pending` when `applied_seq < head`.
-- `advance` calls `POST /sync/sync` one time. The adapter returns the `pending` flag from the
-  response and reads the current head from `/sync/status`. The caller repeats the call while
-  `pending` is true.
+- The status has no `pending` field. The adapter sets `pending` when `applied_seq` is null
+  or when `applied_seq < head`. A null `applied_seq` means that no build ran. The adapter
+  reports this state as `appliedSeq: 0` with `pending: true`, because the first advance must
+  run before `manifest.json` exists.
+- `advance` calls `POST /sync/sync` one time. The adapter caches the response `ETag`. The
+  next call sends `If-None-Match`. A `304` response reads the current head and returns the
+  cached advance result. The advance `ETag` does not cover `head`.
+- The upstream `pending` flag means that a full rebuild is queued. The reader `pending` flag
+  means that the replica has changes to apply. The adapter sets `pending` when either
+  condition is true: the upstream flag is true or `applied_seq < head`. The adapter reads the
+  current head from `/sync/status`. The caller repeats the call while `pending` is true.
 - `manifest` calls `GET /sync/db/manifest.json`. The adapter keeps the `sst` order and the
   `wal` order. It does not sort or filter the entries.
-- The manifest has no per-object ETag. The adapter uses a version token. The first object
-  read returns the server ETag.
-- `readObject` calls `GET /sync/db/{object}`. The adapter sends `If-None-Match` when the caller
-  gives an ETag. A `304` response returns a not-modified result.
+- The manifest has no per-object ETag. The adapter uses a version token. The transport keeps
+  the real `ETag` from each successful object read. A later read uses the real `ETag` when
+  the caller gives the version token or no `ETag`. An explicit real `ETag` from the caller
+  wins.
+- The adapter sends the cached real `ETag` for an immutable object. The server can then
+  return a `304` response without a body. The immutable keys are `e*/sst/*`, `e*/wal/*`,
+  and `e*/blob/*`.
+- `readObject` calls `GET /sync/db/{object}`. The adapter sends `If-None-Match` when it has
+  an `ETag` to send. A `304` response returns a not-modified result.
 - The adapter keeps the manifest rules. The core reader stays generic.
 
 ```ts
