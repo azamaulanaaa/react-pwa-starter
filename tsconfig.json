@@ -30,6 +30,10 @@
     "checkJs": false /* Prevents TS from checking errors inside JS files */,
     "skipLibCheck": true /* Skips checking types in node_modules (Big speed boost) */,
     "resolveJsonModule": true /* Essential for importing .json configs */,
+    "moduleSuffixes": [
+      ".d",
+      ""
+    ] /* Prefer sibling .d.ts files for package types */,
     /* --- Output & Paths --- */
     "noEmit": true,
     "paths": {

@@ -26,7 +26,7 @@ application adds its own domain code.
 
 ## Features
 
-- Vite 8 (Rolldown) + TypeScript 6/7 + React 19
+- Vite 8 (Rolldown) + TypeScript 7 + React 19
 - Progressive Web App (service worker via vite-plugin-pwa and workbox-window, auto-update)
 - Comlink Web Worker that works as a Dedicated worker or as a SharedWorker. A SharedWorker
   runs one instance, and all tabs share that instance.
@@ -68,7 +68,7 @@ cd react-pwa-starter && npm install && npm run dev
 | `npm run dev`           | Start the Vite dev server                 |
 | `npm run build`         | Production build (with bundle visualizer) |
 | `npm run preview`       | Preview the production build              |
-| `npm run check`         | Type-check with TypeScript 6              |
+| `npm run check`         | Type-check with TypeScript 7              |
 | `npm run test`          | Run tests with Vitest                     |
 | `npm run test:run`      | Run tests with Vitest one time            |
 | `npm run ladle`         | Serve Ladle component previews            |
