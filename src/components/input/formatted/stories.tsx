@@ -1,7 +1,10 @@
 import type { Story, StoryDefault } from "@ladle/react";
 import { useState } from "react";
 
-import { InputFormatted, type InputFormattedProps } from "./index.tsx";
+import {
+  InputFormatted,
+  type InputFormattedProps,
+} from "@/components/input/formatted/index.tsx";
 
 export default {
   title: "Input / Formatted",

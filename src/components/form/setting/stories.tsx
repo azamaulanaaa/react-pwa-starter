@@ -1,5 +1,9 @@
 import type { Story, StoryDefault } from "@ladle/react";
-import { FormSetting, FormSettingProps, FormSettingValue } from "./index.tsx";
+import {
+  FormSetting,
+  FormSettingProps,
+  FormSettingValue,
+} from "@/components/form/setting/index.tsx";
 
 export default {
   title: "Form / Setting",

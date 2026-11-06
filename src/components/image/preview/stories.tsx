@@ -3,7 +3,10 @@ import type { Story, StoryDefault } from "@ladle/react";
 
 import { ImageGenerator } from "@/lib/svg.ts";
 
-import { ImagePreview, ImagePreviewProps } from "./index.tsx";
+import {
+  ImagePreview,
+  ImagePreviewProps,
+} from "@/components/image/preview/index.tsx";
 
 export default {
   title: "Image / Preview",

@@ -9,9 +9,9 @@ import {
   SelfieCapture,
   type SelfieCaptureProps,
   type SelfieCaptureResult,
-} from "./index.tsx";
+} from "@/components/image/selfie-capture/index.tsx";
 
-import dictionary from "../../../../public/locales/en-US.json" with { type: "json" };
+import dictionary from "~/public/locales/en-US.json" with { type: "json" };
 
 vi.mock("@/lib/image.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/image.ts")>();

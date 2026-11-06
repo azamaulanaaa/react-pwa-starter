@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { TranslationProvider } from "@/components/context/translation.tsx";
-import { ListTask, type Task } from "./index.tsx";
+import { ListTask, type Task } from "@/examples/task/list/index.tsx";
 
 const TASKS: Task[] = [
   { id: "1", is_done: false, description: "Write tests" },

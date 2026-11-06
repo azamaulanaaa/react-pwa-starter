@@ -1,7 +1,10 @@
 import type { Story, StoryDefault } from "@ladle/react";
 import { useState } from "react";
 
-import { InputDate, type InputDateProps } from "./index.tsx";
+import {
+  InputDate,
+  type InputDateProps,
+} from "@/components/input/date/index.tsx";
 
 export default {
   title: "Input / Date",

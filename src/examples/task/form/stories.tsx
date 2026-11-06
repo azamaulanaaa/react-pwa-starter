@@ -1,6 +1,6 @@
 import type { Story, StoryDefault } from "@ladle/react";
 
-import { FormTask, FormTaskProps } from "./index.tsx";
+import { FormTask, FormTaskProps } from "@/examples/task/form/index.tsx";
 
 export default {
   title: "Form / Task",

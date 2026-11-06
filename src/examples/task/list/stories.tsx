@@ -1,7 +1,7 @@
 import type { Story, StoryDefault } from "@ladle/react";
 import { useState } from "react";
 
-import { ListTask, ListTaskProps } from "./index.tsx";
+import { ListTask, ListTaskProps } from "@/examples/task/list/index.tsx";
 
 export default {
   title: "List / Task",

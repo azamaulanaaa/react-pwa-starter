@@ -6,7 +6,7 @@ import {
   TableGeneric,
   type TableGenericFeatures,
   type TableGenericProps,
-} from "./index.tsx";
+} from "@/components/table/generic/index.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 
 export default {

@@ -1,5 +1,6 @@
 import { defineConfig } from "vitest/config";
 
+const ROOT_PATH = new URL("./", import.meta.url).pathname;
 const SRC_PATH = new URL("./src", import.meta.url).pathname;
 
 export default defineConfig({
@@ -13,6 +14,7 @@ export default defineConfig({
     setupFiles: ["./src/vitest.setup.ts"],
     alias: {
       "@": SRC_PATH,
+      "~": ROOT_PATH,
     },
   },
 });

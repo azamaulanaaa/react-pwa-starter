@@ -1,6 +1,9 @@
 import type { Story, StoryDefault } from "@ladle/react";
 
-import { SelfieCapture, type SelfieCaptureProps } from "./index.tsx";
+import {
+  SelfieCapture,
+  type SelfieCaptureProps,
+} from "@/components/image/selfie-capture/index.tsx";
 
 export default {
   title: "Image / Selfie Capture",
