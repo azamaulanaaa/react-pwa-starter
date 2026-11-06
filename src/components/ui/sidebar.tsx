@@ -5,7 +5,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { PanelLeftIcon } from "lucide-react";
 
 import { useMediaQuery } from "@/hooks/primitives/use-media-query.ts";
-import { cn } from "@/lib/cn.ts";
+import { cn } from "@/lib/utils/cn.ts";
 import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { ScrollArea } from "@/components/ui/scroll-area.tsx";

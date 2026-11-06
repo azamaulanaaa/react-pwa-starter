@@ -8,7 +8,7 @@ import {
 } from "react";
 import { CalendarIcon } from "lucide-react";
 
-import { cn } from "@/lib/cn.ts";
+import { cn } from "@/lib/utils/cn.ts";
 import { Button } from "@/components/ui/button.tsx";
 import { Calendar } from "@/components/ui/calendar.tsx";
 import {

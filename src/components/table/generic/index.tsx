@@ -14,7 +14,7 @@ import {
   useTable,
 } from "@tanstack/react-table";
 
-import { cn } from "@/lib/cn.ts";
+import { cn } from "@/lib/utils/cn.ts";
 import { useTranslation } from "@/components/context/translation.tsx";
 import { Checkbox } from "@/components/ui/checkbox.tsx";
 import {

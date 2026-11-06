@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { DownloadIcon, EyeIcon } from "lucide-react";
 
-import { cn } from "@/lib/cn.ts";
+import { cn } from "@/lib/utils/cn.ts";
 import {
   Dialog,
   DialogContent,

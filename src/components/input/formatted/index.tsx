@@ -1,6 +1,6 @@
 import { type Ref, useEffect, useState } from "react";
 
-import { cn } from "@/lib/cn.ts";
+import { cn } from "@/lib/utils/cn.ts";
 import { Input } from "@/components/ui/input.tsx";
 
 export type InputFormattedProps<T = string> = Omit<

@@ -899,6 +899,29 @@ const transport = backend.files;
   next to their modules, such as `src/worker/db/*.test.ts`.
 - Run tests with `npm run test`.
 
+## Add a coss ui component
+
+The coss ui registry name is `@coss`. Run this command to add a component:
+
+```bash
+npx shadcn@latest add @coss/button
+```
+
+The `utils` alias in `components.json` is `@/lib/utils`. `src/lib/utils/cn.ts`
+re-exports `cn` from `cnfast`. `src/lib/utils.ts` re-exports `cn` from
+`src/lib/utils/cn.ts`. Existing code imports `@/lib/utils/cn.ts`. Generated
+components import `@/lib/utils`. Both paths use the same helper.
+
+The `hooks` alias in `components.json` is `@/hooks/primitives`. Generated hooks import
+from that directory.
+
+Do not run `npx shadcn@latest add @coss/ui --overwrite`. Local edits exist in
+`src/components/ui/scroll-area.tsx` and `src/components/ui/sidebar.tsx`.
+
+The `@coss/utils` registry item can try to write `src/lib/utils.ts`. It can also
+add the `clsx` and `tailwind-merge` dependencies. Keep the existing re-export. Do
+not pass `--overwrite`.
+
 ## Component previews (Ladle)
 
 - Each component has a `stories.tsx` file. Ladle serves stories in `src/components` and

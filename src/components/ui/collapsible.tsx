@@ -1,7 +1,7 @@
 import type React from "react";
 import { Collapsible as CollapsiblePrimitive } from "@base-ui/react/collapsible";
 
-import { cn } from "@/lib/cn.ts";
+import { cn } from "@/lib/utils/cn.ts";
 
 export function Collapsible({
   ...props

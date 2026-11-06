@@ -1,7 +1,7 @@
 import type React from "react";
 import { ScrollArea as ScrollAreaPrimitive } from "@base-ui/react/scroll-area";
 
-import { cn } from "@/lib/cn.ts";
+import { cn } from "@/lib/utils/cn.ts";
 
 export type ScrollAreaProps = ScrollAreaPrimitive.Root.Props & {
   scrollFade?: boolean;

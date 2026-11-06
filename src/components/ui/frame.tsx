@@ -1,6 +1,6 @@
 import type * as React from "react";
 
-import { cn } from "@/lib/cn.ts";
+import { cn } from "@/lib/utils/cn.ts";
 
 export function Frame({
   className,

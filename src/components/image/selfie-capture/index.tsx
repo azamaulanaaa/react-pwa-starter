@@ -15,7 +15,7 @@ import {
   type GeolocationError,
   type GeolocationStatus,
 } from "@/hooks/engines/use-geolocation.ts";
-import { cn } from "@/lib/cn.ts";
+import { cn } from "@/lib/utils/cn.ts";
 import { blobToJpeg, IMAGE_MAX_BYTES } from "@/lib/image.ts";
 
 export type SelfieCaptureResult = {

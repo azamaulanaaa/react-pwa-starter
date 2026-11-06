@@ -1,7 +1,7 @@
 import type React from "react";
 import { Progress as ProgressPrimitive } from "@base-ui/react/progress";
 
-import { cn } from "@/lib/cn.ts";
+import { cn } from "@/lib/utils/cn.ts";
 
 export function Progress({
   className,
