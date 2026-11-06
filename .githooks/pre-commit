@@ -1,0 +1,23 @@
+#!/bin/sh
+set -eu
+
+root="$(git rev-parse --show-toplevel)"
+cd "$root"
+
+if [ ! -d node_modules ]; then
+  echo "pre-commit: node_modules is missing." >&2
+  echo "Run npm ci to install the dependencies." >&2
+  exit 1
+fi
+
+if ! npm run fmt:check; then
+  echo "pre-commit: the formatting check failed." >&2
+  echo "Run npm run fmt to format the files. Then stage the changes." >&2
+  exit 1
+fi
+
+if ! npm run lint; then
+  echo "pre-commit: lint failed." >&2
+  echo "Fix the reported lint errors. Then commit again." >&2
+  exit 1
+fi

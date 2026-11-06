@@ -1,0 +1,17 @@
+#!/bin/sh
+set -eu
+
+root="$(git rev-parse --show-toplevel)"
+cd "$root"
+
+if [ ! -d node_modules ]; then
+  echo "pre-push: node_modules is missing." >&2
+  echo "Run npm ci to install the dependencies." >&2
+  exit 1
+fi
+
+if ! npm run ci; then
+  echo "pre-push: the CI checks failed." >&2
+  echo "Run npm run ci to see the full output. Fix the errors. Then push again." >&2
+  exit 1
+fi

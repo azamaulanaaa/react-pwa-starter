@@ -63,20 +63,52 @@ cd react-pwa-starter && npm install && npm run dev
 
 ### Scripts
 
-| Script              | Description                               |
-| ------------------- | ----------------------------------------- |
-| `npm run dev`       | Start the Vite dev server                 |
-| `npm run build`     | Production build (with bundle visualizer) |
-| `npm run preview`   | Preview the production build              |
-| `npm run check`     | Type-check with TypeScript 6              |
-| `npm run test`      | Run tests with Vitest                     |
-| `npm run ladle`     | Serve Ladle component previews            |
-| `npm run fmt`       | Format the code with Prettier             |
-| `npm run fmt:check` | Check formatting without writing changes  |
-| `npm run lint`      | Lint the code with oxlint                 |
+| Script                  | Description                               |
+| ----------------------- | ----------------------------------------- |
+| `npm run dev`           | Start the Vite dev server                 |
+| `npm run build`         | Production build (with bundle visualizer) |
+| `npm run preview`       | Preview the production build              |
+| `npm run check`         | Type-check with TypeScript 6              |
+| `npm run test`          | Run tests with Vitest                     |
+| `npm run test:run`      | Run tests with Vitest one time            |
+| `npm run ladle`         | Serve Ladle component previews            |
+| `npm run fmt`           | Format the code with Prettier             |
+| `npm run fmt:check`     | Check formatting without writing changes  |
+| `npm run lint`          | Lint the code with oxlint                 |
+| `npm run ci`            | Run all CI checks locally                 |
+| `npm run hooks:install` | Install the local Git hooks               |
 
 Prettier formats the code and oxlint lints it. The configurations are in
 `.prettierrc.json`, `.prettierignore`, and `.oxlintrc.json`.
+
+## Continuous integration
+
+The workflow `.github/workflows/ci.yml` runs on each push to `main`, on each
+pull request, and on manual dispatch. It uses Node 24.x and Node 26.x. The
+workflow runs these checks:
+
+- `npm run fmt:check` checks the formatting.
+- `npm run lint` runs oxlint.
+- `npm run check` runs the type check.
+- `npm run test:run` runs the tests one time.
+- `npm run build` makes the production build.
+
+Run the same checks locally with `npm run ci`.
+
+## Local git hooks
+
+Install the local hooks with `npm run hooks:install`. The command sets
+`core.hooksPath` to `.githooks`.
+
+- The pre-commit hook runs `npm run fmt:check` and `npm run lint`.
+- The pre-push hook runs `npm run ci`.
+
+The hooks stop when `node_modules` is missing. Run `npm ci` first.
+
+To skip a hook in an emergency, add `--no-verify` to the command. Use
+`git commit --no-verify` to skip the pre-commit hook. Use
+`git push --no-verify` to skip the pre-push hook. Run the checks before you
+push the changes.
 
 ## Start both services
 
