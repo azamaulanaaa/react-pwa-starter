@@ -309,7 +309,7 @@ src/
 │   ├── engines/       # Higher-level hooks: use-infinite-scroll, use-uploader,
 │   │                  # use-report, use-camera, use-geolocation
 │   └── primitives/    # Small composable hooks (debounce, persist state,
-│                      # media query, dark mode, streams, file upload)
+│                      # media query, dark mode, streams, use-file-upload)
 ├── lib/               # Comlink helpers, generic API, auth, sync, outbox, report,
 │                      # time, pwa, and file contracts, cn, utilities
 ├── rust-api/          # Optional backend adapter. The core imports only optional.tsx.
