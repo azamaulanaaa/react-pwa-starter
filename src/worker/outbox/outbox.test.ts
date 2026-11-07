@@ -1,17 +1,18 @@
 import "fake-indexeddb/auto";
-import { beforeAll, describe, expect, it } from "vitest";
-import { Effect, Schema, Struct } from "effect";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { Effect, Exit, Option, Schema, Scope, Stream, Struct } from "effect";
 
 import { createEventBus } from "@/worker/db/change-bus.ts";
 import { createDatabase, createTableModule } from "@/worker/db/factory.ts";
 import { setupOxkv } from "@/worker/db/oxkv-wasm.ts";
 import { createDbFs } from "@/worker/db/persistence.ts";
 import { BaseSchema } from "@/worker/db/schema.ts";
+import { OutboxError } from "@/worker/outbox/error.ts";
 import {
   createOutbox,
   type CreateOutboxOptions,
 } from "@/worker/outbox/runtime.ts";
-import { TableOutbox } from "@/worker/outbox/table.ts";
+import { TableOutbox, type OutboxTableApi } from "@/worker/outbox/table.ts";
 
 const RecordSchema = BaseSchema.mapFields(
   Struct.assign(
@@ -27,6 +28,8 @@ function run<A>(effect: Effect.Effect<A, unknown, never>): Promise<A> {
   return Effect.runPromise(effect);
 }
 
+const scopes: Scope.Closeable[] = [];
+
 function createTestOutbox(
   name: string,
   root: string,
@@ -40,9 +43,13 @@ function createTestOutbox(
     { outbox: TableOutbox, record: TableRecord },
     { events, hydrate: dbFs.hydrate },
   );
-  const runtime = createOutbox({ table: db.outbox, ...options });
+  const scope = Effect.runSync(Scope.make());
+  scopes.push(scope);
+  const runtime = Effect.runSync(
+    Scope.provide(scope)(createOutbox({ table: db.outbox, ...options })),
+  );
 
-  return { db, runtime };
+  return { db, runtime, scope };
 }
 
 async function waitFor(
@@ -71,12 +78,17 @@ function deferred<T>() {
 describe("outbox", () => {
   beforeAll(setupOxkv);
 
+  afterEach(async () => {
+    const open = scopes.splice(0);
+    await Promise.all(open.map((scope) => run(Scope.close(scope, Exit.void))));
+  });
+
   it("keeps an operation after a worker restart", async () => {
     const root = "db/outbox-restart";
     const first = createTestOutbox("outbox-restart-1", root, {
       now: () => 1000,
     });
-    await first.runtime.ready;
+    await run(first.runtime.ready);
 
     await run(
       first.runtime.registry.register("test.op", async () => ({ status: 200 })),
@@ -109,12 +121,53 @@ describe("outbox", () => {
     const second = createTestOutbox("outbox-restart-2", root, {
       now: () => 2000,
     });
-    await second.runtime.ready;
+    await run(second.runtime.ready);
 
     const rows = await run(second.runtime.api.list());
 
     expect(rows.map((row) => row.id)).toEqual([op.id]);
     expect(rows[0]?.state).toBe("pending");
+  });
+
+  it("fails ready when recovery fails and raises no unhandled rejection", async () => {
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown) => {
+      unhandled.push(reason);
+    };
+    process.on("unhandledRejection", onUnhandled);
+
+    try {
+      const events = createEventBus();
+      const root = "db/outbox-recovery-failure";
+      const dbFs = createDbFs(
+        { outbox: TableOutbox, record: TableRecord },
+        root,
+      );
+      dbFs.attach(events);
+      const db = createDatabase(
+        "outbox-recovery-failure",
+        { outbox: TableOutbox, record: TableRecord },
+        { events, hydrate: dbFs.hydrate },
+      );
+      const table = {
+        ...db.outbox,
+        watch: () => Stream.fail(new Error("The storage is unavailable.")),
+      } as unknown as OutboxTableApi;
+      const scope = Effect.runSync(Scope.make());
+      scopes.push(scope);
+      const runtime = Effect.runSync(
+        Scope.provide(scope)(createOutbox({ table })),
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(unhandled).toEqual([]);
+
+      const error = await run(Effect.flip(runtime.ready));
+      expect(error).toBeInstanceOf(OutboxError);
+      expect(error.reason).toBe("storage");
+    } finally {
+      process.off("unhandledRejection", onUnhandled);
+    }
   });
 
   it("sends one operation twice with the same id", async () => {
@@ -126,7 +179,7 @@ describe("outbox", () => {
       "db/outbox-duplicate",
       { now: () => clock, random: () => 0 },
     );
-    await runtime.ready;
+    await run(runtime.ready);
 
     await run(
       runtime.registry.register("test.op", async (op) => {
@@ -163,7 +216,7 @@ describe("outbox", () => {
       "outbox-conflict",
       "db/outbox-conflict",
     );
-    await runtime.ready;
+    await run(runtime.ready);
 
     await run(
       runtime.registry.register("test.op", async () => ({
@@ -202,7 +255,7 @@ describe("outbox", () => {
         random: () => 0,
       },
     );
-    await runtime.ready;
+    await run(runtime.ready);
 
     await run(
       runtime.registry.register("test.op", async () => {
@@ -237,7 +290,7 @@ describe("outbox", () => {
     const { runtime } = createTestOutbox("outbox-order", "db/outbox-order", {
       now: () => 10_000,
     });
-    await runtime.ready;
+    await run(runtime.ready);
 
     await run(
       runtime.registry.register("test.op", async (op) => {
@@ -286,7 +339,7 @@ describe("outbox", () => {
       "outbox-single-flight",
       "db/outbox-single-flight",
     );
-    await runtime.ready;
+    await run(runtime.ready);
 
     await run(
       runtime.registry.register("test.op", async () => {
@@ -321,6 +374,90 @@ describe("outbox", () => {
     expect(right.sent).toBe(1);
   });
 
+  it("shares one drain between two concurrent flush calls", async () => {
+    let calls = 0;
+    const gate = deferred<void>();
+    const { runtime } = createTestOutbox(
+      "outbox-shared-flush",
+      "db/outbox-shared-flush",
+    );
+    await run(runtime.ready);
+
+    await run(
+      runtime.registry.register("test.op", async () => {
+        calls += 1;
+        await gate.promise;
+        return { status: 200 };
+      }),
+    );
+
+    await run(
+      runtime.api.enqueue({
+        kind: "test.op",
+        method: "PUT",
+        path: "/test/shared-flush",
+      }),
+    );
+
+    const first = run(runtime.api.flush());
+    await waitFor(() => calls === 1);
+    const second = run(runtime.api.flush());
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    gate.resolve();
+
+    const [left, right] = await Promise.all([first, second]);
+    expect(calls).toBe(1);
+    expect(left).toEqual(right);
+  });
+
+  it("ends a pending flush when the scope closes", async () => {
+    const entered = deferred<void>();
+    const gate = deferred<void>();
+    const { runtime, scope } = createTestOutbox(
+      "outbox-shutdown",
+      "db/outbox-shutdown",
+    );
+    await run(runtime.ready);
+
+    await run(
+      runtime.registry.register("test.op", async () => {
+        entered.resolve();
+        await gate.promise;
+        return { status: 200 };
+      }),
+    );
+
+    await run(
+      runtime.api.enqueue({
+        kind: "test.op",
+        method: "PUT",
+        path: "/test/shutdown",
+      }),
+    );
+
+    const pending = run(runtime.api.flush()).then(
+      (value) => ({ kind: "success" as const, value }),
+      (error: unknown) => ({ kind: "error" as const, error }),
+    );
+    await entered.promise;
+
+    await run(Scope.close(scope, Exit.void));
+
+    const outcome = await run(
+      Effect.promise(() => pending).pipe(Effect.timeoutOption(2000)),
+    );
+    expect(Option.isSome(outcome)).toBe(true);
+    if (Option.isSome(outcome)) {
+      const settled = outcome.value;
+      expect(settled.kind).toBe("error");
+      if (settled.kind === "error") {
+        expect(settled.error).toBeInstanceOf(OutboxError);
+      }
+    }
+
+    gate.resolve();
+  });
+
   it("pauses the flush when the session is lost", async () => {
     let clock = 1000;
     let calls = 0;
@@ -331,7 +468,7 @@ describe("outbox", () => {
         now: () => clock,
       },
     );
-    await runtime.ready;
+    await run(runtime.ready);
 
     await run(
       runtime.registry.register("test.op", async () => {
@@ -370,7 +507,7 @@ describe("outbox", () => {
       "outbox-success",
       "db/outbox-success",
     );
-    await runtime.ready;
+    await run(runtime.ready);
 
     await run(
       runtime.registry.register("test.op", async () => ({
