@@ -148,6 +148,19 @@ describe("OutboxView", () => {
     expect(screen.getByText("note.create")).toBeDefined();
   });
 
+  it("keeps the filter compact and the count on one line", () => {
+    renderView();
+
+    expect(
+      screen.getByLabelText("Filter state").classList.contains("sm:w-44"),
+    ).toBe(true);
+    expect(
+      screen
+        .getByText("Showing 3 of 3")
+        .classList.contains("whitespace-nowrap"),
+    ).toBe(true);
+  });
+
   it("filters the rows by the search text", async () => {
     renderView();
 

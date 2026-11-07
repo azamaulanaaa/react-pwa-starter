@@ -364,8 +364,8 @@ export function OutboxView({
           </Alert>
         )}
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <InputGroup className="sm:max-w-xs">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-nowrap sm:items-center">
+          <InputGroup className="sm:max-w-xs sm:flex-1">
             <InputGroupAddon>
               <SearchIcon />
             </InputGroupAddon>
@@ -381,7 +381,10 @@ export function OutboxView({
             onValueChange={(value) => setStateFilter(value as StateFilter)}
             value={stateFilter}
           >
-            <SelectTrigger aria-label={t("system_filter_state")}>
+            <SelectTrigger
+              aria-label={t("system_filter_state")}
+              className="w-full shrink-0 sm:w-44"
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectPopup>
@@ -392,7 +395,7 @@ export function OutboxView({
               ))}
             </SelectPopup>
           </Select>
-          <span className="text-muted-foreground text-sm sm:ms-auto">
+          <span className="shrink-0 whitespace-nowrap text-muted-foreground text-sm sm:ms-auto">
             {t("system_showing", { shown, total })}
           </span>
         </div>

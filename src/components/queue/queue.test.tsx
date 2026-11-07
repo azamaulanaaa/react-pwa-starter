@@ -142,6 +142,19 @@ describe("QueueView", () => {
     expect(screen.getByText("task.import")).toBeDefined();
   });
 
+  it("keeps the filter compact and the count on one line", () => {
+    renderView();
+
+    expect(
+      screen.getByLabelText("Filter state").classList.contains("sm:w-44"),
+    ).toBe(true);
+    expect(
+      screen
+        .getByText("Showing 6 of 6")
+        .classList.contains("whitespace-nowrap"),
+    ).toBe(true);
+  });
+
   it("filters the rows by the search text", async () => {
     renderView();
 
