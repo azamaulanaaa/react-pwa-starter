@@ -11,6 +11,10 @@ import {
   UserMenu as UserMenuComponent,
 } from "@/components/auth/user-menu.tsx";
 import { SessionProvider } from "@/components/context/session.tsx";
+import { RustApiSessionBoundary } from "@/components/context/rust-api.tsx";
+import { RustApiAuthCard as RustApiAuthCardComponent } from "@/integrations/rust-api/auth-ui.tsx";
+import { createRustApiBackendIfEnabled } from "@/integrations/rust-api/backend.ts";
+import { createMemoryTokenStore } from "@/integrations/rust-api/client.ts";
 import type {
   Session,
   SessionProvider as SessionProviderContract,
@@ -31,6 +35,19 @@ const SESSION_PROVIDER: SessionProviderContract = {
   logout: async () => {},
   refresh: async () => SESSION,
 };
+
+const RUST_API_BACKEND = createRustApiBackendIfEnabled({
+  env: {
+    VITE_RUST_API_BASE_URL: "https://api.test",
+    VITE_RUST_API_ENABLED: "true",
+  },
+  fetch: async () =>
+    new Response(JSON.stringify({ error: "unauthorized" }), {
+      headers: { "Content-Type": "application/json" },
+      status: 401,
+    }),
+  tokens: createMemoryTokenStore(),
+});
 
 const PROVIDERS: OAuthProvider[] = [
   "google",
@@ -103,5 +120,19 @@ export const SessionUserMenu: Story = () => (
     <SessionProvider provider={SESSION_PROVIDER}>
       <SessionUserMenuComponent onProfile={() => alert("Open profile")} />
     </SessionProvider>
+  </div>
+);
+
+export const RustApiAuthCard: Story = () => (
+  <div className="w-full max-w-sm">
+    <RustApiSessionBoundary backend={RUST_API_BACKEND}>
+      <RustApiAuthCardComponent />
+    </RustApiSessionBoundary>
+  </div>
+);
+
+export const RustApiAuthCardOff: Story = () => (
+  <div className="w-full max-w-sm">
+    <RustApiAuthCardComponent />
   </div>
 );

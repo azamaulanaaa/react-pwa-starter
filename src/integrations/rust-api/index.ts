@@ -26,6 +26,16 @@ export { createRustApiSessionProvider } from "@/integrations/rust-api/auth.ts";
 export type { RustApiSessionOptions } from "@/integrations/rust-api/auth.ts";
 
 export {
+  buildCallbackPath,
+  readLoginSearch,
+  RustApiAuthCard,
+} from "@/integrations/rust-api/auth-ui.tsx";
+export type {
+  LoginSearch,
+  RustApiAuthCardProps,
+} from "@/integrations/rust-api/auth-ui.tsx";
+
+export {
   createRustApiReplicaReader,
   createRustApiSyncTransport,
 } from "@/integrations/rust-api/sync.ts";
