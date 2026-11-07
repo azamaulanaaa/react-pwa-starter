@@ -667,6 +667,31 @@ const provider: SessionContract = {
   `useSessionReset` runs the same reset when the user id changes. It does not
   clear the session cache and does not log out.
 
+## System: outbox and queue
+
+- The system components are in `src/components/system`. The page is in
+  `src/components/system/system-page.tsx`. The `/system` route is in
+  `src/routes/_dashboard/system.tsx`. The dashboard sidebar has a `System`
+  link before the `Setting` link.
+- `OutboxView` shows the outbox rows, the state counts, the search box, the
+  state filter, and the detail sheet. `QueueView` shows the queue rows, the
+  state counts, the search box, the state filter, and the detail sheet.
+- The outbox has the global `flush` and `resume` actions. `flush` calls
+  `worker.outbox.flush()`. `resume` calls `worker.outbox.resume()`. The view
+  shows the paused state and the sign-in-required state. The sign-in link opens
+  `/login`.
+- The outbox has no per-item retry, delete, or cancel action. A failed or
+  conflicted row stays in the list until a handler or an operator resolves it.
+- The queue has the per-job `pause`, `resume`, and `cancel` actions. They call
+  `worker.queue.pause(id)`, `worker.queue.resume(id)`, and
+  `worker.queue.cancel(id)`. The cancel action asks for confirmation first.
+- The queue stores the live jobs. `useQueueJobs` reads `worker.queue.watch()`.
+  The stream sends the first snapshot, then each change. The list updates
+  without polling.
+- `useOutboxOps` reads `worker.outbox.watch()` and reloads the list after each
+  status change. The hook calls `worker.outbox.list()` on mount.
+- Run the system tests with `npm run test:run`.
+
 ## Replica reader
 
 - The generic reader is in `src/lib/sync`. The reader has no domain type.
