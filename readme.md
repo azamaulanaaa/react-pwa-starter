@@ -669,7 +669,10 @@ const provider: SessionContract = {
 
 ## System: outbox and queue
 
-- The system components are in `src/components/system`. The page is in
+- The outbox components are in `src/components/outbox`. The queue components
+  are in `src/components/queue`. The shared `JsonView` and `DetailFields`
+  components are in `src/components/shared`.
+- The `/system` composition page is in
   `src/components/system/system-page.tsx`. The `/system` route is in
   `src/routes/_dashboard/system.tsx`. The dashboard sidebar has a `System`
   link before the `Setting` link.
