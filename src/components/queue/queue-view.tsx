@@ -334,27 +334,25 @@ export function QueueView({
               value={query}
             />
           </InputGroup>
-          <div className="flex flex-wrap items-center gap-2">
-            <Select
-              items={filterLabels}
-              onValueChange={(value) => setStateFilter(value as StateFilter)}
-              value={stateFilter}
-            >
-              <SelectTrigger aria-label={t("system_filter_state")}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectPopup>
-                {(Object.keys(FILTER_VALUES) as StateFilter[]).map((value) => (
-                  <SelectItem key={value} value={value}>
-                    {filterLabels[value]}
-                  </SelectItem>
-                ))}
-              </SelectPopup>
-            </Select>
-            <span className="text-muted-foreground text-sm">
-              {t("system_showing", { shown, total })}
-            </span>
-          </div>
+          <Select
+            items={filterLabels}
+            onValueChange={(value) => setStateFilter(value as StateFilter)}
+            value={stateFilter}
+          >
+            <SelectTrigger aria-label={t("system_filter_state")}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectPopup>
+              {(Object.keys(FILTER_VALUES) as StateFilter[]).map((value) => (
+                <SelectItem key={value} value={value}>
+                  {filterLabels[value]}
+                </SelectItem>
+              ))}
+            </SelectPopup>
+          </Select>
+          <span className="text-muted-foreground text-sm sm:ms-auto">
+            {t("system_showing", { shown, total })}
+          </span>
         </div>
 
         {loading ? (

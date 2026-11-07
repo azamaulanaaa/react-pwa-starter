@@ -137,6 +137,7 @@ describe("QueueView", () => {
     const counts = document.querySelector('[data-slot="queue-counts"]');
     expect(counts).not.toBeNull();
     expect(within(counts as HTMLElement).getAllByText("1")).toHaveLength(6);
+    expect(screen.getByText("Showing 6 of 6")).toBeDefined();
     expect(screen.getByText("task.send")).toBeDefined();
     expect(screen.getByText("task.import")).toBeDefined();
   });

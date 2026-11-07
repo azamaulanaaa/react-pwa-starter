@@ -141,6 +141,7 @@ describe("OutboxView", () => {
     expect(counts).not.toBeNull();
     expect(within(counts as HTMLElement).getAllByText("1")).toHaveLength(3);
 
+    expect(screen.getByText("Showing 3 of 3")).toBeDefined();
     expect(screen.getByText("/api/notes")).toBeDefined();
     expect(screen.getByText("/api/notes/2")).toBeDefined();
     expect(screen.getByText("/api/notes/3")).toBeDefined();
