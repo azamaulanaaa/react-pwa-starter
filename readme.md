@@ -303,12 +303,13 @@ src/
 │   ├── table/         # Generic table wrapper
 │   ├── form/          # Form helpers and the setting form
 │   ├── context/       # Providers: config, intl, session, translation, worker
-│   └── image/         # Image preview
+│   ├── image/         # Image preview
+│   └── upload/        # File upload with drag and drop
 ├── hooks/
 │   ├── engines/       # Higher-level hooks: use-infinite-scroll, use-uploader,
 │   │                  # use-report, use-camera, use-geolocation
 │   └── primitives/    # Small composable hooks (debounce, persist state,
-│                      # media query, dark mode, streams)
+│                      # media query, dark mode, streams, file upload)
 ├── lib/               # Comlink helpers, generic API, auth, sync, outbox, report,
 │                      # time, pwa, and file contracts, cn, utilities
 ├── rust-api/          # Optional backend adapter. The core imports only optional.tsx.
@@ -1020,6 +1021,31 @@ Do not run `npx shadcn@latest add @coss/ui --overwrite`. Local edits exist in
 The `@coss/utils` registry item can try to write `src/lib/utils.ts`. It can also
 add the `clsx` and `tailwind-merge` dependencies. Keep the existing re-export. Do
 not pass `--overwrite`.
+
+## File upload
+
+The component is in `src/components/upload/file-upload.tsx`. The hook is in
+`src/hooks/primitives/use-file-upload.ts`. The source registry item is
+`https://coss.com/origin/r/comp-552.json`.
+
+The component supports drag and drop and a file picker. It shows preview cards
+for each file. It applies a maximum file count, a maximum file size, and accept
+rules. It can remove one file or clear all files.
+
+The props:
+
+- `initialFiles`: the files at the first render.
+- `maxFiles`: the maximum file count. The default is 6.
+- `maxSize`: the maximum file size in bytes. The default is 5 MB.
+- `accept`: the input accept rule. The default is `*`.
+- `multiple`: allow more than one file. The default is `true`.
+- `disabled`: disable the input and the buttons.
+- `name`, `id`, and `className`: the input name, the input id, and the root
+  class.
+- `onFilesChange`: run when the file list changes.
+- `onFilesAdded`: run when the user adds files.
+
+The stories run with `npm run ladle`. The tests run with `npm run test:run`.
 
 ## Component previews (Ladle)
 
