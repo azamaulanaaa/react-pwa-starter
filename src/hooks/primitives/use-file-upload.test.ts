@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { StrictMode, createElement, type ReactNode } from "react";
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -186,6 +187,20 @@ describe("useFileUpload", () => {
     act(() => result.current[1].removeFile(id));
 
     expect(onFilesChange).toHaveBeenLastCalledWith([]);
+  });
+
+  it("calls onFilesChange one time under StrictMode", () => {
+    const onFilesChange = vi.fn();
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(StrictMode, null, children);
+    const { result } = renderHook(
+      () => useFileUpload({ multiple: true, maxSize: 1024, onFilesChange }),
+      { wrapper },
+    );
+
+    act(() => result.current[1].addFiles([makeFile("photo.png", "image/png")]));
+
+    expect(onFilesChange).toHaveBeenCalledTimes(1);
   });
 
   it("returns the input props with the type, accept, and multiple values", () => {
