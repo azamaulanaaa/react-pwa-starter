@@ -55,3 +55,23 @@ export const SingleFile: Story = () => (
     />
   </div>
 );
+
+export const WithProgress: Story = () => (
+  <div className="max-w-2xl p-6">
+    <FileUpload
+      busy
+      initialFiles={SAMPLE_FILES}
+      progressByFileId={{ "audio-01": 0.75, "image-01": 0.42 }}
+    />
+  </div>
+);
+
+export const WithError: Story = () => (
+  <div className="max-w-2xl p-6">
+    <FileUpload
+      busy={false}
+      errorsByFileId={{ "intro-zip": "The upload failed. Try again." }}
+      initialFiles={SAMPLE_FILES}
+    />
+  </div>
+);

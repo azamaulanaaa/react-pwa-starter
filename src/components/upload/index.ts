@@ -1,5 +1,12 @@
-export { FileUpload } from "@/components/upload/file-upload.tsx";
-export type { FileUploadProps } from "@/components/upload/file-upload.tsx";
+export {
+  FileUpload,
+  toFileMetadata,
+  uploadsComplete,
+} from "@/components/upload/file-upload.tsx";
+export type {
+  FileUploadMetadata,
+  FileUploadProps,
+} from "@/components/upload/file-upload.tsx";
 export { formatBytes } from "@/hooks/primitives/use-file-upload.ts";
 export type {
   FileMetadata,
