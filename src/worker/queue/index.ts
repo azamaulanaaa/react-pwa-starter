@@ -1,11 +1,11 @@
 import { Effect, Scope } from "effect";
 
 import { createQueue, type QueueApi } from "@/worker/queue/runtime.ts";
+import { workerScope } from "@/worker/supervisor.ts";
 
-// The module keeps the scope, which is what keeps the scheduler alive for the
-// life of the worker. A `Layer` would rebuild the runtime per call.
-const runtimeScope = Effect.runSync(Scope.make());
-const runtime = Effect.runSync(Scope.provide(runtimeScope)(createQueue()));
+// The worker scope owns the scheduler for the life of the worker.
+// A `Layer` would rebuild the runtime per call.
+const runtime = Effect.runSync(Scope.provide(workerScope)(createQueue()));
 
 export const queue: QueueApi = runtime;
 
