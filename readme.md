@@ -1032,6 +1032,11 @@ The component supports drag and drop and a file picker. It shows preview cards
 for each file. It applies a maximum file count, a maximum file size, and accept
 rules. It can remove one file or clear all files.
 
+The component does not upload files. The app owns the upload. The app starts one
+upload for each new file from `onFilesAdded` or `onFilesChange`. The app sets
+`progressByFileId[id]` from 0 to 1. The app sets `errorsByFileId[id]` when one
+upload fails. The app owns the actual upload calls and sets the progress values.
+
 The props:
 
 - `initialFiles`: the files at the first render.
@@ -1040,10 +1045,33 @@ The props:
 - `accept`: the input accept rule. The default is `*`.
 - `multiple`: allow more than one file. The default is `true`.
 - `disabled`: disable the input and the buttons.
+- `busy`: disable add, remove, and select while an upload runs. The default is
+  `false`.
+- `progressByFileId`: the progress for each file id. A value from 0 to 1.
+- `errorsByFileId`: the upload error for each file id.
 - `name`, `id`, and `className`: the input name, the input id, and the root
   class.
 - `onFilesChange`: run when the file list changes.
 - `onFilesAdded`: run when the user adds files.
+
+The `toFileMetadata` helper returns only `id`, `name`, `size`, and `type` for
+each file. The `uploadsComplete` helper reports true when every file has
+progress 1. An empty list returns true.
+
+This example disables the submit button until every upload completes:
+
+```tsx
+const ready = uploadsComplete(files, progressByFileId);
+
+<FileUpload
+  busy={!ready}
+  onFilesChange={setFiles}
+  progressByFileId={progressByFileId}
+/>
+<Button disabled={!ready} onClick={() => submit(toFileMetadata(files))}>
+  Save
+</Button>
+```
 
 The stories run with `npm run ladle`. The tests run with `npm run test:run`.
 
