@@ -2,9 +2,12 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { IntlProvider } from "@/components/context/intl.tsx";
 import { TranslationProvider } from "@/components/context/translation.tsx";
 import {
   FileUpload,
+  toFileMetadata,
+  uploadsComplete,
   type FileUploadProps,
 } from "@/components/upload/file-upload.tsx";
 import type { FileMetadata } from "@/hooks/primitives/use-file-upload.ts";
@@ -65,7 +68,9 @@ function renderUpload(props: FileUploadProps = {}) {
       dictionary={DICTIONARY}
       fallbackDictionary={DICTIONARY}
     >
-      <FileUpload {...props} />
+      <IntlProvider>
+        <FileUpload {...props} />
+      </IntlProvider>
     </TranslationProvider>,
   );
 }
@@ -166,5 +171,90 @@ describe("FileUpload", () => {
         .hasAttribute("disabled"),
     ).toBe(true);
     expect(getInput().disabled).toBe(true);
+  });
+
+  it("shows the overlay for a file below full progress", () => {
+    renderUpload({
+      initialFiles: [INITIAL_FILES[0]],
+      progressByFileId: { "image-1": 0.42 },
+    });
+
+    expect(
+      document.querySelector('[data-slot="file-upload-progress"]'),
+    ).not.toBeNull();
+    expect(screen.getByText("42%")).toBeDefined();
+  });
+
+  it("hides the overlay when the progress is 1", () => {
+    renderUpload({
+      initialFiles: [INITIAL_FILES[0]],
+      progressByFileId: { "image-1": 1 },
+    });
+
+    expect(
+      document.querySelector('[data-slot="file-upload-progress"]'),
+    ).toBeNull();
+  });
+
+  it("shows the upload error text from the props", () => {
+    const message = "The upload failed. Try again.";
+
+    renderUpload({
+      errorsByFileId: { "image-1": message },
+      initialFiles: [INITIAL_FILES[0]],
+    });
+
+    expect(screen.getByText(message)).toBeDefined();
+  });
+
+  it("disables the actions while busy", () => {
+    renderUpload({ busy: true, initialFiles: INITIAL_FILES });
+
+    expect(
+      screen
+        .getByRole("button", { name: "Add files" })
+        .hasAttribute("disabled"),
+    ).toBe(true);
+    expect(
+      screen
+        .getByRole("button", { name: "Remove all" })
+        .hasAttribute("disabled"),
+    ).toBe(true);
+    expect(
+      screen
+        .getByRole("button", { name: "Remove photo.png" })
+        .hasAttribute("disabled"),
+    ).toBe(true);
+    expect(getInput().disabled).toBe(true);
+  });
+});
+
+describe("toFileMetadata", () => {
+  it("returns only the file metadata for a form submit", () => {
+    const file = new File(["data"], "photo.png", { type: "image/png" });
+
+    const result = toFileMetadata([
+      { id: "file-1", file, preview: "blob:preview-1" },
+    ]);
+
+    expect(result).toEqual([
+      {
+        id: "file-1",
+        name: "photo.png",
+        size: file.size,
+        type: "image/png",
+      },
+    ]);
+  });
+});
+
+describe("uploadsComplete", () => {
+  it("reports upload completion for empty and partial lists", () => {
+    const file = new File(["data"], "photo.png", { type: "image/png" });
+    const files = [{ id: "file-1", file }];
+
+    expect(uploadsComplete([], {})).toBe(true);
+    expect(uploadsComplete(files, { "file-1": 1 })).toBe(true);
+    expect(uploadsComplete(files, { "file-1": 0.5 })).toBe(false);
   });
 });
