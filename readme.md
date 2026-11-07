@@ -435,9 +435,13 @@ code moves.
   queue job runs on a fiber that the queue runtime owns, so dropping the
   `enqueue` call stops nothing. `pause`, `resume`, and `cancel` are three
   separate worker calls that mutate the queue's own state.
-- The queue runtime (`src/worker/queue/runtime.ts`) is built once under an
-  explicit scope that lives for the life of the worker. It is not a `Layer`,
-  because `Layer.effect` rebuilds per call and would reset the queue.
+- One supervisor scope in `src/worker/supervisor.ts` owns every long-lived
+  worker fiber. The queue loop and the outbox flusher run under this scope.
+  `src/worker/runtime.ts` builds the `{ changes, db, fs, outbox, queue }`
+  object. The queue runtime is not a `Layer`, because `Layer.effect` rebuilds
+  per call and would reset the queue.
+- `stopWorker` closes the supervisor scope. It is worker-side only. The UI does
+  not call it.
 
 ## Service worker & update UX
 
@@ -490,6 +494,9 @@ code moves.
   permanent `4xx` code moves it to `failed`. Every other response retries.
 - Retry uses exponential backoff. The base is 1000 ms and the cap is 300000 ms.
   The jitter is 50 to 100 percent. The head row blocks the queue until it ends.
+- One flusher fiber runs at a time. A duplicate `flush()` joins the active
+  drain and returns the same result. A failed or interrupted drain clears the
+  active slot, so a later call can start again.
 - `status` returns `pending`, `sending`, `failed`, and `conflict` counts. It also
   returns `paused` and `signInRequired`. `useOutbox` reads the counts.
 - `useAutoFlush` flushes on the `online` event, on a visible tab, and after a
