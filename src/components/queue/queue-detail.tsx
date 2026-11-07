@@ -30,13 +30,13 @@ import {
 import {
   DetailField,
   DetailFields,
-} from "@/components/system/detail-fields.tsx";
-import { JsonView } from "@/components/system/json-view.tsx";
-import { QueueStateBadge } from "@/components/system/state-badge.tsx";
+} from "@/components/shared/detail-fields.tsx";
+import { JsonView } from "@/components/shared/json-view.tsx";
+import { QueueStateBadge } from "@/components/queue/state-badge.tsx";
 import type {
   QueueActionResult,
   QueueActionTarget,
-} from "@/components/system/use-queue-jobs.ts";
+} from "@/components/queue/use-queue-jobs.ts";
 import type { Job } from "@/worker/queue/schema.ts";
 
 export interface QueueDetailProps {

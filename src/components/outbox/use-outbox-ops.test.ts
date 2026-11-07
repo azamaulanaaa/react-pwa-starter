@@ -2,7 +2,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { useOutboxOps } from "@/components/system/use-outbox-ops.ts";
+import { useOutboxOps } from "@/components/outbox/use-outbox-ops.ts";
 import type {
   OutboxFlushResult,
   OutboxOp,

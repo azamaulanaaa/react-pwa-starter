@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   useQueueJobs,
   type QueueActionResult,
-} from "@/components/system/use-queue-jobs.ts";
+} from "@/components/queue/use-queue-jobs.ts";
 import type { Job } from "@/worker/queue/schema.ts";
 
 const state = vi.hoisted(() => ({

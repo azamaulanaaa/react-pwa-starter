@@ -20,12 +20,12 @@ import {
 import {
   DetailField,
   DetailFields,
-} from "@/components/system/detail-fields.tsx";
-import { JsonView } from "@/components/system/json-view.tsx";
+} from "@/components/shared/detail-fields.tsx";
+import { JsonView } from "@/components/shared/json-view.tsx";
 import {
   MethodBadge,
   OutboxStateBadge,
-} from "@/components/system/state-badge.tsx";
+} from "@/components/outbox/state-badge.tsx";
 import type { OutboxOp } from "@/lib/outbox/types.ts";
 
 export interface OutboxDetailProps {

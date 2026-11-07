@@ -2,10 +2,14 @@ import type React from "react";
 import { useMemo, useState } from "react";
 import {
   ChevronRightIcon,
-  ListChecksIcon,
+  CircleCheckIcon,
+  InboxIcon,
+  LogInIcon,
+  PlayIcon,
   RefreshCwIcon,
   SearchIcon,
   TriangleAlertIcon,
+  UploadIcon,
 } from "lucide-react";
 
 import { useIntl } from "@/components/context/intl.tsx";
@@ -38,7 +42,6 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group.tsx";
-import { Progress } from "@/components/ui/progress.tsx";
 import {
   Select,
   SelectItem,
@@ -56,73 +59,77 @@ import {
   TableGeneric,
   type TableGenericColumnDef,
 } from "@/components/table/generic/index.tsx";
-import { QueueDetail } from "@/components/system/queue-detail.tsx";
-import { QueueStateBadge } from "@/components/system/state-badge.tsx";
-import type {
-  QueueActionResult,
-  QueueActionTarget,
-} from "@/components/system/use-queue-jobs.ts";
+import { OutboxDetail } from "@/components/outbox/outbox-detail.tsx";
+import {
+  MethodBadge,
+  OutboxStateBadge,
+} from "@/components/outbox/state-badge.tsx";
 import { useDebounce } from "@/hooks/primitives/use-debounce.ts";
-import type { Job, JobState } from "@/worker/queue/schema.ts";
+import type {
+  OutboxFlushResult,
+  OutboxOp,
+  OutboxState,
+  OutboxStatus,
+} from "@/lib/outbox/types.ts";
 
-type StateFilter = JobState | "all";
+type StateFilter = OutboxState | "all";
 
 const COUNT_STATES = [
-  "queued",
-  "running",
-  "paused",
-  "succeeded",
+  "pending",
+  "sending",
   "failed",
-  "canceled",
-] as const satisfies readonly JobState[];
+  "conflict",
+] as const satisfies readonly OutboxState[];
 
 const COUNT_VARIANTS = {
-  queued: "outline",
-  running: "info",
-  paused: "warning",
-  succeeded: "success",
+  pending: "warning",
+  sending: "info",
   failed: "error",
-  canceled: "outline",
+  conflict: "warning",
 } as const;
 
 const FILTER_VALUES: Record<StateFilter, string> = {
   all: "system_filter_all",
-  queued: "system_state_queued",
-  running: "system_state_running",
-  paused: "system_state_paused",
-  succeeded: "system_state_succeeded",
+  pending: "system_state_pending",
+  sending: "system_state_sending",
   failed: "system_state_failed",
-  canceled: "system_state_canceled",
+  conflict: "system_state_conflict",
+  done: "system_state_done",
 };
 
-export interface QueueViewProps {
-  jobs: Job[];
+export interface OutboxViewProps {
+  ops: OutboxOp[];
+  status: OutboxStatus;
   loading: boolean;
+  refreshing: boolean;
   error: Error | null;
-  pendingAction: QueueActionTarget | null;
+  flushing: boolean;
+  resuming: boolean;
+  flushResult: OutboxFlushResult | null;
   onRefresh: () => void;
-  onPause: (id: string) => Promise<QueueActionResult>;
-  onResume: (id: string) => Promise<QueueActionResult>;
-  onCancel: (id: string) => Promise<QueueActionResult>;
+  onFlush: () => void;
+  onResume: () => void;
 }
 
-/** Shows the queue jobs, the per-job actions, and the detail sheet. */
-export function QueueView({
-  jobs,
+/** Shows the outbox rows, the global actions, and the detail sheet. */
+export function OutboxView({
+  ops,
+  status,
   loading,
+  refreshing,
   error,
-  pendingAction,
+  flushing,
+  resuming,
+  flushResult,
   onRefresh,
-  onPause,
+  onFlush,
   onResume,
-  onCancel,
-}: QueueViewProps): React.ReactElement {
+}: OutboxViewProps): React.ReactElement {
   const { t } = useTranslation();
-  const { formatDate, formatNumber, formatPercent } = useIntl();
+  const { formatDate, formatNumber } = useIntl();
   const [query, setQuery] = useState("");
   const [stateFilter, setStateFilter] = useState<StateFilter>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const debouncedQuery = useDebounce(query, 200);
 
   const filterLabels = useMemo(() => {
@@ -133,76 +140,66 @@ export function QueueView({
     return labels;
   }, [t]);
 
-  const counts = useMemo(() => {
-    const next = {} as Record<JobState, number>;
-    for (const state of COUNT_STATES) next[state] = 0;
-    for (const job of jobs) next[job.state] += 1;
-    return next;
-  }, [jobs]);
-
-  const visibleJobs = useMemo(() => {
+  const visibleOps = useMemo(() => {
     const term = debouncedQuery.trim().toLowerCase();
 
-    return jobs.filter((job) => {
-      if (stateFilter !== "all" && job.state !== stateFilter) return false;
+    return ops.filter((op) => {
+      if (stateFilter !== "all" && op.state !== stateFilter) return false;
       if (!term) return true;
 
       return (
-        job.id.toLowerCase().includes(term) ||
-        job.kind.toLowerCase().includes(term)
+        op.id.toLowerCase().includes(term) ||
+        op.kind.toLowerCase().includes(term) ||
+        op.path.toLowerCase().includes(term)
       );
     });
-  }, [debouncedQuery, jobs, stateFilter]);
+  }, [debouncedQuery, ops, stateFilter]);
 
-  const columns = useMemo<TableGenericColumnDef<Job>[]>(
+  const columns = useMemo<TableGenericColumnDef<OutboxOp>[]>(
     () => [
       {
         id: "state",
         header: t("system_detail_state"),
-        cell: ({ row }) => <QueueStateBadge state={row.original.state} />,
+        cell: ({ row }) => <OutboxStateBadge state={row.original.state} />,
+      },
+      {
+        id: "method",
+        header: t("system_detail_method"),
+        cell: ({ row }) => <MethodBadge method={row.original.method} />,
+      },
+      {
+        id: "path",
+        header: t("system_detail_path"),
+        cell: ({ row }) => (
+          <span className="font-mono text-xs">{row.original.path}</span>
+        ),
       },
       {
         id: "kind",
-        header: t("system_detail_kind"),
-        cell: ({ row }) => (
-          <span className="font-mono text-xs">{row.original.kind}</span>
-        ),
-      },
-      {
-        id: "progress",
-        header: t("system_detail_progress"),
-        cell: ({ row }) => (
-          <div className="flex min-w-32 items-center gap-2">
-            <Progress
-              className="flex-1"
-              max={100}
-              value={Math.round(row.original.progress * 100)}
-            />
-            <span className="text-muted-foreground text-xs tabular-nums">
-              {formatPercent(row.original.progress)}
-            </span>
-          </div>
-        ),
-      },
-      {
-        id: "attempt",
         header: () => (
-          <span className="max-md:hidden">{t("system_detail_attempt")}</span>
+          <span className="max-md:hidden">{t("system_detail_kind")}</span>
+        ),
+        cell: ({ row }) => (
+          <span className="max-md:hidden">{row.original.kind}</span>
+        ),
+      },
+      {
+        id: "attempts",
+        header: () => (
+          <span className="max-md:hidden">{t("system_detail_attempts")}</span>
         ),
         cell: ({ row }) => (
           <span className="max-md:hidden tabular-nums">
-            {formatNumber(row.original.attempt)}
+            {formatNumber(row.original.attempts)}
           </span>
         ),
       },
       {
-        id: "updated",
-        header: () => (
-          <span className="max-md:hidden">{t("system_detail_updated")}</span>
-        ),
+        id: "created",
+        header: t("system_detail_created"),
         cell: ({ row }) => (
-          <span className="max-md:hidden whitespace-nowrap text-xs">
-            {formatDate(row.original.updated_at, {
+          <span className="whitespace-nowrap text-xs">
+            {formatDate(row.original.createdAt, {
               dateStyle: "medium",
               timeStyle: "short",
             })}
@@ -210,10 +207,26 @@ export function QueueView({
         ),
       },
       {
-        id: "error",
-        header: t("system_detail_error"),
+        id: "nextAttempt",
+        header: () => (
+          <span className="max-md:hidden">
+            {t("system_detail_next_attempt")}
+          </span>
+        ),
+        cell: ({ row }) => (
+          <span className="max-md:hidden whitespace-nowrap text-xs">
+            {formatDate(row.original.nextAttemptAt, {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })}
+          </span>
+        ),
+      },
+      {
+        id: "lastError",
+        header: t("system_detail_last_error"),
         cell: ({ row }) => {
-          const message = row.original.error;
+          const message = row.original.lastError?.message;
           if (!message) {
             return <span className="text-muted-foreground">—</span>;
           }
@@ -223,7 +236,7 @@ export function QueueView({
               <TooltipTrigger
                 render={
                   <span className="flex max-w-40 items-center gap-1 text-muted-foreground">
-                    <TriangleAlertIcon className="size-3.5 shrink-0 text-destructive" />
+                    <TriangleAlertIcon className="size-3.5 shrink-0 text-warning" />
                     <span className="truncate">{message}</span>
                   </span>
                 }
@@ -250,57 +263,79 @@ export function QueueView({
         ),
       },
     ],
-    [formatDate, formatNumber, formatPercent, t],
+    [formatDate, formatNumber, t],
   );
 
-  const selected = jobs.find((job) => job.id === selectedId) ?? null;
-  const shown = formatNumber(visibleJobs.length);
-  const total = formatNumber(jobs.length);
-
-  const runAction = async (
-    action: () => Promise<QueueActionResult>,
-  ): Promise<QueueActionResult> => {
-    const result = await action();
-    if (result.ok) {
-      setNotice(null);
-      return result;
-    }
-
-    setNotice(
-      result.reason === "unavailable"
-        ? t("system_action_unavailable")
-        : result.error.message,
-    );
-    return result;
-  };
+  const selected = ops.find((op) => op.id === selectedId) ?? null;
+  const shown = formatNumber(visibleOps.length);
+  const total = formatNumber(ops.length);
 
   return (
-    <Card data-slot="queue-view">
+    <Card data-slot="outbox-view">
       <CardHeader>
-        <CardTitle>{t("system_queue_title")}</CardTitle>
-        <CardDescription>{t("system_queue_description")}</CardDescription>
+        <CardTitle>{t("system_outbox_title")}</CardTitle>
+        <CardDescription>{t("system_outbox_description")}</CardDescription>
         <CardAction className="flex flex-wrap items-center gap-2">
-          <Button onClick={onRefresh} variant="outline">
+          <Button loading={refreshing} onClick={onRefresh} variant="outline">
             <RefreshCwIcon />
             {t("system_refresh")}
           </Button>
+          <Button loading={flushing} onClick={onFlush}>
+            <UploadIcon />
+            {t("system_flush")}
+          </Button>
+          {(status.paused || status.signInRequired) && (
+            <Button loading={resuming} onClick={onResume} variant="outline">
+              <PlayIcon />
+              {t("system_resume")}
+            </Button>
+          )}
         </CardAction>
       </CardHeader>
 
       <CardPanel className="flex flex-col gap-4">
         <div
           className="flex flex-wrap items-center gap-2"
-          data-slot="queue-counts"
+          data-slot="outbox-counts"
         >
           {COUNT_STATES.map((state) => (
             <Badge key={state} variant={COUNT_VARIANTS[state]}>
               {t(`system_state_${state}`)}
               <span className="tabular-nums">
-                {formatNumber(counts[state])}
+                {formatNumber(status[state])}
               </span>
             </Badge>
           ))}
         </div>
+
+        {status.paused && (
+          <Alert variant="warning">
+            <TriangleAlertIcon />
+            <AlertTitle>{t("system_outbox_paused")}</AlertTitle>
+            <AlertAction>
+              <Button
+                loading={resuming}
+                onClick={onResume}
+                size="sm"
+                variant="outline"
+              >
+                {t("system_resume")}
+              </Button>
+            </AlertAction>
+          </Alert>
+        )}
+
+        {status.signInRequired && (
+          <Alert variant="error">
+            <LogInIcon />
+            <AlertTitle>{t("system_outbox_sign_in_required")}</AlertTitle>
+            <AlertAction>
+              <Button render={<a href="/login" />} size="sm" variant="outline">
+                {t("system_outbox_sign_in")}
+              </Button>
+            </AlertAction>
+          </Alert>
+        )}
 
         {error && (
           <Alert variant="error">
@@ -315,10 +350,17 @@ export function QueueView({
           </Alert>
         )}
 
-        {notice && (
-          <Alert variant="error">
-            <TriangleAlertIcon />
-            <AlertDescription>{notice}</AlertDescription>
+        {flushResult && (
+          <Alert variant="success">
+            <CircleCheckIcon />
+            <AlertDescription>
+              {t("system_flush_result", {
+                sent: formatNumber(flushResult.sent),
+                pending: formatNumber(flushResult.pending),
+                failed: formatNumber(flushResult.failed),
+                conflict: formatNumber(flushResult.conflict),
+              })}
+            </AlertDescription>
           </Alert>
         )}
 
@@ -363,38 +405,34 @@ export function QueueView({
               <Skeleton className="h-10 w-full" key={index} />
             ))}
           </div>
-        ) : visibleJobs.length === 0 ? (
+        ) : visibleOps.length === 0 ? (
           <Empty>
             <EmptyHeader>
               <EmptyMedia variant="icon">
-                <ListChecksIcon />
+                <InboxIcon />
               </EmptyMedia>
-              <EmptyTitle>{t("system_empty_queue_title")}</EmptyTitle>
+              <EmptyTitle>{t("system_empty_outbox_title")}</EmptyTitle>
               <EmptyDescription>
-                {t("system_empty_queue_description")}
+                {t("system_empty_outbox_description")}
               </EmptyDescription>
             </EmptyHeader>
           </Empty>
         ) : (
           <TableGeneric
             columns={columns}
-            data={visibleJobs}
-            getRowId={(job) => job.id}
+            data={visibleOps}
+            getRowId={(op) => op.id}
           />
         )}
       </CardPanel>
 
       {selected !== null && (
-        <QueueDetail
-          job={selected}
-          onCancel={(id) => runAction(() => onCancel(id))}
+        <OutboxDetail
           onOpenChange={(next) => {
             if (!next) setSelectedId(null);
           }}
-          onPause={(id) => runAction(() => onPause(id))}
-          onResume={(id) => runAction(() => onResume(id))}
           open={selected !== null}
-          pendingAction={pendingAction}
+          op={selected}
         />
       )}
     </Card>

@@ -1,7 +1,7 @@
 import type React from "react";
 
-import { QueueView } from "@/components/system/queue-view.tsx";
-import { useQueueJobs } from "@/components/system/use-queue-jobs.ts";
+import { QueueView } from "@/components/queue/queue-view.tsx";
+import { useQueueJobs } from "@/components/queue/use-queue-jobs.ts";
 
 /** Connects the queue view to the worker. */
 export function QueuePanel(): React.ReactElement {

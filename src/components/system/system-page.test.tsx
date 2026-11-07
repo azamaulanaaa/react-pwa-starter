@@ -6,11 +6,11 @@ import { IntlProvider } from "@/components/context/intl.tsx";
 import { TranslationProvider } from "@/components/context/translation.tsx";
 import { SystemPage } from "@/components/system/system-page.tsx";
 
-vi.mock("@/components/system/outbox-panel.tsx", () => ({
+vi.mock("@/components/outbox/index.ts", () => ({
   OutboxPanel: () => <div>Outbox panel</div>,
 }));
 
-vi.mock("@/components/system/queue-panel.tsx", () => ({
+vi.mock("@/components/queue/index.ts", () => ({
   QueuePanel: () => <div>Queue panel</div>,
 }));
 

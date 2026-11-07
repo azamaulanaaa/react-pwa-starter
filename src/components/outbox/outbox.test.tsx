@@ -13,7 +13,7 @@ import { TranslationProvider } from "@/components/context/translation.tsx";
 import {
   OutboxView,
   type OutboxViewProps,
-} from "@/components/system/outbox-view.tsx";
+} from "@/components/outbox/outbox-view.tsx";
 import type { OutboxOp, OutboxStatus } from "@/lib/outbox/types.ts";
 
 const DICTIONARY = {

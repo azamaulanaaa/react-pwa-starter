@@ -3,8 +3,8 @@ import { InboxIcon, ListChecksIcon } from "lucide-react";
 
 import { useTranslation } from "@/components/context/translation.tsx";
 import { Tabs, TabsList, TabsPanel, TabsTab } from "@/components/ui/tabs.tsx";
-import { OutboxPanel } from "@/components/system/outbox-panel.tsx";
-import { QueuePanel } from "@/components/system/queue-panel.tsx";
+import { OutboxPanel } from "@/components/outbox/index.ts";
+import { QueuePanel } from "@/components/queue/index.ts";
 
 /** Shows the outbox and queue tabs. */
 export function SystemPage(): React.ReactElement {

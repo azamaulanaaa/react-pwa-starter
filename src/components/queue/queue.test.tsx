@@ -13,8 +13,8 @@ import { TranslationProvider } from "@/components/context/translation.tsx";
 import {
   QueueView,
   type QueueViewProps,
-} from "@/components/system/queue-view.tsx";
-import type { QueueActionResult } from "@/components/system/use-queue-jobs.ts";
+} from "@/components/queue/queue-view.tsx";
+import type { QueueActionResult } from "@/components/queue/use-queue-jobs.ts";
 import type { Job } from "@/worker/queue/schema.ts";
 
 const DICTIONARY = {
