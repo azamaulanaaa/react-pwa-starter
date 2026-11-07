@@ -6,7 +6,7 @@ import {
   Outlet,
   useMatches,
 } from "@tanstack/react-router";
-import { House, Settings } from "lucide-react";
+import { Activity, House, Settings } from "lucide-react";
 
 import {
   AnchoredToastProvider,
@@ -118,6 +118,11 @@ function Page() {
                         icon={House}
                         label={t("layout_menu_home")}
                         to="/"
+                      />
+                      <SidebarLink
+                        icon={Activity}
+                        label={t("layout_menu_system")}
+                        to="/system"
                       />
                       <SidebarLink
                         icon={Settings}

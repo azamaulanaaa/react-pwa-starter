@@ -13,6 +13,7 @@ import { Route as DashboardRouteRouteImport } from './routes/_dashboard/route'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardIndexRouteImport } from './routes/_dashboard/index'
 import { Route as DashboardSettingRouteImport } from './routes/_dashboard/setting'
+import { Route as DashboardSystemRouteImport } from './routes/_dashboard/system'
 
 const DashboardRouteRoute = DashboardRouteRouteImport.update({
   id: '/_dashboard',
@@ -33,15 +34,22 @@ const DashboardSettingRoute = DashboardSettingRouteImport.update({
   path: '/setting',
   getParentRoute: () => DashboardRouteRoute,
 } as any)
+const DashboardSystemRoute = DashboardSystemRouteImport.update({
+  id: '/system',
+  path: '/system',
+  getParentRoute: () => DashboardRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof DashboardIndexRoute
   '/login': typeof LoginRoute
   '/setting': typeof DashboardSettingRoute
+  '/system': typeof DashboardSystemRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/setting': typeof DashboardSettingRoute
+  '/system': typeof DashboardSystemRoute
   '/': typeof DashboardIndexRoute
 }
 export interface FileRoutesById {
@@ -49,18 +57,20 @@ export interface FileRoutesById {
   '/_dashboard': typeof DashboardRouteRouteWithChildren
   '/login': typeof LoginRoute
   '/_dashboard/setting': typeof DashboardSettingRoute
+  '/_dashboard/system': typeof DashboardSystemRoute
   '/_dashboard/': typeof DashboardIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/setting'
+  fullPaths: '/' | '/login' | '/setting' | '/system'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/setting' | '/'
+  to: '/login' | '/setting' | '/system' | '/'
   id:
     | '__root__'
     | '/_dashboard'
     | '/login'
     | '/_dashboard/setting'
+    | '/_dashboard/system'
     | '/_dashboard/'
   fileRoutesById: FileRoutesById
 }
@@ -99,16 +109,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardSettingRouteImport
       parentRoute: typeof DashboardRouteRoute
     }
+    '/_dashboard/system': {
+      id: '/_dashboard/system'
+      path: '/system'
+      fullPath: '/system'
+      preLoaderRoute: typeof DashboardSystemRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
   }
 }
 
 interface DashboardRouteRouteChildren {
   DashboardSettingRoute: typeof DashboardSettingRoute
+  DashboardSystemRoute: typeof DashboardSystemRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
 }
 
 const DashboardRouteRouteChildren: DashboardRouteRouteChildren = {
   DashboardSettingRoute: DashboardSettingRoute,
+  DashboardSystemRoute: DashboardSystemRoute,
   DashboardIndexRoute: DashboardIndexRoute,
 }
 

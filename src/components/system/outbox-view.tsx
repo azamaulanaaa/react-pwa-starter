@@ -1,0 +1,440 @@
+import type React from "react";
+import { useMemo, useState } from "react";
+import {
+  ChevronRightIcon,
+  CircleCheckIcon,
+  InboxIcon,
+  LogInIcon,
+  PlayIcon,
+  RefreshCwIcon,
+  SearchIcon,
+  TriangleAlertIcon,
+  UploadIcon,
+} from "lucide-react";
+
+import { useIntl } from "@/components/context/intl.tsx";
+import { useTranslation } from "@/components/context/translation.tsx";
+import {
+  Alert,
+  AlertAction,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert.tsx";
+import { Badge } from "@/components/ui/badge.tsx";
+import { Button } from "@/components/ui/button.tsx";
+import {
+  Card,
+  CardAction,
+  CardDescription,
+  CardHeader,
+  CardPanel,
+  CardTitle,
+} from "@/components/ui/card.tsx";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty.tsx";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group.tsx";
+import {
+  Select,
+  SelectItem,
+  SelectPopup,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select.tsx";
+import { Skeleton } from "@/components/ui/skeleton.tsx";
+import {
+  Tooltip,
+  TooltipPopup,
+  TooltipTrigger,
+} from "@/components/ui/tooltip.tsx";
+import {
+  TableGeneric,
+  type TableGenericColumnDef,
+} from "@/components/table/generic/index.tsx";
+import { OutboxDetail } from "@/components/system/outbox-detail.tsx";
+import {
+  MethodBadge,
+  OutboxStateBadge,
+} from "@/components/system/state-badge.tsx";
+import { useDebounce } from "@/hooks/primitives/use-debounce.ts";
+import type {
+  OutboxFlushResult,
+  OutboxOp,
+  OutboxState,
+  OutboxStatus,
+} from "@/lib/outbox/types.ts";
+
+type StateFilter = OutboxState | "all";
+
+const COUNT_STATES = [
+  "pending",
+  "sending",
+  "failed",
+  "conflict",
+] as const satisfies readonly OutboxState[];
+
+const COUNT_VARIANTS = {
+  pending: "warning",
+  sending: "info",
+  failed: "error",
+  conflict: "warning",
+} as const;
+
+const FILTER_VALUES: Record<StateFilter, string> = {
+  all: "system_filter_all",
+  pending: "system_state_pending",
+  sending: "system_state_sending",
+  failed: "system_state_failed",
+  conflict: "system_state_conflict",
+  done: "system_state_done",
+};
+
+export interface OutboxViewProps {
+  ops: OutboxOp[];
+  status: OutboxStatus;
+  loading: boolean;
+  refreshing: boolean;
+  error: Error | null;
+  flushing: boolean;
+  resuming: boolean;
+  flushResult: OutboxFlushResult | null;
+  onRefresh: () => void;
+  onFlush: () => void;
+  onResume: () => void;
+}
+
+/** Shows the outbox rows, the global actions, and the detail sheet. */
+export function OutboxView({
+  ops,
+  status,
+  loading,
+  refreshing,
+  error,
+  flushing,
+  resuming,
+  flushResult,
+  onRefresh,
+  onFlush,
+  onResume,
+}: OutboxViewProps): React.ReactElement {
+  const { t } = useTranslation();
+  const { formatDate, formatNumber } = useIntl();
+  const [query, setQuery] = useState("");
+  const [stateFilter, setStateFilter] = useState<StateFilter>("all");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const debouncedQuery = useDebounce(query, 200);
+
+  const filterLabels = useMemo(() => {
+    const labels = {} as Record<StateFilter, string>;
+    for (const [value, key] of Object.entries(FILTER_VALUES)) {
+      labels[value as StateFilter] = t(key);
+    }
+    return labels;
+  }, [t]);
+
+  const visibleOps = useMemo(() => {
+    const term = debouncedQuery.trim().toLowerCase();
+
+    return ops.filter((op) => {
+      if (stateFilter !== "all" && op.state !== stateFilter) return false;
+      if (!term) return true;
+
+      return (
+        op.id.toLowerCase().includes(term) ||
+        op.kind.toLowerCase().includes(term) ||
+        op.path.toLowerCase().includes(term)
+      );
+    });
+  }, [debouncedQuery, ops, stateFilter]);
+
+  const columns = useMemo<TableGenericColumnDef<OutboxOp>[]>(
+    () => [
+      {
+        id: "state",
+        header: t("system_detail_state"),
+        cell: ({ row }) => <OutboxStateBadge state={row.original.state} />,
+      },
+      {
+        id: "method",
+        header: t("system_detail_method"),
+        cell: ({ row }) => <MethodBadge method={row.original.method} />,
+      },
+      {
+        id: "path",
+        header: t("system_detail_path"),
+        cell: ({ row }) => (
+          <span className="font-mono text-xs">{row.original.path}</span>
+        ),
+      },
+      {
+        id: "kind",
+        header: () => (
+          <span className="max-md:hidden">{t("system_detail_kind")}</span>
+        ),
+        cell: ({ row }) => (
+          <span className="max-md:hidden">{row.original.kind}</span>
+        ),
+      },
+      {
+        id: "attempts",
+        header: () => (
+          <span className="max-md:hidden">{t("system_detail_attempts")}</span>
+        ),
+        cell: ({ row }) => (
+          <span className="max-md:hidden tabular-nums">
+            {formatNumber(row.original.attempts)}
+          </span>
+        ),
+      },
+      {
+        id: "created",
+        header: t("system_detail_created"),
+        cell: ({ row }) => (
+          <span className="whitespace-nowrap text-xs">
+            {formatDate(row.original.createdAt, {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })}
+          </span>
+        ),
+      },
+      {
+        id: "nextAttempt",
+        header: () => (
+          <span className="max-md:hidden">
+            {t("system_detail_next_attempt")}
+          </span>
+        ),
+        cell: ({ row }) => (
+          <span className="max-md:hidden whitespace-nowrap text-xs">
+            {formatDate(row.original.nextAttemptAt, {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })}
+          </span>
+        ),
+      },
+      {
+        id: "lastError",
+        header: t("system_detail_last_error"),
+        cell: ({ row }) => {
+          const message = row.original.lastError?.message;
+          if (!message) {
+            return <span className="text-muted-foreground">—</span>;
+          }
+
+          return (
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <span className="flex max-w-40 items-center gap-1 text-muted-foreground">
+                    <TriangleAlertIcon className="size-3.5 shrink-0 text-warning" />
+                    <span className="truncate">{message}</span>
+                  </span>
+                }
+              />
+              <TooltipPopup>{message}</TooltipPopup>
+            </Tooltip>
+          );
+        },
+      },
+      {
+        id: "view",
+        header: "",
+        cell: ({ row }) => (
+          <div className="flex justify-end">
+            <Button
+              aria-label={t("system_view_details")}
+              onClick={() => setSelectedId(row.original.id)}
+              size="icon-sm"
+              variant="ghost"
+            >
+              <ChevronRightIcon />
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [formatDate, formatNumber, t],
+  );
+
+  const selected = ops.find((op) => op.id === selectedId) ?? null;
+  const shown = formatNumber(visibleOps.length);
+  const total = formatNumber(ops.length);
+
+  return (
+    <Card data-slot="outbox-view">
+      <CardHeader>
+        <CardTitle>{t("system_outbox_title")}</CardTitle>
+        <CardDescription>{t("system_outbox_description")}</CardDescription>
+        <CardAction className="flex flex-wrap items-center gap-2">
+          <Button loading={refreshing} onClick={onRefresh} variant="outline">
+            <RefreshCwIcon />
+            {t("system_refresh")}
+          </Button>
+          <Button loading={flushing} onClick={onFlush}>
+            <UploadIcon />
+            {t("system_flush")}
+          </Button>
+          {(status.paused || status.signInRequired) && (
+            <Button loading={resuming} onClick={onResume} variant="outline">
+              <PlayIcon />
+              {t("system_resume")}
+            </Button>
+          )}
+        </CardAction>
+      </CardHeader>
+
+      <CardPanel className="flex flex-col gap-4">
+        <div
+          className="flex flex-wrap items-center gap-2"
+          data-slot="outbox-counts"
+        >
+          {COUNT_STATES.map((state) => (
+            <Badge key={state} variant={COUNT_VARIANTS[state]}>
+              {t(`system_state_${state}`)}
+              <span className="tabular-nums">
+                {formatNumber(status[state])}
+              </span>
+            </Badge>
+          ))}
+        </div>
+
+        {status.paused && (
+          <Alert variant="warning">
+            <TriangleAlertIcon />
+            <AlertTitle>{t("system_outbox_paused")}</AlertTitle>
+            <AlertAction>
+              <Button
+                loading={resuming}
+                onClick={onResume}
+                size="sm"
+                variant="outline"
+              >
+                {t("system_resume")}
+              </Button>
+            </AlertAction>
+          </Alert>
+        )}
+
+        {status.signInRequired && (
+          <Alert variant="error">
+            <LogInIcon />
+            <AlertTitle>{t("system_outbox_sign_in_required")}</AlertTitle>
+            <AlertAction>
+              <Button render={<a href="/login" />} size="sm" variant="outline">
+                {t("system_outbox_sign_in")}
+              </Button>
+            </AlertAction>
+          </Alert>
+        )}
+
+        {error && (
+          <Alert variant="error">
+            <TriangleAlertIcon />
+            <AlertTitle>{t("system_error_title")}</AlertTitle>
+            <AlertDescription>{error.message}</AlertDescription>
+            <AlertAction>
+              <Button onClick={onRefresh} size="sm" variant="outline">
+                {t("system_error_retry")}
+              </Button>
+            </AlertAction>
+          </Alert>
+        )}
+
+        {flushResult && (
+          <Alert variant="success">
+            <CircleCheckIcon />
+            <AlertDescription>
+              {t("system_flush_result", {
+                sent: formatNumber(flushResult.sent),
+                pending: formatNumber(flushResult.pending),
+                failed: formatNumber(flushResult.failed),
+                conflict: formatNumber(flushResult.conflict),
+              })}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <InputGroup className="sm:max-w-xs">
+            <InputGroupAddon>
+              <SearchIcon />
+            </InputGroupAddon>
+            <InputGroupInput
+              aria-label={t("system_search_placeholder")}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={t("system_search_placeholder")}
+              value={query}
+            />
+          </InputGroup>
+          <div className="flex flex-wrap items-center gap-2">
+            <Select
+              items={filterLabels}
+              onValueChange={(value) => setStateFilter(value as StateFilter)}
+              value={stateFilter}
+            >
+              <SelectTrigger aria-label={t("system_filter_state")}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectPopup>
+                {(Object.keys(FILTER_VALUES) as StateFilter[]).map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {filterLabels[value]}
+                  </SelectItem>
+                ))}
+              </SelectPopup>
+            </Select>
+            <span className="text-muted-foreground text-sm">
+              {t("system_showing", { shown, total })}
+            </span>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="flex flex-col gap-2">
+            {Array.from({ length: 5 }, (_, index) => (
+              <Skeleton className="h-10 w-full" key={index} />
+            ))}
+          </div>
+        ) : visibleOps.length === 0 ? (
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <InboxIcon />
+              </EmptyMedia>
+              <EmptyTitle>{t("system_empty_outbox_title")}</EmptyTitle>
+              <EmptyDescription>
+                {t("system_empty_outbox_description")}
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        ) : (
+          <TableGeneric
+            columns={columns}
+            data={visibleOps}
+            getRowId={(op) => op.id}
+          />
+        )}
+      </CardPanel>
+
+      {selected !== null && (
+        <OutboxDetail
+          onOpenChange={(next) => {
+            if (!next) setSelectedId(null);
+          }}
+          open={selected !== null}
+          op={selected}
+        />
+      )}
+    </Card>
+  );
+}
