@@ -153,5 +153,14 @@
   "system_view_details": "View details",
   "table_generic_empty": "No Data",
   "table_generic_select_all_row": "Select All",
-  "table_generic_select_row": "Select #{{id}}"
+  "table_generic_select_row": "Select #{{id}}",
+  "upload_add_files": "Add files",
+  "upload_choose_files": "Upload files",
+  "upload_drop_title": "Drop your files here",
+  "upload_files_title": "Files ({{count}})",
+  "upload_limit_one": "Max 1 file · Up to {{maxSize}}",
+  "upload_limits": "Max {{maxFiles}} files · Up to {{maxSize}}",
+  "upload_remove_all": "Remove all",
+  "upload_remove_file": "Remove {{name}}",
+  "upload_select_files": "Select files"
 }

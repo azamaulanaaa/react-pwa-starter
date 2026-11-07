@@ -153,5 +153,14 @@
   "system_view_details": "Lihat detail",
   "table_generic_empty": "Tidak Ada Data",
   "table_generic_select_all_row": "Pilih Semua",
-  "table_generic_select_row": "Pilih #{{id}}"
+  "table_generic_select_row": "Pilih #{{id}}",
+  "upload_add_files": "Tambah file",
+  "upload_choose_files": "Unggah file",
+  "upload_drop_title": "Letakkan file di sini",
+  "upload_files_title": "File ({{count}})",
+  "upload_limit_one": "Maks 1 file · Hingga {{maxSize}}",
+  "upload_limits": "Maks {{maxFiles}} file · Hingga {{maxSize}}",
+  "upload_remove_all": "Hapus semua",
+  "upload_remove_file": "Hapus {{name}}",
+  "upload_select_files": "Pilih file"
 }
