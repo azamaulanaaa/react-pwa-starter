@@ -4,7 +4,7 @@ import {
   createMemoryTokenStore,
   createRustApiClient,
   resolveRustApiBaseUrl,
-} from "@/integrations/rust-api/client.ts";
+} from "@/rust-api/shared/client.ts";
 
 /** Builds a JSON response for a fake fetch. */
 function jsonResponse(body: unknown, status = 200): Response {

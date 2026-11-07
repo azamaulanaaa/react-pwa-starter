@@ -1,7 +1,7 @@
 import { createContext, type ReactNode, useContext } from "react";
 
 import { SessionProvider } from "@/components/context/session.tsx";
-import type { RustApiBackend } from "@/integrations/rust-api/backend.ts";
+import type { RustApiBackend } from "./backend.ts";
 
 const RustApiBackendContext = createContext<RustApiBackend | null>(null);
 

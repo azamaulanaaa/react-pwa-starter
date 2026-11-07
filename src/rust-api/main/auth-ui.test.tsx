@@ -8,7 +8,7 @@ import {
   buildCallbackPath,
   readLoginSearch,
   RustApiAuthCard,
-} from "@/integrations/rust-api/auth-ui.tsx";
+} from "@/rust-api/main/auth-ui.tsx";
 import type { Session, SessionStatus } from "@/lib/auth/types.ts";
 
 const mocks = vi.hoisted(() => ({
@@ -16,7 +16,7 @@ const mocks = vi.hoisted(() => ({
   useSession: vi.fn(),
 }));
 
-vi.mock("@/components/context/rust-api.tsx", () => ({
+vi.mock("@/rust-api/main/boundary.tsx", () => ({
   useRustApiBackend: mocks.useRustApiBackend,
 }));
 

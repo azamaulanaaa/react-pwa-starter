@@ -11,7 +11,7 @@
  *
  * curl -s http://localhost:8080/openapi.json -o /tmp/rust-api-openapi.json
  * npx openapi-typescript /tmp/rust-api-openapi.json \
- *   -o src/integrations/rust-api/generated/openapi.d.ts
+ *   -o src/rust-api/shared/generated/openapi.d.ts
  *
  * The adapter uses the small types below until the generated document replaces them.
  */

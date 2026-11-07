@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createRustApiClient } from "@/integrations/rust-api/client.ts";
-import { createRustApiFileTransport } from "@/integrations/rust-api/fs.ts";
+import { createRustApiClient } from "@/rust-api/shared/client.ts";
+import { createRustApiFileTransport } from "@/rust-api/shared/fs.ts";
 
 /** Builds a JSON response for a fake fetch. */
 function jsonResponse(body: unknown, status = 200): Response {

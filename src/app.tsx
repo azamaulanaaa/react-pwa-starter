@@ -4,14 +4,13 @@ import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { routeTree } from "@/routeTree.gen.ts";
 
 import { type Config, ConfigProvider } from "@/components/context/config.tsx";
-import { RustApiSessionBoundary } from "@/components/context/rust-api.tsx";
 import { TranslationProvider } from "@/components/context/translation.tsx";
 import { WorkerProvider } from "@/components/context/worker.tsx";
 import { IntlProvider } from "@/components/context/intl.tsx";
 import { usePersistState } from "@/hooks/primitives/use-persist-state.ts";
 import { useSystemDarkMode } from "@/hooks/primitives/use-system-dark-mode.ts";
 import { useNavigatorLanguage } from "@/hooks/primitives/use-navigator-language.ts";
-import { createRustApiBackendIfEnabled } from "@/integrations/rust-api/backend.ts";
+import { RustApiMount } from "@/rust-api/optional.tsx";
 
 // Create a new router instance
 export const router = createRouter({ routeTree });
@@ -22,9 +21,6 @@ declare module "@tanstack/react-router" {
     router: typeof router;
   }
 }
-
-// One composition root for the optional rust-api backend. The switch is off by default.
-const RUST_API_BACKEND = createRustApiBackendIfEnabled();
 
 const DEFAULT_CONFIG: Config = {
   theme: "system",
@@ -96,9 +92,9 @@ export function App() {
       >
         <WorkerProvider>
           <IntlProvider locale={locale}>
-            <RustApiSessionBoundary backend={RUST_API_BACKEND}>
+            <RustApiMount>
               <RouterProvider router={router} />
-            </RustApiSessionBoundary>
+            </RustApiMount>
           </IntlProvider>
         </WorkerProvider>
       </TranslationProvider>

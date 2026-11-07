@@ -10,11 +10,11 @@ import {
 } from "@/lib/auth/index.ts";
 import type { SessionChannel } from "@/lib/auth/index.ts";
 import type { RefreshLock } from "@/lib/auth/index.ts";
-import { createRustApiSessionProvider } from "@/integrations/rust-api/auth.ts";
+import { createRustApiSessionProvider } from "@/rust-api/main/auth.ts";
 import {
   createMemoryTokenStore,
   createRustApiClient,
-} from "@/integrations/rust-api/client.ts";
+} from "@/rust-api/shared/client.ts";
 
 const NOW = 2_000_000_000_000;
 

@@ -1,6 +1,9 @@
 import { ApiError, apiErrorFromResponse } from "@/lib/api/error.ts";
 import type { FetchFunction, HttpMethod } from "@/lib/api/types.ts";
 
+import { readRustApiEnv } from "./config.ts";
+import type { RustApiEnv } from "./config.ts";
+
 /** Defines the default rust-api base URL for local development. */
 export const DEFAULT_RUST_API_BASE_URL = "http://localhost:8080";
 
@@ -85,9 +88,7 @@ export interface RustApiClient {
  */
 export function resolveRustApiBaseUrl(
   baseUrl?: string,
-  env: Record<string, string | undefined> = (
-    import.meta as unknown as { env?: Record<string, string | undefined> }
-  ).env ?? {},
+  env: RustApiEnv = readRustApiEnv(),
 ): string {
   const candidate = baseUrl ?? env.VITE_RUST_API_BASE_URL ?? "";
   const value = candidate.trim();

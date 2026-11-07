@@ -3,9 +3,9 @@ import { describe, expect, it, vi } from "vitest";
 import {
   createRustApiBackend,
   createRustApiBackendIfEnabled,
-  isRustApiEnabled,
-} from "@/integrations/rust-api/backend.ts";
-import { createMemoryTokenStore } from "@/integrations/rust-api/client.ts";
+} from "@/rust-api/main/backend.ts";
+import { isRustApiEnabled } from "@/rust-api/shared/config.ts";
+import { createMemoryTokenStore } from "@/rust-api/shared/client.ts";
 
 /** Builds a JSON response for a fake fetch. */
 function jsonResponse(body: unknown, status = 200): Response {

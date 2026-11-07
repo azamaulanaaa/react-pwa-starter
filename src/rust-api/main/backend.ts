@@ -3,21 +3,17 @@ import type { FileTransport } from "@/lib/fs/index.ts";
 import type { SessionProvider } from "@/lib/auth/index.ts";
 import type { ReplicaReader } from "@/lib/sync/index.ts";
 
-import {
-  createRustApiSessionProvider,
-  type RustApiSessionOptions,
-} from "@/integrations/rust-api/auth.ts";
+import { createRustApiSessionProvider } from "./auth.ts";
+import type { RustApiSessionOptions } from "./auth.ts";
 import {
   createRustApiClient,
   resolveRustApiBaseUrl,
-  type RustApiClient,
-  type RustApiTokenStore,
-} from "@/integrations/rust-api/client.ts";
-import { createRustApiFileTransport } from "@/integrations/rust-api/fs.ts";
-import { createRustApiReplicaReader } from "@/integrations/rust-api/sync.ts";
-
-/** Defines the environment values for the rust-api adapter. */
-export type RustApiEnv = Record<string, string | undefined>;
+} from "../shared/client.ts";
+import type { RustApiClient, RustApiTokenStore } from "../shared/client.ts";
+import { isRustApiEnabled, readRustApiEnv } from "../shared/config.ts";
+import type { RustApiEnv } from "../shared/config.ts";
+import { createRustApiFileTransport } from "../shared/fs.ts";
+import { createRustApiReplicaReader } from "../shared/sync.ts";
 
 /** Defines the options for the rust-api backend. */
 export interface RustApiBackendOptions {
@@ -46,22 +42,6 @@ export interface RustApiBackend {
   replica: ReplicaReader;
   /** The file transport. */
   files: FileTransport;
-}
-
-/** Returns the build-time environment values. */
-function readRustApiEnv(): RustApiEnv {
-  return (import.meta as unknown as { env?: RustApiEnv }).env ?? {};
-}
-
-/**
- * Reports whether the rust-api backend is enabled.
- * The switch is off unless `VITE_RUST_API_ENABLED` is one of
- * `1`, `true`, `yes`, or `on`.
- */
-export function isRustApiEnabled(env: RustApiEnv = readRustApiEnv()): boolean {
-  const value = env.VITE_RUST_API_ENABLED?.trim().toLowerCase();
-
-  return value === "1" || value === "true" || value === "yes" || value === "on";
 }
 
 /**

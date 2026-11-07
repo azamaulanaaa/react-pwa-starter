@@ -31,11 +31,8 @@ import {
   type ReturnToStorage,
 } from "@/lib/auth/return-to.ts";
 
-import type {
-  AuthResponse,
-  MeResponse,
-} from "@/integrations/rust-api/generated/index.ts";
-import type { RustApiClient } from "@/integrations/rust-api/client.ts";
+import type { AuthResponse, MeResponse } from "../shared/generated/index.ts";
+import type { RustApiClient } from "../shared/client.ts";
 
 /** The default time limit for the session check. The value is five seconds. */
 export const DEFAULT_SESSION_TIMEOUT_MS = 5_000;

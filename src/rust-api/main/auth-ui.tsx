@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AuthCard } from "@/components/auth/auth-card.tsx";
 import { AuthLoading } from "@/components/auth/auth-loading.tsx";
 import type { OAuthProvider } from "@/components/auth/provider-icon.tsx";
-import { useRustApiBackend } from "@/components/context/rust-api.tsx";
+import { useRustApiBackend } from "./boundary.tsx";
 import { useSession } from "@/components/context/session.tsx";
 import { useTranslation } from "@/components/context/translation.tsx";
 import { safeReturnTo } from "@/lib/auth/return-to.ts";

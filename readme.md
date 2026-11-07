@@ -176,10 +176,10 @@ VITE_RUST_API_BASE_URL=/
 ```
 
 `VITE_API_BASE_URL` sets the base URL for the generic client in `src/lib/api`.
-`VITE_RUST_API_ENABLED` mounts the optional rust-api session provider. The default
+`VITE_RUST_API_ENABLED` loads the optional rust-api session provider on demand. The default
 is `false`, so a normal development run sends no request to the rust-api.
 `VITE_RUST_API_BASE_URL` sets the base URL for the optional adapter in
-`src/integrations/rust-api`. The default is `http://localhost:8080`.
+`src/rust-api/shared/client.ts`. The default is `http://localhost:8080`.
 `/` means the SPA origin. The local setup above uses the proxy value `/`.
 
 The Vite dev server runs on `http://localhost:5173` and proxies `/auth`, `/fs`,
@@ -311,7 +311,10 @@ src/
 │                      # media query, dark mode, streams)
 ├── lib/               # Comlink helpers, generic API, auth, sync, outbox, report,
 │                      # time, pwa, and file contracts, cn, utilities
-├── integrations/      # Optional backend adapters (rust-api). The core does not import them.
+├── rust-api/          # Optional backend adapter. The core imports only optional.tsx.
+│   ├── shared/        # Client, config, sync, files, and generated wire types.
+│   ├── main/          # Browser composition root, session, auth card, and mount.
+│   └── worker/        # Worker composition root. src/worker/main.ts does not expose it yet.
 └── worker/
     ├── main.ts        # Worker entry. It exposes { changes, db, fs, outbox, queue }.
     ├── db/            # Tables, schema, change bus, change apply, oxkv,
@@ -764,13 +767,24 @@ For a single-part upload, set `part_size` to `file_size` and set `file_total_par
 
 ## rust-api adapter
 
-- The adapter is optional. The code is in `src/integrations/rust-api`. The core does not
-  import the adapter.
-- The adapter is off by default. `VITE_RUST_API_ENABLED` turns it on. The switch accepts
-  `1`, `true`, `yes`, or `on`. `src/app.tsx` mounts the session provider only when the
-  switch is on. A normal development run sends no request to the rust-api.
-- `createRustApiBackend` is the composition root. The function creates one client and one
-  token store. The `session`, `replica`, and `files` adapters use the shared client.
+- The adapter is optional. The code is in `src/rust-api`. The core imports one module,
+  `src/rust-api/optional.tsx`.
+- `src/rust-api/optional.tsx` reads `VITE_RUST_API_ENABLED` at module load. The switch accepts
+  `1`, `true`, `yes`, or `on`. When the switch is off, the core loads no adapter chunk and sends
+  no request.
+- When the switch is on, `RustApiMount` loads `src/rust-api/main/mount.tsx` with a dynamic import.
+  The module creates one backend at module scope with `createRustApiBackendIfEnabled()`.
+  The mount wraps the router in `RustApiSessionBoundary`. The `Suspense` fallback is null.
+- The login route uses `RustApiLoginPanel` from the same optional module. The panel lazy-loads
+  `RustApiAuthCard` from `src/rust-api/main/auth-ui.tsx`. The panel returns null when the switch is off.
+- `src/rust-api/shared` holds the runtime-agnostic modules. It has the client, config, sync,
+  files, and the generated wire types. The main and worker composition roots use these modules.
+- `src/rust-api/main/backend.ts` is the browser composition root. `createRustApiBackend` creates
+  one client and one token store. The `session`, `replica`, and `files` adapters use the shared client.
+- `src/rust-api/worker/backend.ts` is the worker composition root. `createRustApiWorkerBackend`
+  creates one client and one token store. The `replica` and `files` adapters use the shared client.
+  `src/worker/main.ts` does not expose rust-api yet.
+- `src/rust-api/index.ts`, `shared/index.ts`, `main/index.ts`, and `worker/index.ts` are barrels.
 - The adapter reads the base URL from `VITE_RUST_API_BASE_URL`. The default is
   `http://localhost:8080`. `/` means the SPA origin, which the Vite dev proxy uses.
   The client strips a trailing slash.
@@ -779,7 +793,7 @@ For a single-part upload, set `part_size` to `file_size` and set `file_total_par
 - The adapter has no task logic. It does not import `src/examples`.
 - `createRustApiClient` accepts a base URL, a fetch function, and a token store. A test can
   give a fake fetch.
-- The generated wire types are in `src/integrations/rust-api/generated`. The rust-api
+- The generated wire types are in `src/rust-api/shared/generated`. The rust-api
   repository does not commit an OpenAPI document at the inspected commit. The types come from
   the route definitions and the response structs. The module names the commit and the
   regeneration command.
@@ -788,13 +802,13 @@ For a single-part upload, set `part_size` to `file_size` and set `file_total_par
   ```bash
   curl -s http://localhost:8080/openapi.json -o /tmp/rust-api-openapi.json
   npx openapi-typescript /tmp/rust-api-openapi.json \
-    -o src/integrations/rust-api/generated/openapi.d.ts
+    -o src/rust-api/shared/generated/openapi.d.ts
   ```
 
-### Backend composition root
+### Main composition root
 
 ```ts
-import { createRustApiBackend } from "@/integrations/rust-api/backend.ts";
+import { createRustApiBackend } from "@/rust-api/main/backend.ts";
 
 const backend = createRustApiBackend();
 
@@ -807,7 +821,7 @@ The boundary gives the same backend object to route components. The hook returns
 when the switch is off.
 
 ```tsx
-import { useRustApiBackend } from "@/components/context/rust-api.tsx";
+import { useRustApiBackend } from "@/rust-api/main/boundary.tsx";
 
 function ReplicaStatus() {
   const backend = useRustApiBackend();
@@ -821,6 +835,24 @@ function ReplicaStatus() {
 The factory accepts `env`, `baseUrl`, `fetch`, `tokens`, and `session` options.
 A test can give a fake environment and a fake fetch.
 `createRustApiBackendIfEnabled` returns null when `VITE_RUST_API_ENABLED` is off.
+
+### Worker composition root
+
+```ts
+import {
+  createRustApiWorkerBackend,
+  createRustApiWorkerBackendIfEnabled,
+} from "@/rust-api/worker/backend.ts";
+
+const backend = createRustApiWorkerBackend();
+
+const status = await backend.replica.status();
+const file = await backend.files.metadata("file-id");
+```
+
+The worker factory accepts `env`, `baseUrl`, `fetch`, and `tokens` options.
+`createRustApiWorkerBackendIfEnabled` returns null when the switch is off.
+`src/worker/main.ts` does not expose rust-api yet. A later issue can add the worker boundary.
 
 ### Session provider
 
@@ -851,7 +883,7 @@ A test can give a fake environment and a fake fetch.
   next mount.
 
 ```ts
-import { createRustApiBackend } from "@/integrations/rust-api/backend.ts";
+import { createRustApiBackend } from "@/rust-api/main/backend.ts";
 
 const backend = createRustApiBackend();
 const provider = backend.session;
@@ -887,7 +919,7 @@ const provider = backend.session;
 - The adapter keeps the manifest rules. The core reader stays generic.
 
 ```ts
-import { createRustApiBackend } from "@/integrations/rust-api/backend.ts";
+import { createRustApiBackend } from "@/rust-api/main/backend.ts";
 
 const backend = createRustApiBackend();
 const status = await backend.replica.status();
@@ -913,7 +945,7 @@ const status = await backend.replica.status();
 - The transport does not attach a file to a domain row. That rule belongs to the application.
 
 ```ts
-import { createRustApiBackend } from "@/integrations/rust-api/backend.ts";
+import { createRustApiBackend } from "@/rust-api/main/backend.ts";
 
 const backend = createRustApiBackend();
 const transport = backend.files;

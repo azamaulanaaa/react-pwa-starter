@@ -5,13 +5,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   RustApiSessionBoundary,
   useRustApiBackend,
-} from "@/components/context/rust-api.tsx";
+} from "@/rust-api/main/boundary.tsx";
 import { SessionProvider, useSession } from "@/components/context/session.tsx";
 import {
   createRustApiBackendIfEnabled,
   type RustApiBackend,
-} from "@/integrations/rust-api/backend.ts";
-import { createMemoryTokenStore } from "@/integrations/rust-api/client.ts";
+} from "@/rust-api/main/backend.ts";
+import { createMemoryTokenStore } from "@/rust-api/shared/client.ts";
 
 vi.mock("@/components/context/session.tsx", async (importOriginal) => {
   const actual =

@@ -10,12 +10,12 @@ import type {
   ReplicaTransportReadResult,
 } from "@/lib/sync/index.ts";
 
-import type { RustApiClient } from "@/integrations/rust-api/client.ts";
+import type { RustApiClient } from "./client.ts";
 import type {
   ReplicaManifest,
   SyncAdvanceResponse,
   SyncStatusResponse,
-} from "@/integrations/rust-api/generated/index.ts";
+} from "./generated/index.ts";
 
 /** Defines the options for the rust-api sync transport. */
 export interface RustApiSyncOptions {

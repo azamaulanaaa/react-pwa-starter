@@ -18,12 +18,12 @@ import type {
   UploadSession,
 } from "@/lib/fs/index.ts";
 
-import type { RustApiClient } from "@/integrations/rust-api/client.ts";
+import type { RustApiClient } from "./client.ts";
 import type {
   FileMetadata as RustApiFileMetadata,
   InitResponse,
   ProgressResponse,
-} from "@/integrations/rust-api/generated/index.ts";
+} from "./generated/index.ts";
 
 /** Defines the options for the rust-api file transport. */
 export interface RustApiFileOptions {

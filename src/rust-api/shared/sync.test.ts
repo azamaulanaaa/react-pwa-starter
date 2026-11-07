@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createRustApiClient } from "@/integrations/rust-api/client.ts";
-import { createRustApiReplicaReader } from "@/integrations/rust-api/sync.ts";
+import { createRustApiClient } from "@/rust-api/shared/client.ts";
+import { createRustApiReplicaReader } from "@/rust-api/shared/sync.ts";
 
 /** Builds a JSON response for a fake fetch. */
 function jsonResponse(body: unknown, status = 200): Response {

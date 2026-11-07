@@ -11,4 +11,4 @@ export type {
   ReplicaManifest,
   SyncAdvanceResponse,
   SyncStatusResponse,
-} from "@/integrations/rust-api/generated/types.ts";
+} from "./types.ts";
