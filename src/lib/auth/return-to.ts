@@ -22,10 +22,18 @@ export function browserSessionStorage(): ReturnToStorage | null {
   }
 }
 
+/** Reports whether a value has a C0 control character or DELETE. */
+const hasControlCharacter = (value: string): boolean =>
+  Array.from(value).some((character) => {
+    const code = character.charCodeAt(0);
+
+    return code <= 0x1f || code === 0x7f;
+  });
+
 /**
  * Returns a safe relative path.
  * The function rejects an empty value, an absolute URL, and a protocol-relative path.
- * The function also rejects a backslash, an encoded backslash, and a control character.
+ * The function also rejects a backslash, an encoded backslash, a C0 control character, and DELETE.
  */
 export function safeReturnTo(value: string | undefined): string | null {
   if (value === undefined) return null;
@@ -38,7 +46,7 @@ export function safeReturnTo(value: string | undefined): string | null {
     path.startsWith("//") ||
     path.includes("\\") ||
     /%5c/i.test(path) ||
-    /[\u0000-\u001f\u007f]/.test(path)
+    hasControlCharacter(path)
   ) {
     return null;
   }
