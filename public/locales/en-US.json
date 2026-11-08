@@ -46,6 +46,8 @@
   "form_task_error_task_empty": "Task description cannot be empty",
   "form_task_insert": "Insert",
   "form_task_validating": "Validating...",
+  "image_thumbnail_view": "View image larger",
+  "image_thumbnail_view_named": "View {{name}} larger",
   "image_view_close": "Close image",
   "image_view_description": "Use the zoom controls to inspect the image.",
   "image_view_download": "Download",

@@ -46,6 +46,8 @@
   "form_task_error_task_empty": "Deskripsi tugas tidak boleh kosong",
   "form_task_insert": "Masukkan",
   "form_task_validating": "Memvalidasi...",
+  "image_thumbnail_view": "Lihat gambar lebih besar",
+  "image_thumbnail_view_named": "Lihat {{name}} lebih besar",
   "image_view_close": "Tutup gambar",
   "image_view_description": "Gunakan kontrol zoom untuk memeriksa gambar.",
   "image_view_download": "Unduh",
