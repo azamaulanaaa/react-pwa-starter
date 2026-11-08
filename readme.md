@@ -303,7 +303,9 @@ src/
 │   ├── table/         # Generic table wrapper
 │   ├── form/          # Form helpers and the setting form
 │   ├── context/       # Providers: config, intl, session, translation, worker
-│   ├── image/         # Image preview
+│   ├── image/         # Image components
+│   │   ├── preview/   # Image preview dialog
+│   │   └── view/      # Image view lightbox
 │   └── upload/        # File upload with drag and drop
 ├── hooks/
 │   ├── engines/       # Higher-level hooks: use-infinite-scroll, use-uploader,
@@ -1077,6 +1079,45 @@ const ready = uploadsComplete(files, progressByFileId);
 <Button disabled={!ready} onClick={() => submit(toFileMetadata(files))}>
   Save
 </Button>
+```
+
+The stories run with `npm run ladle`. The tests run with `npm run test:run`.
+
+## Image view
+
+The component is in `src/components/image/view/index.tsx`.
+
+`ImageView` shows one image in a lightbox. The backdrop is blurred. The image
+is in the center. The image keeps its aspect ratio. At the base zoom, the image
+fits in 80% of the viewport. The default maximum zoom is 2x. The close button
+is a default button that stays at the top right. The zoom controls stay at the
+top left. The zoom controls have no border or shadow. The download button is an
+outline button that stays at the center bottom. The download uses the image
+source. The component does not fetch or transform the image. The dialog handles
+focus, Escape, and the page scroll lock.
+
+The props:
+
+- `src`: the image source.
+- `alt`: the image alt text.
+- `open`: the open state.
+- `onOpenChange`: runs when the open state changes.
+- `maxZoom`: the maximum zoom. The default is 2.
+- `downloadName`: the file name for the download action. The default is `image`.
+- `className`: the root class.
+
+This example uses the controlled state:
+
+```tsx
+const [open, setOpen] = useState(false);
+
+<img alt="Report" src={src} onClick={() => setOpen(true)} />
+<ImageView
+  alt="Report"
+  onOpenChange={setOpen}
+  open={open}
+  src={src}
+/>
 ```
 
 The stories run with `npm run ladle`. The tests run with `npm run test:run`.
