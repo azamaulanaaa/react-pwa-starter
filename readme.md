@@ -1032,6 +1032,12 @@ The component supports drag and drop and a file picker. It shows preview cards
 for each file. It applies a maximum file count, a maximum file size, and accept
 rules. It can remove one file or clear all files.
 
+The progress overlay covers only the preview. The file name, the file size, and
+the error text stay visible.
+
+The per-file remove button cancels one upload. The app cancels the upload
+transport when the file leaves the list through `onFilesChange`.
+
 The component does not upload files. The app owns the upload. The app starts one
 upload for each new file from `onFilesAdded` or `onFilesChange`. The app sets
 `progressByFileId[id]` from 0 to 1. The app sets `errorsByFileId[id]` when one
@@ -1045,8 +1051,8 @@ The props:
 - `accept`: the input accept rule. The default is `*`.
 - `multiple`: allow more than one file. The default is `true`.
 - `disabled`: disable the input and the buttons.
-- `busy`: disable add, remove, and select while an upload runs. The default is
-  `false`.
+- `busy`: disable add and select while an upload runs. The remove action stays
+  available. The default is `false`.
 - `progressByFileId`: the progress for each file id. A value from 0 to 1.
 - `errorsByFileId`: the upload error for each file id.
 - `name`, `id`, and `className`: the input name, the input id, and the root

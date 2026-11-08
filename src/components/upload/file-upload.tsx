@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import {
   AlertCircleIcon,
   FileArchiveIcon,
@@ -42,7 +44,7 @@ export interface FileUploadProps {
   progressByFileId?: Record<string, number>;
   /** Upload error per file id. */
   errorsByFileId?: Record<string, string>;
-  /** Disable add, remove, and select while an upload runs. */
+  /** Disable add and select while an upload runs. The remove action stays available. */
   busy?: boolean;
 }
 
@@ -129,8 +131,11 @@ const getFileIcon = (file: File | FileMetadata) => {
   return <FileIcon className="size-5 opacity-60" />;
 };
 
-const getFilePreview = ({ file, preview }: FileWithPreview) => (
-  <div className="flex aspect-square items-center justify-center overflow-hidden rounded-t-[inherit] bg-accent">
+const getFilePreview = (
+  { file, preview }: FileWithPreview,
+  overlay?: ReactNode,
+) => (
+  <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-t-[inherit] bg-accent">
     {file.type.startsWith("image/") && preview ? (
       <img
         alt={file.name}
@@ -140,6 +145,7 @@ const getFilePreview = ({ file, preview }: FileWithPreview) => (
     ) : (
       getFileIcon(file)
     )}
+    {overlay}
   </div>
 );
 
@@ -283,24 +289,29 @@ export function FileUpload({
                     data-slot="file-upload-card"
                     key={item.id}
                   >
-                    {getFilePreview(item)}
-                    {showProgress && (
-                      <div
-                        className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-md bg-background/80 p-4 backdrop-blur-xs"
-                        data-slot="file-upload-progress"
-                      >
-                        <Progress max={100} value={Math.round(clamped * 100)} />
-                        <p className="font-medium text-sm tabular-nums">
-                          {formatPercent(clamped)}
-                        </p>
-                      </div>
+                    {getFilePreview(
+                      item,
+                      showProgress ? (
+                        <div
+                          className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-t-[inherit] bg-background/80 p-4 backdrop-blur-xs"
+                          data-slot="file-upload-progress"
+                        >
+                          <Progress
+                            max={100}
+                            value={Math.round(clamped * 100)}
+                          />
+                          <p className="font-medium text-sm tabular-nums">
+                            {formatPercent(clamped)}
+                          </p>
+                        </div>
+                      ) : null,
                     )}
                     <Button
                       aria-label={t("upload_remove_file", {
                         name: item.file.name,
                       })}
-                      className="-top-2 -right-2 absolute size-6 rounded-full border-2 border-background shadow-none focus-visible:border-background"
-                      disabled={actionsDisabled}
+                      className="-top-2 -right-2 absolute z-20 size-6 rounded-full border-2 border-background shadow-none focus-visible:border-background"
+                      disabled={disabled}
                       onClick={() => removeFile(item.id)}
                       size="icon"
                     >

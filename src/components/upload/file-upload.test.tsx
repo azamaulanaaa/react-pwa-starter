@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { IntlProvider } from "@/components/context/intl.tsx";
@@ -207,7 +207,7 @@ describe("FileUpload", () => {
     expect(screen.getByText(message)).toBeDefined();
   });
 
-  it("disables the actions while busy", () => {
+  it("disables add, remove all, and select while busy", () => {
     renderUpload({ busy: true, initialFiles: INITIAL_FILES });
 
     expect(
@@ -224,8 +224,39 @@ describe("FileUpload", () => {
       screen
         .getByRole("button", { name: "Remove photo.png" })
         .hasAttribute("disabled"),
-    ).toBe(true);
+    ).toBe(false);
     expect(getInput().disabled).toBe(true);
+  });
+
+  it("removes one file while an upload runs", () => {
+    const onFilesChange = vi.fn();
+
+    renderUpload({
+      busy: true,
+      initialFiles: [INITIAL_FILES[0]],
+      onFilesChange,
+      progressByFileId: { "image-1": 0.42 },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove photo.png" }));
+
+    expect(screen.queryByText("photo.png")).toBeNull();
+    expect(onFilesChange).toHaveBeenLastCalledWith([]);
+  });
+
+  it("keeps the file metadata outside the progress overlay", () => {
+    renderUpload({
+      initialFiles: [INITIAL_FILES[0]],
+      progressByFileId: { "image-1": 0.42 },
+    });
+
+    const overlay = document.querySelector(
+      '[data-slot="file-upload-progress"]',
+    );
+
+    expect(overlay).not.toBeNull();
+    expect(within(overlay as HTMLElement).queryByText("photo.png")).toBeNull();
+    expect(screen.getByText("photo.png")).toBeDefined();
   });
 });
 
