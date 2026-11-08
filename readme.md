@@ -304,6 +304,7 @@ src/
 │   ├── form/          # Form helpers and the setting form
 │   ├── context/       # Providers: config, intl, session, translation, worker
 │   ├── image/         # Image components
+│   │   ├── thumbnail/ # Image thumbnail with an overlay
 │   │   └── view/      # Image view lightbox
 │   └── upload/        # File upload with drag and drop
 ├── hooks/
@@ -1078,6 +1079,46 @@ const ready = uploadsComplete(files, progressByFileId);
 <Button disabled={!ready} onClick={() => submit(toFileMetadata(files))}>
   Save
 </Button>
+```
+
+The stories run with `npm run ladle`. The tests run with `npm run test:run`.
+
+## Image thumbnail
+
+The component is in `src/components/image/thumbnail/index.tsx`.
+
+`ImageThumbnail` shows an image as a button. A hover or a keyboard focus shows
+a ghost overlay with an eye icon. The eye icon tells the user that the image
+opens in a larger view. A touch device has no hover, so the overlay always
+shows there. A click or a keyboard activation opens `ImageView` with the same
+image.
+
+The props:
+
+- `src`: the image source.
+- `alt`: the image alt text. The component also uses it for the button name.
+- `maxZoom`: the maximum zoom. The default is 2.
+- `downloadName`: the file name for the download action. The default is `image`.
+- `open`: the open state. The component owns the state when you omit it.
+- `onOpenChange`: runs when the open state changes.
+- `className`: the root class.
+- `imageClassName`: the image class.
+
+The component owns the open state by default. Set `open` and `onOpenChange` to
+control the state.
+
+This example uses the uncontrolled state:
+
+```tsx
+<ImageThumbnail alt="Report" className="max-w-xl" src={src} />
+```
+
+This example uses the controlled state:
+
+```tsx
+const [open, setOpen] = useState(false);
+
+<ImageThumbnail alt="Report" onOpenChange={setOpen} open={open} src={src} />;
 ```
 
 The stories run with `npm run ladle`. The tests run with `npm run test:run`.
