@@ -2,6 +2,7 @@ import {
   type ChangeEvent,
   type FocusEvent,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -9,6 +10,7 @@ import {
 import { CalendarIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils/cn.ts";
+import { useTranslation } from "@/components/context/translation.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Calendar } from "@/components/ui/calendar.tsx";
 import {
@@ -101,6 +103,7 @@ function formatRawDigits(digits: string, format: DateFormat): string {
 
 export interface InputDateProps {
   name?: string;
+  id?: string;
   value?: Date;
   onChange?: (date: Date | undefined) => void;
   onBlur?: () => void;
@@ -108,10 +111,14 @@ export interface InputDateProps {
   disabled?: boolean;
   readOnly?: boolean;
   locale?: string;
+  invalid?: boolean;
+  error?: string;
+  "aria-describedby"?: string;
 }
 
 export function InputDate({
   name,
+  id,
   value,
   onChange,
   onBlur,
@@ -119,12 +126,21 @@ export function InputDate({
   disabled = false,
   readOnly = false,
   locale = "en-US",
+  invalid = false,
+  error,
+  "aria-describedby": ariaDescribedBy,
 }: InputDateProps) {
+  const { t } = useTranslation();
   const dateFormat = useMemo(
     () => deriveDateFormatFromLocale(locale),
     [locale],
   );
   const formatters = useFormatters(locale);
+  const errorId = useId();
+  const isInvalid = invalid || Boolean(error);
+  const describedBy =
+    [ariaDescribedBy, error ? errorId : undefined].filter(Boolean).join(" ") ||
+    undefined;
 
   const [inputValue, setInputValue] = useState(() =>
     formatDate(value, dateFormat),
@@ -160,6 +176,8 @@ export function InputDate({
   };
 
   const handleSelect = (selectedDate: Date | undefined) => {
+    if (readOnly) return;
+
     const formatted = formatDate(selectedDate, dateFormat);
     setInputValue(formatted);
     lastValidValueRef.current = formatted;
@@ -183,51 +201,62 @@ export function InputDate({
   };
 
   const handleOpenChange = (open: boolean) => {
+    if (readOnly) return;
+
     setIsOpen(open);
     if (!open) onBlur?.();
   };
 
   return (
-    <Popover open={isOpen} onOpenChange={handleOpenChange}>
-      <InputGroup
-        className={cn(
-          "has-read-only:border-transparent",
-          disabled && "opacity-50 pointer-events-none",
-          className,
-        )}
-      >
-        <InputGroupInput
-          aria-label="Select date"
-          type="text"
-          inputMode="numeric"
-          placeholder={dateFormat}
-          name={name}
-          value={inputValue}
-          disabled={disabled}
-          readOnly={readOnly}
-          onChange={handleInputChange}
-          onBlur={handleInputBlur}
-          onClick={(e) => e.stopPropagation()}
-        />
-        <InputGroupAddon>
-          <PopoverTrigger
-            aria-label="Toggle calendar popover"
-            render={<Button size="icon-xs" variant="ghost" />}
-          >
-            <CalendarIcon aria-hidden="true" />
-          </PopoverTrigger>
-        </InputGroupAddon>
-      </InputGroup>
-      <PopoverPopup align="start" alignOffset={-4} sideOffset={8}>
-        <Calendar
-          formatters={formatters}
-          month={month}
-          onMonthChange={setMonth}
-          onSelect={handleSelect}
-          selected={value}
-          mode="single"
-        />
-      </PopoverPopup>
-    </Popover>
+    <div className={cn("flex w-full flex-col gap-2", className)}>
+      <Popover open={isOpen} onOpenChange={handleOpenChange}>
+        <InputGroup className="has-read-only:border-transparent">
+          <InputGroupInput
+            aria-describedby={describedBy}
+            aria-invalid={isInvalid || undefined}
+            aria-label={t("input_date_label")}
+            className="tabular-nums"
+            disabled={disabled}
+            id={id}
+            inputMode="numeric"
+            name={name}
+            onBlur={handleInputBlur}
+            onChange={handleInputChange}
+            onClick={(e) => e.stopPropagation()}
+            placeholder={t("input_date_placeholder")}
+            readOnly={readOnly}
+            type="text"
+            value={inputValue}
+          />
+          {!readOnly ? (
+            <InputGroupAddon>
+              <PopoverTrigger
+                aria-label={t("input_date_toggle")}
+                render={
+                  <Button disabled={disabled} size="icon-xs" variant="ghost" />
+                }
+              >
+                <CalendarIcon aria-hidden="true" />
+              </PopoverTrigger>
+            </InputGroupAddon>
+          ) : null}
+        </InputGroup>
+        <PopoverPopup align="start" alignOffset={-4} sideOffset={4}>
+          <Calendar
+            formatters={formatters}
+            month={month}
+            onMonthChange={setMonth}
+            onSelect={handleSelect}
+            selected={value}
+            mode="single"
+          />
+        </PopoverPopup>
+      </Popover>
+      {error ? (
+        <p className="text-destructive-foreground text-xs" id={errorId}>
+          {error}
+        </p>
+      ) : null}
+    </div>
   );
 }

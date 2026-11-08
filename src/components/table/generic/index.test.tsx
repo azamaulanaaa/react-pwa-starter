@@ -28,9 +28,12 @@ const COLUMNS: ColumnDef<TableGenericFeatures, Person>[] = [
 ];
 
 const DICTIONARY = {
+  table_generic_actions: "Actions",
+  table_generic_caption: "Data table",
   table_generic_select_row: "Select row {{id}}",
   table_generic_select_all_row: "Select all rows",
   table_generic_empty: "No rows",
+  table_generic_empty_description: "No rows are available.",
 };
 
 function renderTable(props: Partial<TableGenericProps<Person>> = {}) {
@@ -171,5 +174,26 @@ describe("TableGeneric", () => {
     renderTable({ data: [] });
 
     expect(screen.getByText("No rows")).toBeDefined();
+    expect(screen.getByText("No rows are available.")).toBeDefined();
+  });
+
+  it("shows skeleton rows while loading", () => {
+    renderTable({ data: [], loading: true });
+
+    expect(
+      document.querySelectorAll('[data-slot="skeleton"]').length,
+    ).toBeGreaterThan(0);
+    expect(screen.queryByText("No rows")).toBeNull();
+  });
+
+  it("names an empty action column", () => {
+    renderTable({
+      columns: [
+        { accessorKey: "name", header: "Name" },
+        { id: "actions", header: "" },
+      ],
+    });
+
+    expect(screen.getByText("Actions")).toBeDefined();
   });
 });

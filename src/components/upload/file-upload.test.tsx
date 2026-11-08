@@ -16,6 +16,8 @@ const DICTIONARY = {
   upload_add_files: "Add files",
   upload_choose_files: "Upload files",
   upload_drop_title: "Drop your files here",
+  upload_error_title: "The upload failed",
+  upload_file_error_title: "Upload failed",
   upload_files_title: "Files ({{count}})",
   upload_limit_one: "Max 1 file · Up to {{maxSize}}",
   upload_limits: "Max {{maxFiles}} files · Up to {{maxSize}}",

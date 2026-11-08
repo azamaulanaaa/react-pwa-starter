@@ -1,7 +1,15 @@
-import { type Ref, useEffect, useState } from "react";
+import { type Ref, useEffect, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils/cn.ts";
 import { Input } from "@/components/ui/input.tsx";
+
+function defaultFormatter<T>(value: T): string {
+  return value !== undefined && value !== null ? String(value) : "";
+}
+
+function defaultParser<T>(value: string): T {
+  return value as unknown as T;
+}
 
 export type InputFormattedProps<T = string> = Omit<
   React.InputHTMLAttributes<HTMLInputElement>,
@@ -28,8 +36,8 @@ export function InputFormatted<T = string>({
   defaultValue,
   onChange,
   onBlur,
-  formatter = (val) => (val !== undefined && val !== null ? String(val) : ""),
-  parser = (val) => val as unknown as T,
+  formatter = defaultFormatter,
+  parser = defaultParser,
   ...props
 }: InputFormattedProps<T>) {
   const isControlled = value !== undefined;
@@ -46,16 +54,27 @@ export function InputFormatted<T = string>({
       : "",
   );
 
+  const previousValueRef = useRef(value);
+
   useEffect(() => {
-    setLocalText(
-      activeValue !== undefined && activeValue !== null
-        ? formatter(activeValue)
-        : "",
-    );
-  }, [activeValue, formatter]);
+    if (!isControlled) return;
+    if (Object.is(previousValueRef.current, value)) return;
+
+    previousValueRef.current = value;
+    setLocalText(value !== undefined && value !== null ? formatter(value) : "");
+  }, [formatter, isControlled, value]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setLocalText(e.target.value);
+    const nextText = e.target.value;
+    const parsedValue = parser(nextText);
+
+    setLocalText(nextText);
+
+    if (!isControlled) {
+      setUncontrolledValue(parsedValue);
+    }
+
+    onChange?.(parsedValue);
   };
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {

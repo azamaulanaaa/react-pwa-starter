@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import {
   DownloadIcon,
   MinusIcon,
@@ -10,6 +9,13 @@ import {
 
 import { cn } from "@/lib/utils/cn.ts";
 import { Button } from "@/components/ui/button.tsx";
+import {
+  Dialog,
+  DialogBackdrop,
+  DialogPortal,
+  DialogPrimitive,
+} from "@/components/ui/dialog.tsx";
+import { Group } from "@/components/ui/group.tsx";
 import { useIntl } from "@/components/context/intl.tsx";
 import { useTranslation } from "@/components/context/translation.tsx";
 
@@ -63,16 +69,13 @@ export function ImageView({
   };
 
   return (
-    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       {open ? (
-        <DialogPrimitive.Portal>
-          <DialogPrimitive.Backdrop
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md"
-            data-slot="image-view-backdrop"
-          />
+        <DialogPortal>
+          <DialogBackdrop data-slot="image-view-backdrop" />
           <DialogPrimitive.Popup
             className={cn(
-              "fixed inset-0 z-50 flex items-center justify-center bg-transparent p-4 outline-none",
+              "fixed inset-0 z-50 flex items-center justify-center bg-transparent outline-none",
               className,
             )}
             data-slot="image-view"
@@ -84,28 +87,35 @@ export function ImageView({
               {t("image_view_description")}
             </DialogPrimitive.Description>
 
-            <img
-              alt={alt ?? t("image_view_title")}
-              className="h-auto max-h-[80vh] w-auto max-w-[80vw] object-contain transition-transform duration-200 ease-out"
-              data-slot="image-view-image"
-              src={src}
-              style={{
-                transform: `scale(${currentZoom})`,
-                transformOrigin: "center",
-              }}
-            />
+            <div
+              className="size-full overflow-auto p-4"
+              data-slot="image-view-viewport"
+            >
+              <div className="flex min-h-full min-w-full items-center justify-center">
+                <img
+                  alt={alt ?? t("image_view_title")}
+                  className="h-auto max-h-[80vh] w-auto max-w-[80vw] object-contain transition-transform duration-200 ease-out motion-reduce:transition-none"
+                  data-slot="image-view-image"
+                  src={src}
+                  style={{
+                    transform: `scale(${currentZoom})`,
+                    transformOrigin: "center",
+                  }}
+                />
+              </div>
+            </div>
 
             <DialogPrimitive.Close
               aria-label={t("image_view_close")}
-              className="fixed end-4 top-4 z-20"
+              className="fixed end-4 top-4 z-20 rounded-full bg-black/32 backdrop-blur-sm"
               data-slot="image-view-close"
-              render={<Button size="icon-lg" variant="default" />}
+              render={<Button size="icon" variant="ghost" />}
             >
               <XIcon />
             </DialogPrimitive.Close>
 
             <Button
-              className="fixed bottom-6 left-1/2 z-20 -translate-x-1/2"
+              className="fixed inset-x-0 bottom-6 z-20 mx-auto w-fit"
               data-slot="image-view-download"
               render={<a download={downloadName ?? "image"} href={src} />}
               variant="outline"
@@ -114,8 +124,8 @@ export function ImageView({
               {t("image_view_download")}
             </Button>
 
-            <div
-              className="fixed start-4 top-4 z-20 flex items-center gap-1 rounded-full border-0 bg-background/80 p-1 shadow-none backdrop-blur"
+            <Group
+              className="fixed start-4 top-4 z-20 gap-1 rounded-full border-0 bg-background/80 p-1 shadow-none backdrop-blur"
               data-slot="image-view-zoom-controls"
             >
               <Button
@@ -132,7 +142,9 @@ export function ImageView({
                 aria-label={t("image_view_zoom_level", {
                   percent: formatPercent(currentZoom),
                 })}
+                aria-live="polite"
                 className="min-w-12 text-center text-sm tabular-nums"
+                role="status"
               >
                 {formatPercent(currentZoom)}
               </span>
@@ -156,10 +168,10 @@ export function ImageView({
               >
                 <RotateCcwIcon />
               </Button>
-            </div>
+            </Group>
           </DialogPrimitive.Popup>
-        </DialogPrimitive.Portal>
+        </DialogPortal>
       ) : null}
-    </DialogPrimitive.Root>
+    </Dialog>
   );
 }

@@ -1,8 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
-import { CameraIcon, RotateCcwIcon, UploadIcon } from "lucide-react";
+import {
+  AlertCircleIcon,
+  CameraIcon,
+  RotateCcwIcon,
+  UploadIcon,
+} from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert.tsx";
 import { Button, buttonVariants } from "@/components/ui/button.tsx";
+import { Spinner } from "@/components/ui/spinner.tsx";
 import { useTranslation } from "@/components/context/translation.tsx";
 import {
   useCamera,
@@ -232,6 +238,8 @@ export function SelfieCapture({
       : undefined;
   const isError =
     fileError !== null || (available && camera.status === "error");
+  const isStatusBusy =
+    busy || camera.status === "starting" || location.status === "locating";
   const locationKey = geolocationMessageKey(location.status, location.error);
   const locationParams =
     location.status === "success" && location.accuracy !== null
@@ -247,7 +255,7 @@ export function SelfieCapture({
         {preview ? (
           <img
             alt={t("selfie_capture_photo_alt")}
-            className="size-full object-cover"
+            className="size-full object-contain"
             src={preview}
           />
         ) : (
@@ -266,19 +274,34 @@ export function SelfieCapture({
         {!photo && camera.status !== "ready" ? (
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground">
             {showFileInput ? (
-              <UploadIcon className="size-8" />
+              <UploadIcon className="size-4.5 opacity-80 sm:size-4" />
             ) : (
-              <CameraIcon className="size-8" />
+              <CameraIcon className="size-4.5 opacity-80 sm:size-4" />
             )}
             <span className="text-xs">{t("selfie_capture_preview_hint")}</span>
           </div>
         ) : null}
       </div>
 
-      <Alert variant={isError ? "error" : "info"}>
-        <AlertTitle>{t(messageKey, messageParams)}</AlertTitle>
-        <AlertDescription>{t(locationKey, locationParams)}</AlertDescription>
-      </Alert>
+      {isError ? (
+        <Alert variant="error">
+          <AlertCircleIcon aria-hidden="true" />
+          <AlertTitle>{t(messageKey, messageParams)}</AlertTitle>
+          <AlertDescription>{t(locationKey, locationParams)}</AlertDescription>
+        </Alert>
+      ) : (
+        <div
+          aria-live="polite"
+          className="flex flex-wrap items-center gap-2 text-muted-foreground text-sm"
+        >
+          {isStatusBusy ? (
+            <Spinner aria-hidden="true" className="size-3.5" />
+          ) : null}
+          <span>{t(messageKey, messageParams)}</span>
+          <span aria-hidden="true">·</span>
+          <span>{t(locationKey, locationParams)}</span>
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-2">
         {!photo && available && camera.status !== "ready" ? (
@@ -324,7 +347,7 @@ export function SelfieCapture({
         <label
           className={cn(
             buttonVariants({ variant: "outline" }),
-            "cursor-pointer",
+            "cursor-pointer has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-1 has-[:focus-visible]:ring-offset-background",
             (disabled || busy) && "pointer-events-none opacity-64",
           )}
         >

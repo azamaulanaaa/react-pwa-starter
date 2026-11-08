@@ -60,12 +60,12 @@ describe("ImageView", () => {
     expect(onOpenChange.mock.calls[0]?.[0]).toBe(false);
   });
 
-  it("shows the default close button at the top right", () => {
+  it("shows the ghost close button at the top right", () => {
     renderView();
 
     const close = getButton("Close image");
 
-    expect(close.classList.contains("bg-primary")).toBe(true);
+    expect(close.classList.contains("bg-primary")).toBe(false);
     expect(close.classList.contains("fixed")).toBe(true);
     expect(close.classList.contains("top-4")).toBe(true);
     expect(close.classList.contains("end-4")).toBe(true);

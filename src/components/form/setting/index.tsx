@@ -1,10 +1,10 @@
 import { useEffect, useMemo } from "react";
 import { Schema } from "effect";
-import { useForm } from "@tanstack/react-form";
+import { useForm, useStore } from "@tanstack/react-form";
 
 import { useTranslation } from "@/components/context/translation.tsx";
 import { Form } from "@/components/ui/form.tsx";
-import { Field, FieldError, FieldLabel } from "@/components/ui/field.tsx";
+import { Field, FieldLabel } from "@/components/ui/field.tsx";
 import {
   Select,
   SelectItem,
@@ -89,6 +89,8 @@ export function FormSetting(props: FormSettingProps) {
     }
   }, [props.value, form]);
 
+  const isSubmitting = useStore(form.store, (state) => state.isSubmitting);
+
   return (
     <Form
       className="flex w-full flex-col gap-4"
@@ -120,12 +122,10 @@ export function FormSetting(props: FormSettingProps) {
                 ))}
               </SelectPopup>
             </Select>
-            <FieldError match={!field.state.meta.isValid}>
-              <FieldInfo
-                field={field}
-                validatingLabel="form_setting_validating"
-              />
-            </FieldError>
+            <FieldInfo
+              field={field}
+              validatingLabel="form_setting_validating"
+            />
           </Field>
         )}
       </form.Field>
@@ -151,16 +151,16 @@ export function FormSetting(props: FormSettingProps) {
                 ))}
               </SelectPopup>
             </Select>
-            <FieldError match={!field.state.meta.isValid}>
-              <FieldInfo
-                field={field}
-                validatingLabel="form_setting_validating"
-              />
-            </FieldError>
+            <FieldInfo
+              field={field}
+              validatingLabel="form_setting_validating"
+            />
           </Field>
         )}
       </form.Field>
-      <Button type="submit">{t("form_setting_submit_button")}</Button>
+      <Button disabled={isSubmitting} loading={isSubmitting} type="submit">
+        {t("form_setting_submit_button")}
+      </Button>
     </Form>
   );
 }

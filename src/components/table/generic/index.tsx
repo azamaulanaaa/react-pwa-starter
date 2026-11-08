@@ -13,24 +13,29 @@ import {
   type Updater,
   useTable,
 } from "@tanstack/react-table";
+import { InboxIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils/cn.ts";
 import { useTranslation } from "@/components/context/translation.tsx";
 import { Checkbox } from "@/components/ui/checkbox.tsx";
 import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty.tsx";
+import { ScrollArea } from "@/components/ui/scroll-area.tsx";
+import { Skeleton } from "@/components/ui/skeleton.tsx";
+import {
   Table,
   TableBody,
+  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table.tsx";
-import {
-  Tooltip,
-  TooltipPopup,
-  TooltipTrigger,
-} from "@/components/ui/tooltip.tsx";
-import { ScrollArea } from "@/components/ui/scroll-area.tsx";
 
 /**
  * The features that every TableGeneric instance needs. The object is defined
@@ -70,7 +75,10 @@ export type TableGenericProps<TData extends RowData = RowData> = {
   ) => void;
   containerRef?: Ref<HTMLDivElement>;
   getRowRefs?: (id: string) => Ref<HTMLTableRowElement>;
+  loading?: boolean;
 };
+
+const LOADING_ROW_COUNT = 5;
 
 export function TableGeneric<TData extends RowData>(
   props: TableGenericProps<TData>,
@@ -118,51 +126,48 @@ export function TableGeneric<TData extends RowData>(
   );
 
   const columns = useMemo<TableGenericColumnDef<TData>[]>(() => {
-    if (!enableSelection) return props.columns;
+    const sourceColumns = props.columns.map((column) => {
+      if (column.header !== "") return column;
+
+      return {
+        ...column,
+        header: () => (
+          <span className="sr-only">{t("table_generic_actions")}</span>
+        ),
+      } as TableGenericColumnDef<TData>;
+    });
+
+    if (!enableSelection) return sourceColumns;
 
     const selectionColumn: TableGenericColumnDef<TData> = {
       id: "select",
       enableHiding: false,
       cell: ({ row }) => {
         return (
-          <Tooltip>
-            <TooltipTrigger>
-              <Checkbox
-                aria-label={t("table_generic_select_row", {
-                  id: row.id,
-                })}
-                checked={row.getIsSelected()}
-                onCheckedChange={(value) => row.toggleSelected(!!value)}
-                disabled={!row.getCanSelect()}
-              />
-            </TooltipTrigger>
-            <TooltipPopup>
-              {t("table_generic_select_row", {
-                id: row.id,
-              })}
-            </TooltipPopup>
-          </Tooltip>
+          <Checkbox
+            aria-label={t("table_generic_select_row", {
+              id: row.id,
+            })}
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            disabled={!row.getCanSelect()}
+          />
         );
       },
       header: ({ table }) => (
-        <Tooltip>
-          <TooltipTrigger>
-            <Checkbox
-              aria-label={t("table_generic_select_all_row")}
-              checked={table.getIsAllPageRowsSelected()}
-              indeterminate={
-                table.getIsSomePageRowsSelected() &&
-                !table.getIsAllPageRowsSelected()
-              }
-              onCheckedChange={(value) => table.toggleAllRowsSelected(!!value)}
-            />
-          </TooltipTrigger>
-          <TooltipPopup>{t("table_generic_select_all_row")}</TooltipPopup>
-        </Tooltip>
+        <Checkbox
+          aria-label={t("table_generic_select_all_row")}
+          checked={table.getIsAllPageRowsSelected()}
+          indeterminate={
+            table.getIsSomePageRowsSelected() &&
+            !table.getIsAllPageRowsSelected()
+          }
+          onCheckedChange={(value) => table.toggleAllRowsSelected(!!value)}
+        />
       ),
     };
 
-    return [selectionColumn, ...props.columns];
+    return [selectionColumn, ...sourceColumns];
   }, [enableSelection, props.columns, t]);
 
   const state = useMemo(
@@ -200,20 +205,31 @@ export function TableGeneric<TData extends RowData>(
 
   return (
     <Table
-      render={(containerProps) => (
-        <ScrollArea
-          {...containerProps}
-          className={cn(
-            containerProps.className,
-            "border rounded-md flex-1 min-h-0",
-          )}
-          scrollFade
-          scrollbarGutter
-          ref={props.containerRef}
-        />
-      )}
+      aria-busy={props.loading || undefined}
+      render={(containerProps) => {
+        const containerClassName = containerProps.className
+          ?.split(" ")
+          .filter((name) => name !== "overflow-x-auto")
+          .join(" ");
+
+        return (
+          <ScrollArea
+            {...containerProps}
+            className={cn(
+              containerClassName,
+              "border rounded-xl flex-1 min-h-0",
+            )}
+            scrollFade
+            scrollbarGutter
+            ref={props.containerRef}
+          />
+        );
+      }}
     >
-      <TableHeader className="sticky top-0 z-10 bg-background/90 backdrop-blur-xs">
+      <TableCaption className="sr-only">
+        {t("table_generic_caption")}
+      </TableCaption>
+      <TableHeader className="sticky top-0 z-10 bg-background">
         {table.getHeaderGroups().map((headerGroup) => (
           <TableRow key={headerGroup.id}>
             {headerGroup.headers.map((header) => {
@@ -232,7 +248,17 @@ export function TableGeneric<TData extends RowData>(
         ))}
       </TableHeader>
       <TableBody>
-        {table.getRowModel().rows?.length ? (
+        {props.loading ? (
+          Array.from({ length: LOADING_ROW_COUNT }, (_, rowIndex) => (
+            <TableRow key={`loading-${rowIndex}`}>
+              {columns.map((_, columnIndex) => (
+                <TableCell key={`loading-${rowIndex}-${columnIndex}`}>
+                  <Skeleton className="h-4 w-full min-w-16" />
+                </TableCell>
+              ))}
+            </TableRow>
+          ))
+        ) : table.getRowModel().rows?.length ? (
           table.getRowModel().rows.map((row) => (
             <TableRow
               data-state={row.getIsSelected() && "selected"}
@@ -240,7 +266,7 @@ export function TableGeneric<TData extends RowData>(
               ref={props.getRowRefs?.(row.id)}
             >
               {row.getVisibleCells().map((cell) => (
-                <TableCell key={cell.id} className="text-foreground">
+                <TableCell key={cell.id}>
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </TableCell>
               ))}
@@ -248,8 +274,21 @@ export function TableGeneric<TData extends RowData>(
           ))
         ) : (
           <TableRow>
-            <TableCell className="h-24 text-center" colSpan={columns.length}>
-              {t("table_generic_empty")}
+            <TableCell
+              className="whitespace-normal p-0"
+              colSpan={columns.length}
+            >
+              <Empty className="py-10 md:py-12">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <InboxIcon aria-hidden="true" />
+                  </EmptyMedia>
+                  <EmptyTitle>{t("table_generic_empty")}</EmptyTitle>
+                  <EmptyDescription>
+                    {t("table_generic_empty_description")}
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
             </TableCell>
           </TableRow>
         )}

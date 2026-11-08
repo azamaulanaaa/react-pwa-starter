@@ -16,7 +16,16 @@ import {
 
 import { useIntl } from "@/components/context/intl.tsx";
 import { useTranslation } from "@/components/context/translation.tsx";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert.tsx";
 import { Button } from "@/components/ui/button.tsx";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty.tsx";
 import { Progress } from "@/components/ui/progress.tsx";
 import {
   formatBytes,
@@ -124,11 +133,11 @@ const getFileIcon = (file: File | FileMetadata) => {
 
   for (const { icon: Icon, conditions } of Object.values(iconMap)) {
     if (conditions(fileType, fileName)) {
-      return <Icon className="size-5 opacity-60" />;
+      return <Icon className="size-4.5 opacity-80 sm:size-4" />;
     }
   }
 
-  return <FileIcon className="size-5 opacity-60" />;
+  return <FileIcon className="size-4.5 opacity-80 sm:size-4" />;
 };
 
 const getFilePreview = (
@@ -218,7 +227,7 @@ export function FileUpload({
       data-slot="file-upload"
     >
       <div
-        className="relative flex min-h-52 flex-col items-center not-data-[files]:justify-center overflow-hidden rounded-xl border border-input border-dashed p-4 transition-colors has-[input:focus]:border-ring has-[input:focus]:ring-[3px] has-[input:focus]:ring-ring/50 data-[dragging=true]:bg-accent/50"
+        className="relative flex min-h-52 flex-col items-center not-data-[files]:justify-center overflow-hidden rounded-lg border border-input border-dashed p-4 transition-colors has-[input:focus]:border-ring has-[input:focus]:ring-[3px] has-[input:focus]:ring-ring/50 data-[dragging=true]:border-ring data-[dragging=true]:bg-accent/50"
         data-dragging={isDragging || undefined}
         data-files={files.length > 0 || undefined}
         data-slot="file-upload-dropzone"
@@ -249,10 +258,7 @@ export function FileUpload({
                   size="sm"
                   variant="outline"
                 >
-                  <UploadIcon
-                    aria-hidden="true"
-                    className="-ms-0.5 size-3.5 opacity-60"
-                  />
+                  <UploadIcon aria-hidden="true" />
                   {t("upload_add_files")}
                 </Button>
                 <Button
@@ -261,10 +267,7 @@ export function FileUpload({
                   size="sm"
                   variant="outline"
                 >
-                  <Trash2Icon
-                    aria-hidden="true"
-                    className="-ms-0.5 size-3.5 opacity-60"
-                  />
+                  <Trash2Icon aria-hidden="true" />
                   {t("upload_remove_all")}
                 </Button>
               </div>
@@ -283,7 +286,7 @@ export function FileUpload({
                 return (
                   <div
                     className={cn(
-                      "relative flex flex-col rounded-md border bg-background",
+                      "relative flex flex-col rounded-lg border bg-background",
                       fileError && "border-destructive/32",
                     )}
                     data-slot="file-upload-card"
@@ -310,24 +313,33 @@ export function FileUpload({
                       aria-label={t("upload_remove_file", {
                         name: item.file.name,
                       })}
-                      className="-top-2 -right-2 absolute z-20 size-6 rounded-full border-2 border-background shadow-none focus-visible:border-background"
+                      className="-end-2 -top-2 absolute z-20 rounded-full"
                       disabled={disabled}
                       onClick={() => removeFile(item.id)}
-                      size="icon"
+                      size="icon-xs"
                     >
-                      <XIcon className="size-3.5" />
+                      <XIcon aria-hidden="true" />
                     </Button>
                     <div className="flex min-w-0 flex-col gap-0.5 border-t p-3">
-                      <p className="truncate font-medium text-[13px]">
+                      <p className="truncate font-medium text-sm">
                         {item.file.name}
                       </p>
                       <p className="truncate text-muted-foreground text-xs">
                         {formatBytes(item.file.size)}
                       </p>
                       {fileError && (
-                        <p className="truncate text-destructive-foreground text-xs">
-                          {fileError}
-                        </p>
+                        <Alert
+                          className="mt-1 rounded-lg px-2.5 py-2"
+                          variant="error"
+                        >
+                          <AlertCircleIcon aria-hidden="true" />
+                          <AlertTitle className="text-xs">
+                            {t("upload_file_error_title")}
+                          </AlertTitle>
+                          <AlertDescription className="text-xs">
+                            {fileError}
+                          </AlertDescription>
+                        </Alert>
                       )}
                     </div>
                   </div>
@@ -336,37 +348,37 @@ export function FileUpload({
             </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center px-4 py-3 text-center">
-            <div
-              aria-hidden="true"
-              className="mb-2 flex size-11 shrink-0 items-center justify-center rounded-full border bg-background"
-            >
-              <UploadIcon className="size-4 opacity-60" />
-            </div>
-            <p className="mb-1.5 font-medium text-sm">
-              {t("upload_drop_title")}
-            </p>
-            <p className="text-muted-foreground text-xs">{limitText}</p>
-            <Button
-              className="mt-4"
-              disabled={actionsDisabled}
-              onClick={openFileDialog}
-              variant="outline"
-            >
-              <UploadIcon aria-hidden="true" className="-ms-1 opacity-60" />
-              {t("upload_select_files")}
-            </Button>
-          </div>
+          <Empty className="gap-4 p-0">
+            <EmptyHeader className="gap-2">
+              <EmptyMedia variant="icon">
+                <UploadIcon aria-hidden="true" />
+              </EmptyMedia>
+              <EmptyTitle>{t("upload_drop_title")}</EmptyTitle>
+              <EmptyDescription>{limitText}</EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent>
+              <Button
+                disabled={actionsDisabled}
+                onClick={openFileDialog}
+                variant="outline"
+              >
+                <UploadIcon aria-hidden="true" />
+                {t("upload_select_files")}
+              </Button>
+            </EmptyContent>
+          </Empty>
         )}
       </div>
       {errors.length > 0 && (
-        <div
-          className="flex items-center gap-1 text-destructive-foreground text-xs"
-          role="alert"
-        >
-          <AlertCircleIcon className="size-3 shrink-0" />
-          <span>{errors[0]}</span>
-        </div>
+        <Alert variant="error">
+          <AlertCircleIcon aria-hidden="true" />
+          <AlertTitle>{t("upload_error_title")}</AlertTitle>
+          <AlertDescription>
+            {errors.map((error, index) => (
+              <p key={`${error}-${index}`}>{error}</p>
+            ))}
+          </AlertDescription>
+        </Alert>
       )}
     </div>
   );
