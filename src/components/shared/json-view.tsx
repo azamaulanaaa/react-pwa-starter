@@ -22,7 +22,7 @@ function formatValue(value: unknown): string {
 }
 
 /**
- * Shows a JSON value in a bordered block.
+ * Shows a JSON value in a code block.
  * The copy button writes the text to the clipboard when the browser allows it.
  */
 export function JsonView({
@@ -32,6 +32,7 @@ export function JsonView({
 }: JsonViewProps): React.ReactElement {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const text = useMemo(
     () => (value === undefined ? "" : formatValue(value)),
@@ -45,28 +46,40 @@ export function JsonView({
   }, []);
 
   const handleCopy = (): void => {
-    if (!navigator.clipboard?.writeText) return;
+    if (typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
+      setCopied(false);
+      setCopyFailed(true);
+
+      return;
+    }
 
     void navigator.clipboard
       .writeText(text)
       .then(() => {
+        setCopyFailed(false);
         setCopied(true);
         if (timer.current !== null) clearTimeout(timer.current);
         timer.current = setTimeout(() => setCopied(false), 1000);
       })
-      .catch(() => {});
+      .catch(() => {
+        setCopied(false);
+        setCopyFailed(true);
+      });
   };
 
   return (
     <div
       className={cn(
-        "relative rounded-lg border bg-muted/32 text-foreground",
+        "overflow-hidden rounded-lg border bg-code text-code-foreground",
         className,
       )}
       data-slot="json-view"
     >
       {value !== undefined && (
-        <div className="absolute end-2 top-2 z-10">
+        <div
+          className="flex items-center justify-end border-b px-2 py-1.5"
+          data-slot="json-view-header"
+        >
           <Button
             aria-label={copied ? t("system_copied") : t("system_copy")}
             onClick={handleCopy}
@@ -81,11 +94,19 @@ export function JsonView({
         <p className="p-3 text-muted-foreground text-sm">{emptyLabel}</p>
       ) : (
         <ScrollArea className="max-h-64">
-          <pre className="whitespace-pre-wrap break-all p-3 pe-12 pt-11 font-mono text-xs">
+          <pre className="whitespace-pre-wrap break-all p-3 font-mono text-xs">
             {text}
           </pre>
         </ScrollArea>
       )}
+      {copyFailed && (
+        <p className="border-t px-3 py-2 text-destructive-foreground text-xs">
+          {t("system_copy_failed")}
+        </p>
+      )}
+      <span aria-live="polite" className="sr-only" role="status">
+        {copied ? t("system_copied") : ""}
+      </span>
     </div>
   );
 }

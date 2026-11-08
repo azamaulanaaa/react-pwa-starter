@@ -1,33 +1,24 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { useTranslation } from "@/components/context/translation.tsx";
-import {
-  Card,
-  CardHeader,
-  CardPanel,
-  CardTitle,
-} from "@/components/ui/card.tsx";
+import { PageHeader } from "@/components/shared/page-header.tsx";
 
 function Page() {
   const { t } = useTranslation();
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t("page_dashboard_home_title")}</CardTitle>
-      </CardHeader>
-      <CardPanel>
-        <p className="text-muted-foreground">
-          {t("page_dashboard_home_description")}
-        </p>
-      </CardPanel>
-    </Card>
+    <div className="flex flex-col gap-4" data-slot="dashboard-home">
+      <PageHeader
+        description={t("page_dashboard_home_description")}
+        title={t("page_dashboard_home_title")}
+      />
+    </div>
   );
 }
 
 export const Route = createFileRoute("/_dashboard/")({
   component: Page,
   staticData: {
-    breadcrumb: "Home",
+    breadcrumb: "layout_menu_home",
   },
 });

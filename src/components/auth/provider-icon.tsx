@@ -89,7 +89,7 @@ export function OAuthProviderIcon({
 
   return (
     <svg
-      className={cn("size-4.5", className)}
+      className={cn("size-4.5 sm:size-4", className)}
       viewBox="0 0 24 24"
       xmlns="http://www.w3.org/2000/svg"
       {...props}

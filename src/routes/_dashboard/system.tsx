@@ -5,6 +5,6 @@ import { SystemPage } from "@/components/system/system-page.tsx";
 export const Route = createFileRoute("/_dashboard/system")({
   component: SystemPage,
   staticData: {
-    breadcrumb: "System",
+    breadcrumb: "layout_menu_system",
   },
 });

@@ -24,7 +24,7 @@ export function AuthLoading({
       data-slot="auth-loading"
       role="status"
     >
-      <Spinner className="size-5" />
+      <Spinner aria-hidden="true" className="size-5" />
       <span className="text-muted-foreground text-sm">
         {label ?? t("auth_loading")}
       </span>

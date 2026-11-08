@@ -81,8 +81,14 @@ describe("RustApiLoginPanel", () => {
   it("loads the authentication card when the switch is on", async () => {
     vi.stubEnv("VITE_RUST_API_ENABLED", "true");
     const { RustApiLoginPanel } = await import("@/rust-api/optional.tsx");
+    const { TranslationProvider } =
+      await import("@/components/context/translation.tsx");
 
-    render(<RustApiLoginPanel />);
+    render(
+      <TranslationProvider dictionary={{ auth_loading: "Loading..." }}>
+        <RustApiLoginPanel />
+      </TranslationProvider>,
+    );
 
     expect(await screen.findByTestId("rust-api-auth-card")).toBeDefined();
     expect(mocks.authLoaded).toBe(true);

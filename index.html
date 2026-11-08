@@ -3,10 +3,48 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#4f46e5" />
+    <meta
+      name="theme-color"
+      media="(prefers-color-scheme: light)"
+      content="#ffffff"
+    />
+    <meta
+      name="theme-color"
+      media="(prefers-color-scheme: dark)"
+      content="#161616"
+    />
 
     <title>React PWA</title>
     <meta name="description" content="A high-performance React PWA" />
+
+    <script>
+      (function () {
+        var root = document.documentElement;
+        var rtlLanguages = ["ar", "fa", "he", "ur", "yi"];
+        var config = {};
+        var locale = navigator.language || "en";
+
+        try {
+          var raw = localStorage.getItem("state-app_config");
+          if (raw) config = JSON.parse(raw);
+        } catch (error) {
+          config = {};
+        }
+
+        if (config.locale) locale = config.locale;
+
+        var language = locale.split("-")[0].toLowerCase();
+        var isDark =
+          config.theme === "dark" ||
+          (config.theme !== "light" &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches);
+
+        root.classList.toggle("dark", isDark);
+        root.style.colorScheme = isDark ? "dark" : "light";
+        root.lang = locale;
+        root.dir = rtlLanguages.indexOf(language) === -1 ? "ltr" : "rtl";
+      })();
+    </script>
 
     <link rel="icon" href="/favicon.ico" sizes="32x32" />
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />

@@ -7,8 +7,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import {
   Menu,
-  MenuGroup,
-  MenuGroupLabel,
   MenuItem,
   MenuPopup,
   MenuSeparator,
@@ -44,25 +42,23 @@ export function UserMenu({
         data-slot="user-menu-trigger"
         render={<Button size="icon" variant="ghost" />}
       >
-        <Avatar>
+        <Avatar className="size-7 sm:size-6">
           <AvatarFallback>{initial}</AvatarFallback>
         </Avatar>
       </MenuTrigger>
       <MenuPopup align={align} className="w-56" side={side}>
-        <MenuGroup>
-          <MenuGroupLabel className="flex flex-col gap-0.5 py-2">
-            {user.name && (
-              <span className="truncate font-medium text-foreground text-sm">
-                {t("auth_signed_in_as", { name: user.name })}
-              </span>
-            )}
-            {user.email && (
-              <span className="truncate font-normal text-muted-foreground text-xs">
-                {user.email}
-              </span>
-            )}
-          </MenuGroupLabel>
-        </MenuGroup>
+        <div className="flex flex-col gap-0.5 px-2 py-1.5">
+          {user.name && (
+            <span className="truncate font-medium text-foreground text-sm">
+              {t("auth_signed_in_as", { name: user.name })}
+            </span>
+          )}
+          {user.email && (
+            <span className="truncate text-muted-foreground text-xs">
+              {user.email}
+            </span>
+          )}
+        </div>
         <MenuSeparator />
         {onProfile && (
           <MenuItem onClick={onProfile}>{t("auth_profile")}</MenuItem>

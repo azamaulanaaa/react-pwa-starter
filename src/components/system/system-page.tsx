@@ -2,6 +2,7 @@ import type React from "react";
 import { InboxIcon, ListChecksIcon } from "lucide-react";
 
 import { useTranslation } from "@/components/context/translation.tsx";
+import { PageHeader } from "@/components/shared/page-header.tsx";
 import { Tabs, TabsList, TabsPanel, TabsTab } from "@/components/ui/tabs.tsx";
 import { OutboxPanel } from "@/components/outbox/index.ts";
 import { QueuePanel } from "@/components/queue/index.ts";
@@ -11,15 +12,11 @@ export function SystemPage(): React.ReactElement {
   const { t } = useTranslation();
 
   return (
-    <div className="flex flex-col gap-4 p-2" data-slot="system-page">
-      <div className="flex flex-col gap-1">
-        <h1 className="font-heading font-semibold text-2xl">
-          {t("page_dashboard_system_title")}
-        </h1>
-        <p className="text-muted-foreground text-sm">
-          {t("page_dashboard_system_description")}
-        </p>
-      </div>
+    <div className="flex flex-col gap-4" data-slot="system-page">
+      <PageHeader
+        description={t("page_dashboard_system_description")}
+        title={t("page_dashboard_system_title")}
+      />
 
       <Tabs className="gap-4" defaultValue="outbox">
         <TabsList variant="underline">

@@ -1,10 +1,12 @@
 import { lazy, Suspense, type ReactNode } from "react";
 
+import { AuthLoading } from "@/components/auth/auth-loading.tsx";
+
 /**
  * Reads the build-time switch.
  * The adapter accepts `1`, `true`, `yes`, and `on`.
  */
-const RUST_API_ENABLED =
+export const RUST_API_ENABLED =
   import.meta.env.VITE_RUST_API_ENABLED === "1" ||
   import.meta.env.VITE_RUST_API_ENABLED === "true" ||
   import.meta.env.VITE_RUST_API_ENABLED === "yes" ||
@@ -52,7 +54,7 @@ export function RustApiLoginPanel() {
   if (!RUST_API_ENABLED || LazyAuthCard === null) return null;
 
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<AuthLoading />}>
       <LazyAuthCard />
     </Suspense>
   );

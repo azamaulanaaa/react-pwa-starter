@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 
 import { routeTree } from "@/routeTree.gen.ts";
@@ -28,6 +28,15 @@ const DEFAULT_CONFIG: Config = {
   isSidebarOpen: true,
 };
 
+const RTL_LANGUAGES = new Set(["ar", "fa", "he", "ur", "yi"]);
+
+/** Returns the text direction for one locale. */
+function getDirection(locale: string): "ltr" | "rtl" {
+  const language = locale.split("-")[0]?.toLowerCase() ?? "";
+
+  return RTL_LANGUAGES.has(language) ? "rtl" : "ltr";
+}
+
 export function App() {
   const [config, setConfig] = usePersistState<Config>(
     "app_config",
@@ -45,12 +54,22 @@ export function App() {
     return config.locale;
   }, [config.locale, systemLocale]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const isDarkMode =
       config.theme === "dark" ||
       (config.theme === "system" && isSystemDarkMode);
-    document.documentElement.classList.toggle("dark", isDarkMode);
+    const root = document.documentElement;
+
+    root.classList.toggle("dark", isDarkMode);
+    root.style.colorScheme = isDarkMode ? "dark" : "light";
   }, [config.theme, isSystemDarkMode]);
+
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+
+    root.lang = locale || "en";
+    root.dir = getDirection(locale);
+  }, [locale]);
 
   const [dictionary, setDictionary] = useState({});
   const [fallbackDictionary, setFallbackDictionary] = useState({});

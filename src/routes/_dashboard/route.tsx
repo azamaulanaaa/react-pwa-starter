@@ -4,6 +4,7 @@ import {
   Link,
   LinkProps,
   Outlet,
+  useMatchRoute,
   useMatches,
 } from "@tanstack/react-router";
 import { Activity, House, Settings } from "lucide-react";
@@ -42,16 +43,19 @@ type SidebarLinkProps = LinkProps & {
 };
 
 export function SidebarLink({ icon: Icon, label, ...props }: SidebarLinkProps) {
+  const matchRoute = useMatchRoute();
+  const isActive = Boolean(matchRoute({ includeSearch: false, to: props.to }));
+
   return (
     <SidebarMenuItem>
-      <Link {...props}>
-        {({ isActive }) => (
-          <SidebarMenuButton isActive={isActive} tooltip={label}>
-            <Icon />
-            <span>{label}</span>
-          </SidebarMenuButton>
-        )}
-      </Link>
+      <SidebarMenuButton
+        isActive={isActive}
+        render={<Link {...props} />}
+        tooltip={label}
+      >
+        <Icon />
+        <span>{label}</span>
+      </SidebarMenuButton>
     </SidebarMenuItem>
   );
 }
@@ -89,7 +93,7 @@ function Page() {
         typeof breadcrumb === "function" ? breadcrumb(match) : breadcrumb;
 
       return {
-        title: label,
+        title: t(label ?? ""),
         path: match.pathname,
       };
     });
@@ -97,7 +101,7 @@ function Page() {
   return (
     <ToastProvider>
       <AnchoredToastProvider>
-        <div className="h-screen w-full bg-background text-foreground">
+        <div className="min-h-svh w-full bg-background text-foreground">
           <SidebarProvider open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
             <Sidebar collapsible="icon">
               <SidebarHeader>
@@ -135,8 +139,8 @@ function Page() {
               </SidebarContent>
             </Sidebar>
             <SidebarInset>
-              <div className="flex flex-row h-12 items-center border-b px-4">
-                <div className="flex gap-2 items-center">
+              <div className="flex h-12 flex-row items-center justify-between border-b px-4">
+                <div className="flex items-center gap-2">
                   <SidebarTrigger />
                   <Breadcrumb>
                     <BreadcrumbList>
@@ -165,7 +169,6 @@ function Page() {
                     </BreadcrumbList>
                   </Breadcrumb>
                 </div>
-                <div></div>
               </div>
               <main className="p-2">
                 <Outlet />
@@ -181,6 +184,6 @@ function Page() {
 export const Route = createFileRoute("/_dashboard")({
   component: Page,
   staticData: {
-    breadcrumb: "Dashboard",
+    breadcrumb: "layout_breadcrumb_dashboard",
   },
 });

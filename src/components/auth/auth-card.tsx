@@ -12,6 +12,7 @@ import {
   CardPanel,
   CardTitle,
 } from "@/components/ui/card.tsx";
+import { EmptyMedia } from "@/components/ui/empty.tsx";
 import { cn } from "@/lib/utils/cn.ts";
 
 export interface AuthCardProps {
@@ -50,9 +51,9 @@ export function AuthCard({
     <Card className={cn("w-full max-w-sm", className)} data-slot="auth-card">
       <CardHeader className="items-center justify-items-center text-center">
         {logo && (
-          <div className="mb-1 flex size-12 items-center justify-center rounded-lg border border-input bg-background shadow-xs/5">
+          <EmptyMedia className="mb-1" variant="icon">
             {logo}
-          </div>
+          </EmptyMedia>
         )}
         <CardTitle>{title ?? t("auth_sign_in_title")}</CardTitle>
         <CardDescription>
@@ -63,11 +64,13 @@ export function AuthCard({
         {hasError && (
           <AuthError code={errorCode} message={error} onRetry={onRetry} />
         )}
-        <OAuthProviderList
-          loadingProvider={loadingProvider}
-          onLogin={onLogin}
-          providers={providers}
-        />
+        {providers.length > 0 && (
+          <OAuthProviderList
+            loadingProvider={loadingProvider}
+            onLogin={onLogin}
+            providers={providers}
+          />
+        )}
         {children}
       </CardPanel>
       {footer && (

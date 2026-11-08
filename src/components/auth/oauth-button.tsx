@@ -31,7 +31,7 @@ export function OAuthButton({
   onClick,
   disabled,
   variant = "outline",
-  size = "lg",
+  size = "default",
   className,
   ...props
 }: OAuthButtonProps): React.ReactElement {
@@ -44,7 +44,7 @@ export function OAuthButton({
 
   return (
     <Button
-      aria-label={text}
+      aria-label={loading ? text : undefined}
       className={cn("w-full justify-center", className)}
       data-provider={provider}
       data-slot="oauth-button"
