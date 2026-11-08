@@ -222,20 +222,15 @@ export function AutocompleteRow({
   );
 }
 
-export function AutocompleteValue({
-  ...props
-}: AutocompletePrimitive.Value.Props): React.ReactElement {
-  return (
-    <AutocompletePrimitive.Value data-slot="autocomplete-value" {...props} />
-  );
-}
+export const AutocompleteValue: typeof AutocompletePrimitive.Value =
+  AutocompletePrimitive.Value;
 
 export function AutocompleteList({
   className,
   ...props
 }: AutocompletePrimitive.List.Props): React.ReactElement {
   return (
-    <ScrollArea scrollbarGutter scrollFade>
+    <ScrollArea overscrollContain scrollbarGutter scrollFade>
       <AutocompletePrimitive.List
         className={cn(
           "not-empty:scroll-py-1 not-empty:p-1 in-data-has-overflow-y:pe-3",
@@ -282,16 +277,8 @@ export function AutocompleteStatus({
   );
 }
 
-export function AutocompleteCollection({
-  ...props
-}: AutocompletePrimitive.Collection.Props): React.ReactElement {
-  return (
-    <AutocompletePrimitive.Collection
-      data-slot="autocomplete-collection"
-      {...props}
-    />
-  );
-}
+export const AutocompleteCollection: typeof AutocompletePrimitive.Collection =
+  AutocompletePrimitive.Collection;
 
 export function AutocompleteTrigger({
   className,
