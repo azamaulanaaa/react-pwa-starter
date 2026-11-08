@@ -304,7 +304,6 @@ src/
 │   ├── form/          # Form helpers and the setting form
 │   ├── context/       # Providers: config, intl, session, translation, worker
 │   ├── image/         # Image components
-│   │   ├── preview/   # Image preview dialog
 │   │   └── view/      # Image view lightbox
 │   └── upload/        # File upload with drag and drop
 ├── hooks/
