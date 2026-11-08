@@ -1,15 +1,16 @@
 import type React from "react";
 import { useMemo, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import {
   ChevronRightIcon,
   CircleCheckIcon,
   InboxIcon,
   LogInIcon,
-  PlayIcon,
   RefreshCwIcon,
   SearchIcon,
   TriangleAlertIcon,
   UploadIcon,
+  XIcon,
 } from "lucide-react";
 
 import { useIntl } from "@/components/context/intl.tsx";
@@ -32,6 +33,7 @@ import {
 } from "@/components/ui/card.tsx";
 import {
   Empty,
+  EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
@@ -49,12 +51,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select.tsx";
-import { Skeleton } from "@/components/ui/skeleton.tsx";
-import {
-  Tooltip,
-  TooltipPopup,
-  TooltipTrigger,
-} from "@/components/ui/tooltip.tsx";
 import {
   TableGeneric,
   type TableGenericColumnDef,
@@ -62,8 +58,10 @@ import {
 import { OutboxDetail } from "@/components/outbox/outbox-detail.tsx";
 import {
   MethodBadge,
+  OUTBOX_STATE_VARIANTS,
   OutboxStateBadge,
 } from "@/components/outbox/state-badge.tsx";
+import { TableSkeleton } from "@/components/shared/table-skeleton.tsx";
 import { useDebounce } from "@/hooks/primitives/use-debounce.ts";
 import type {
   OutboxFlushResult,
@@ -72,7 +70,8 @@ import type {
   OutboxStatus,
 } from "@/lib/outbox/types.ts";
 
-type StateFilter = OutboxState | "all";
+// The worker deletes completed rows, so "done" is not a filter value.
+type StateFilter = Exclude<OutboxState, "done"> | "all";
 
 const COUNT_STATES = [
   "pending",
@@ -81,20 +80,12 @@ const COUNT_STATES = [
   "conflict",
 ] as const satisfies readonly OutboxState[];
 
-const COUNT_VARIANTS = {
-  pending: "warning",
-  sending: "info",
-  failed: "error",
-  conflict: "warning",
-} as const;
-
 const FILTER_VALUES: Record<StateFilter, string> = {
   all: "system_filter_all",
   pending: "system_state_pending",
   sending: "system_state_sending",
   failed: "system_state_failed",
   conflict: "system_state_conflict",
-  done: "system_state_done",
 };
 
 export interface OutboxViewProps {
@@ -109,6 +100,7 @@ export interface OutboxViewProps {
   onRefresh: () => void;
   onFlush: () => void;
   onResume: () => void;
+  onDismissFlushResult: () => void;
 }
 
 /** Shows the outbox rows, the global actions, and the detail sheet. */
@@ -124,6 +116,7 @@ export function OutboxView({
   onRefresh,
   onFlush,
   onResume,
+  onDismissFlushResult,
 }: OutboxViewProps): React.ReactElement {
   const { t } = useTranslation();
   const { formatDate, formatNumber } = useIntl();
@@ -198,7 +191,7 @@ export function OutboxView({
         id: "created",
         header: t("system_detail_created"),
         cell: ({ row }) => (
-          <span className="whitespace-nowrap text-xs">
+          <span className="whitespace-nowrap text-xs tabular-nums">
             {formatDate(row.original.createdAt, {
               dateStyle: "medium",
               timeStyle: "short",
@@ -214,7 +207,7 @@ export function OutboxView({
           </span>
         ),
         cell: ({ row }) => (
-          <span className="max-md:hidden whitespace-nowrap text-xs">
+          <span className="max-md:hidden whitespace-nowrap text-xs tabular-nums">
             {formatDate(row.original.nextAttemptAt, {
               dateStyle: "medium",
               timeStyle: "short",
@@ -232,23 +225,16 @@ export function OutboxView({
           }
 
           return (
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <span className="flex max-w-40 items-center gap-1 text-muted-foreground">
-                    <TriangleAlertIcon className="size-3.5 shrink-0 text-warning" />
-                    <span className="truncate">{message}</span>
-                  </span>
-                }
-              />
-              <TooltipPopup>{message}</TooltipPopup>
-            </Tooltip>
+            <span className="flex max-w-40 items-center gap-1 text-muted-foreground">
+              <TriangleAlertIcon className="size-3.5 shrink-0 text-destructive" />
+              <span className="truncate">{message}</span>
+            </span>
           );
         },
       },
       {
         id: "view",
-        header: "",
+        header: () => <span className="sr-only">{t("system_actions")}</span>,
         cell: ({ row }) => (
           <div className="flex justify-end">
             <Button
@@ -257,7 +243,7 @@ export function OutboxView({
               size="icon-sm"
               variant="ghost"
             >
-              <ChevronRightIcon />
+              <ChevronRightIcon className="rtl:rotate-180" />
             </Button>
           </div>
         ),
@@ -269,13 +255,19 @@ export function OutboxView({
   const selected = ops.find((op) => op.id === selectedId) ?? null;
   const shown = formatNumber(visibleOps.length);
   const total = formatNumber(ops.length);
+  const flushFailed =
+    flushResult !== null && flushResult.failed + flushResult.conflict > 0;
+  const clearFilters = (): void => {
+    setQuery("");
+    setStateFilter("all");
+  };
 
   return (
     <Card data-slot="outbox-view">
       <CardHeader>
         <CardTitle>{t("system_outbox_title")}</CardTitle>
         <CardDescription>{t("system_outbox_description")}</CardDescription>
-        <CardAction className="flex flex-wrap items-center gap-2">
+        <CardAction className="flex flex-wrap items-center gap-2 max-sm:col-span-2 max-sm:col-start-1 max-sm:row-span-1 max-sm:row-start-3 max-sm:w-full max-sm:justify-self-stretch">
           <Button loading={refreshing} onClick={onRefresh} variant="outline">
             <RefreshCwIcon />
             {t("system_refresh")}
@@ -284,12 +276,6 @@ export function OutboxView({
             <UploadIcon />
             {t("system_flush")}
           </Button>
-          {(status.paused || status.signInRequired) && (
-            <Button loading={resuming} onClick={onResume} variant="outline">
-              <PlayIcon />
-              {t("system_resume")}
-            </Button>
-          )}
         </CardAction>
       </CardHeader>
 
@@ -299,7 +285,7 @@ export function OutboxView({
           data-slot="outbox-counts"
         >
           {COUNT_STATES.map((state) => (
-            <Badge key={state} variant={COUNT_VARIANTS[state]}>
+            <Badge key={state} variant={OUTBOX_STATE_VARIANTS[state]}>
               {t(`system_state_${state}`)}
               <span className="tabular-nums">
                 {formatNumber(status[state])}
@@ -330,7 +316,7 @@ export function OutboxView({
             <LogInIcon />
             <AlertTitle>{t("system_outbox_sign_in_required")}</AlertTitle>
             <AlertAction>
-              <Button render={<a href="/login" />} size="sm" variant="outline">
+              <Button render={<Link to="/login" />} size="sm" variant="outline">
                 {t("system_outbox_sign_in")}
               </Button>
             </AlertAction>
@@ -351,8 +337,11 @@ export function OutboxView({
         )}
 
         {flushResult && (
-          <Alert variant="success">
-            <CircleCheckIcon />
+          <Alert
+            role={flushFailed ? "alert" : "status"}
+            variant={flushFailed ? "error" : "success"}
+          >
+            {flushFailed ? <TriangleAlertIcon /> : <CircleCheckIcon />}
             <AlertDescription>
               {t("system_flush_result", {
                 sent: formatNumber(flushResult.sent),
@@ -361,6 +350,16 @@ export function OutboxView({
                 conflict: formatNumber(flushResult.conflict),
               })}
             </AlertDescription>
+            <AlertAction>
+              <Button
+                aria-label={t("system_close")}
+                onClick={onDismissFlushResult}
+                size="icon-sm"
+                variant="ghost"
+              >
+                <XIcon />
+              </Button>
+            </AlertAction>
           </Alert>
         )}
 
@@ -395,35 +394,55 @@ export function OutboxView({
               ))}
             </SelectPopup>
           </Select>
-          <span className="shrink-0 whitespace-nowrap text-muted-foreground text-sm sm:ms-auto">
+          <span className="shrink-0 whitespace-nowrap text-muted-foreground text-sm tabular-nums sm:ms-auto">
             {t("system_showing", { shown, total })}
           </span>
         </div>
 
         {loading ? (
-          <div className="flex flex-col gap-2">
-            {Array.from({ length: 5 }, (_, index) => (
-              <Skeleton className="h-10 w-full" key={index} />
-            ))}
-          </div>
+          <TableSkeleton />
         ) : visibleOps.length === 0 ? (
-          <Empty>
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <InboxIcon />
-              </EmptyMedia>
-              <EmptyTitle>{t("system_empty_outbox_title")}</EmptyTitle>
-              <EmptyDescription>
-                {t("system_empty_outbox_description")}
-              </EmptyDescription>
-            </EmptyHeader>
-          </Empty>
+          ops.length > 0 ? (
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <SearchIcon />
+                </EmptyMedia>
+                <EmptyTitle>
+                  {t("system_empty_outbox_filtered_title")}
+                </EmptyTitle>
+                <EmptyDescription>
+                  {t("system_empty_outbox_filtered_description")}
+                </EmptyDescription>
+              </EmptyHeader>
+              <EmptyContent>
+                <Button onClick={clearFilters} variant="outline">
+                  {t("system_clear_filters")}
+                </Button>
+              </EmptyContent>
+            </Empty>
+          ) : (
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <InboxIcon />
+                </EmptyMedia>
+                <EmptyTitle>{t("system_empty_outbox_title")}</EmptyTitle>
+                <EmptyDescription>
+                  {t("system_empty_outbox_description")}
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          )
         ) : (
-          <TableGeneric
-            columns={columns}
-            data={visibleOps}
-            getRowId={(op) => op.id}
-          />
+          <figure className="flex min-h-0 min-w-0 flex-1 flex-col">
+            <TableGeneric
+              caption={t("system_outbox_table_caption")}
+              columns={columns}
+              data={visibleOps}
+              getRowId={(op) => op.id}
+            />
+          </figure>
         )}
       </CardPanel>
 

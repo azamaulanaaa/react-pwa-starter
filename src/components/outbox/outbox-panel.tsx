@@ -13,6 +13,7 @@ export function OutboxPanel(): React.ReactElement {
       onFlush={() => void flush()}
       onRefresh={() => void refresh()}
       onResume={() => void resume()}
+      onDismissFlushResult={result.dismissFlushResult}
     />
   );
 }

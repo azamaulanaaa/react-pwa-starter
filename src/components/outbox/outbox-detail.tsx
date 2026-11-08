@@ -22,6 +22,7 @@ import {
   DetailFields,
 } from "@/components/shared/detail-fields.tsx";
 import { JsonView } from "@/components/shared/json-view.tsx";
+import { useSheetSide } from "@/components/shared/use-sheet-side.ts";
 import {
   MethodBadge,
   OutboxStateBadge,
@@ -42,6 +43,7 @@ export function OutboxDetail({
 }: OutboxDetailProps): React.ReactElement {
   const { t } = useTranslation();
   const { formatDate, formatNumber } = useIntl();
+  const side = useSheetSide();
   const [copied, setCopied] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -66,7 +68,7 @@ export function OutboxDetail({
 
   return (
     <Sheet onOpenChange={onOpenChange} open={open}>
-      <SheetPopup className="sm:max-w-lg" side="right">
+      <SheetPopup className="sm:max-w-lg" side={side}>
         <div className="contents" data-slot="outbox-detail">
           <SheetHeader>
             <SheetTitle>{t("system_detail_outbox_title")}</SheetTitle>
@@ -80,20 +82,11 @@ export function OutboxDetail({
           </SheetHeader>
           <SheetPanel className="flex flex-col gap-5">
             <DetailFields>
-              <DetailField label={t("system_detail_id")} mono>
-                {op.id}
-              </DetailField>
               <DetailField label={t("system_detail_kind")} mono>
                 {op.kind}
               </DetailField>
-              <DetailField label={t("system_detail_method")}>
-                <MethodBadge method={op.method} />
-              </DetailField>
               <DetailField label={t("system_detail_path")} mono>
                 {op.path}
-              </DetailField>
-              <DetailField label={t("system_detail_state")}>
-                <OutboxStateBadge state={op.state} />
               </DetailField>
               <DetailField label={t("system_detail_attempts")}>
                 {formatNumber(op.attempts)}
@@ -134,6 +127,9 @@ export function OutboxDetail({
             )}
           </SheetPanel>
           <SheetFooter variant="bare">
+            <span aria-live="polite" className="sr-only" role="status">
+              {copied ? t("system_copied") : ""}
+            </span>
             <Button onClick={handleCopyId} variant="outline">
               {copied ? <CheckIcon /> : <CopyIcon />}
               {t("system_copy_id")}

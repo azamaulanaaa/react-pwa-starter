@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge.tsx";
 import { useTranslation } from "@/components/context/translation.tsx";
 import type { JobState } from "@/worker/queue/schema.ts";
 
-const QUEUE_VARIANTS = {
+export const QUEUE_STATE_VARIANTS = {
   queued: "outline",
   running: "info",
   paused: "warning",
@@ -24,7 +24,7 @@ export function QueueStateBadge({
   const { t } = useTranslation();
 
   return (
-    <Badge data-slot="queue-state-badge" variant={QUEUE_VARIANTS[state]}>
+    <Badge data-slot="queue-state-badge" variant={QUEUE_STATE_VARIANTS[state]}>
       {t(`system_state_${state}`)}
     </Badge>
   );

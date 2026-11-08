@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge.tsx";
 import { useTranslation } from "@/components/context/translation.tsx";
 import type { OutboxMethod, OutboxState } from "@/lib/outbox/types.ts";
 
-const OUTBOX_VARIANTS = {
+export const OUTBOX_STATE_VARIANTS = {
   pending: "warning",
   sending: "info",
   failed: "error",
@@ -23,7 +23,10 @@ export function OutboxStateBadge({
   const { t } = useTranslation();
 
   return (
-    <Badge data-slot="outbox-state-badge" variant={OUTBOX_VARIANTS[state]}>
+    <Badge
+      data-slot="outbox-state-badge"
+      variant={OUTBOX_STATE_VARIANTS[state]}
+    >
       {t(`system_state_${state}`)}
     </Badge>
   );

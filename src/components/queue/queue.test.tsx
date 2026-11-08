@@ -19,10 +19,13 @@ import type { Job } from "@/worker/queue/schema.ts";
 
 const DICTIONARY = {
   system_action_unavailable: "The worker did not run this action.",
+  system_actions: "Actions",
   system_cancel: "Cancel",
   system_cancel_description: "The job stops and cannot start again.",
+  system_cancel_job: "Cancel job",
   system_cancel_keep: "Keep job",
   system_cancel_title: "Cancel this job?",
+  system_clear_filters: "Clear filters",
   system_close: "Close",
   system_copied: "Copied",
   system_copy: "Copy",
@@ -41,6 +44,8 @@ const DICTIONARY = {
   system_detail_state: "State",
   system_detail_updated: "Updated",
   system_empty_queue_description: "New jobs appear here.",
+  system_empty_queue_filtered_description: "Change the search or filter.",
+  system_empty_queue_filtered_title: "No matching jobs",
   system_empty_queue_title: "No queue jobs",
   system_error_retry: "Try again",
   system_error_title: "The request failed",
@@ -48,10 +53,12 @@ const DICTIONARY = {
   system_filter_state: "Filter state",
   system_pause: "Pause",
   system_queue_description: "Jobs that run in the worker.",
+  system_queue_table_caption: "Queue jobs",
   system_queue_title: "Queue",
   system_refresh: "Refresh",
   system_resume: "Resume",
   system_search_placeholder: "Search id, kind, or path",
+  system_search_queue_placeholder: "Search id or kind",
   system_showing: "Showing {{shown}} of {{total}}",
   system_state_canceled: "Canceled",
   system_state_failed: "Failed",
@@ -112,6 +119,7 @@ function accepted(): Promise<QueueActionResult> {
 const BASE_PROPS: QueueViewProps = {
   jobs: JOBS,
   loading: false,
+  refreshing: false,
   error: null,
   pendingAction: null,
   onRefresh: () => {},
@@ -158,7 +166,7 @@ describe("QueueView", () => {
   it("filters the rows by the search text", async () => {
     renderView();
 
-    fireEvent.change(screen.getByLabelText("Search id, kind, or path"), {
+    fireEvent.change(screen.getByLabelText("Search id or kind"), {
       target: { value: "job-failed" },
     });
 
@@ -227,14 +235,34 @@ describe("QueueView", () => {
     const dialog = await screen.findByRole("alertdialog");
     expect(within(dialog).getByText("Cancel this job?")).toBeDefined();
 
-    fireEvent.click(within(dialog).getByText("Cancel"));
+    fireEvent.click(within(dialog).getByText("Cancel job"));
 
     await waitFor(() => {
       expect(onCancel).toHaveBeenCalledWith("job-paused");
     });
   });
 
-  it("shows a notice when the worker refuses the action", async () => {
+  it("keeps the cancel dialog open when the action fails", async () => {
+    const onCancel = vi.fn(async (): Promise<QueueActionResult> => ({
+      ok: false,
+      reason: "error",
+      error: new Error("The job did not stop."),
+    }));
+    renderView({ onCancel });
+
+    fireEvent.click(screen.getAllByLabelText("View details")[2]);
+    fireEvent.click(await screen.findByText("Cancel"));
+
+    const dialog = await screen.findByRole("alertdialog");
+    fireEvent.click(within(dialog).getByText("Cancel job"));
+
+    expect(
+      await within(dialog).findByText("The job did not stop."),
+    ).toBeDefined();
+    expect(screen.getByRole("alertdialog")).toBeDefined();
+  });
+
+  it("shows an action error inside the detail sheet", async () => {
     const onPause = vi.fn(async (): Promise<QueueActionResult> => ({
       ok: false,
       reason: "unavailable",
@@ -264,5 +292,30 @@ describe("QueueView", () => {
 
     expect(screen.getByText("No queue jobs")).toBeDefined();
     expect(screen.getByText("New jobs appear here.")).toBeDefined();
+  });
+
+  it("offers a reset when the filter matches no row", async () => {
+    renderView();
+
+    fireEvent.change(screen.getByLabelText("Search id or kind"), {
+      target: { value: "no-such-job" },
+    });
+
+    expect(await screen.findByText("No matching jobs")).toBeDefined();
+    expect(screen.queryByText("No queue jobs")).toBeNull();
+
+    fireEvent.click(screen.getByText("Clear filters"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Showing 6 of 6")).toBeDefined();
+      expect(screen.getByText("task.send")).toBeDefined();
+    });
+  });
+
+  it("spins the refresh button while a snapshot loads", () => {
+    renderView({ refreshing: true });
+
+    const button = screen.getByText("Refresh").closest("button");
+    expect(button?.hasAttribute("data-loading")).toBe(true);
   });
 });

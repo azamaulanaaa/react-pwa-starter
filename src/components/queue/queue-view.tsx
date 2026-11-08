@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/card.tsx";
 import {
   Empty,
+  EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
@@ -46,22 +47,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select.tsx";
-import { Skeleton } from "@/components/ui/skeleton.tsx";
-import {
-  Tooltip,
-  TooltipPopup,
-  TooltipTrigger,
-} from "@/components/ui/tooltip.tsx";
 import {
   TableGeneric,
   type TableGenericColumnDef,
 } from "@/components/table/generic/index.tsx";
 import { QueueDetail } from "@/components/queue/queue-detail.tsx";
-import { QueueStateBadge } from "@/components/queue/state-badge.tsx";
+import {
+  QUEUE_STATE_VARIANTS,
+  QueueStateBadge,
+} from "@/components/queue/state-badge.tsx";
 import type {
   QueueActionResult,
   QueueActionTarget,
 } from "@/components/queue/use-queue-jobs.ts";
+import { TableSkeleton } from "@/components/shared/table-skeleton.tsx";
 import { useDebounce } from "@/hooks/primitives/use-debounce.ts";
 import type { Job, JobState } from "@/worker/queue/schema.ts";
 
@@ -76,15 +75,6 @@ const COUNT_STATES = [
   "canceled",
 ] as const satisfies readonly JobState[];
 
-const COUNT_VARIANTS = {
-  queued: "outline",
-  running: "info",
-  paused: "warning",
-  succeeded: "success",
-  failed: "error",
-  canceled: "outline",
-} as const;
-
 const FILTER_VALUES: Record<StateFilter, string> = {
   all: "system_filter_all",
   queued: "system_state_queued",
@@ -98,6 +88,7 @@ const FILTER_VALUES: Record<StateFilter, string> = {
 export interface QueueViewProps {
   jobs: Job[];
   loading: boolean;
+  refreshing: boolean;
   error: Error | null;
   pendingAction: QueueActionTarget | null;
   onRefresh: () => void;
@@ -110,6 +101,7 @@ export interface QueueViewProps {
 export function QueueView({
   jobs,
   loading,
+  refreshing,
   error,
   pendingAction,
   onRefresh,
@@ -122,7 +114,6 @@ export function QueueView({
   const [query, setQuery] = useState("");
   const [stateFilter, setStateFilter] = useState<StateFilter>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const debouncedQuery = useDebounce(query, 200);
 
   const filterLabels = useMemo(() => {
@@ -201,7 +192,7 @@ export function QueueView({
           <span className="max-md:hidden">{t("system_detail_updated")}</span>
         ),
         cell: ({ row }) => (
-          <span className="max-md:hidden whitespace-nowrap text-xs">
+          <span className="max-md:hidden whitespace-nowrap text-xs tabular-nums">
             {formatDate(row.original.updated_at, {
               dateStyle: "medium",
               timeStyle: "short",
@@ -219,23 +210,16 @@ export function QueueView({
           }
 
           return (
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <span className="flex max-w-40 items-center gap-1 text-muted-foreground">
-                    <TriangleAlertIcon className="size-3.5 shrink-0 text-destructive" />
-                    <span className="truncate">{message}</span>
-                  </span>
-                }
-              />
-              <TooltipPopup>{message}</TooltipPopup>
-            </Tooltip>
+            <span className="flex max-w-40 items-center gap-1 text-muted-foreground">
+              <TriangleAlertIcon className="size-3.5 shrink-0 text-destructive" />
+              <span className="truncate">{message}</span>
+            </span>
           );
         },
       },
       {
         id: "view",
-        header: "",
+        header: () => <span className="sr-only">{t("system_actions")}</span>,
         cell: ({ row }) => (
           <div className="flex justify-end">
             <Button
@@ -244,7 +228,7 @@ export function QueueView({
               size="icon-sm"
               variant="ghost"
             >
-              <ChevronRightIcon />
+              <ChevronRightIcon className="rtl:rotate-180" />
             </Button>
           </div>
         ),
@@ -256,22 +240,9 @@ export function QueueView({
   const selected = jobs.find((job) => job.id === selectedId) ?? null;
   const shown = formatNumber(visibleJobs.length);
   const total = formatNumber(jobs.length);
-
-  const runAction = async (
-    action: () => Promise<QueueActionResult>,
-  ): Promise<QueueActionResult> => {
-    const result = await action();
-    if (result.ok) {
-      setNotice(null);
-      return result;
-    }
-
-    setNotice(
-      result.reason === "unavailable"
-        ? t("system_action_unavailable")
-        : result.error.message,
-    );
-    return result;
+  const clearFilters = (): void => {
+    setQuery("");
+    setStateFilter("all");
   };
 
   return (
@@ -279,8 +250,8 @@ export function QueueView({
       <CardHeader>
         <CardTitle>{t("system_queue_title")}</CardTitle>
         <CardDescription>{t("system_queue_description")}</CardDescription>
-        <CardAction className="flex flex-wrap items-center gap-2">
-          <Button onClick={onRefresh} variant="outline">
+        <CardAction className="flex flex-wrap items-center gap-2 max-sm:col-span-2 max-sm:col-start-1 max-sm:row-span-1 max-sm:row-start-3 max-sm:w-full max-sm:justify-self-stretch">
+          <Button loading={refreshing} onClick={onRefresh} variant="outline">
             <RefreshCwIcon />
             {t("system_refresh")}
           </Button>
@@ -293,7 +264,7 @@ export function QueueView({
           data-slot="queue-counts"
         >
           {COUNT_STATES.map((state) => (
-            <Badge key={state} variant={COUNT_VARIANTS[state]}>
+            <Badge key={state} variant={QUEUE_STATE_VARIANTS[state]}>
               {t(`system_state_${state}`)}
               <span className="tabular-nums">
                 {formatNumber(counts[state])}
@@ -315,22 +286,15 @@ export function QueueView({
           </Alert>
         )}
 
-        {notice && (
-          <Alert variant="error">
-            <TriangleAlertIcon />
-            <AlertDescription>{notice}</AlertDescription>
-          </Alert>
-        )}
-
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-nowrap sm:items-center">
           <InputGroup className="sm:max-w-xs sm:flex-1">
             <InputGroupAddon>
               <SearchIcon />
             </InputGroupAddon>
             <InputGroupInput
-              aria-label={t("system_search_placeholder")}
+              aria-label={t("system_search_queue_placeholder")}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder={t("system_search_placeholder")}
+              placeholder={t("system_search_queue_placeholder")}
               value={query}
             />
           </InputGroup>
@@ -353,47 +317,67 @@ export function QueueView({
               ))}
             </SelectPopup>
           </Select>
-          <span className="shrink-0 whitespace-nowrap text-muted-foreground text-sm sm:ms-auto">
+          <span className="shrink-0 whitespace-nowrap text-muted-foreground text-sm tabular-nums sm:ms-auto">
             {t("system_showing", { shown, total })}
           </span>
         </div>
 
         {loading ? (
-          <div className="flex flex-col gap-2">
-            {Array.from({ length: 5 }, (_, index) => (
-              <Skeleton className="h-10 w-full" key={index} />
-            ))}
-          </div>
+          <TableSkeleton />
         ) : visibleJobs.length === 0 ? (
-          <Empty>
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <ListChecksIcon />
-              </EmptyMedia>
-              <EmptyTitle>{t("system_empty_queue_title")}</EmptyTitle>
-              <EmptyDescription>
-                {t("system_empty_queue_description")}
-              </EmptyDescription>
-            </EmptyHeader>
-          </Empty>
+          jobs.length > 0 ? (
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <SearchIcon />
+                </EmptyMedia>
+                <EmptyTitle>
+                  {t("system_empty_queue_filtered_title")}
+                </EmptyTitle>
+                <EmptyDescription>
+                  {t("system_empty_queue_filtered_description")}
+                </EmptyDescription>
+              </EmptyHeader>
+              <EmptyContent>
+                <Button onClick={clearFilters} variant="outline">
+                  {t("system_clear_filters")}
+                </Button>
+              </EmptyContent>
+            </Empty>
+          ) : (
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <ListChecksIcon />
+                </EmptyMedia>
+                <EmptyTitle>{t("system_empty_queue_title")}</EmptyTitle>
+                <EmptyDescription>
+                  {t("system_empty_queue_description")}
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          )
         ) : (
-          <TableGeneric
-            columns={columns}
-            data={visibleJobs}
-            getRowId={(job) => job.id}
-          />
+          <figure className="flex min-h-0 min-w-0 flex-1 flex-col">
+            <TableGeneric
+              caption={t("system_queue_table_caption")}
+              columns={columns}
+              data={visibleJobs}
+              getRowId={(job) => job.id}
+            />
+          </figure>
         )}
       </CardPanel>
 
       {selected !== null && (
         <QueueDetail
           job={selected}
-          onCancel={(id) => runAction(() => onCancel(id))}
+          onCancel={onCancel}
           onOpenChange={(next) => {
             if (!next) setSelectedId(null);
           }}
-          onPause={(id) => runAction(() => onPause(id))}
-          onResume={(id) => runAction(() => onResume(id))}
+          onPause={onPause}
+          onResume={onResume}
           open={selected !== null}
           pendingAction={pendingAction}
         />

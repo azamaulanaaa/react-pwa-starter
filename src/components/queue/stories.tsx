@@ -90,6 +90,7 @@ function accepted(): Promise<{ ok: true }> {
 const QUEUE_PROPS: QueueViewProps = {
   jobs: QUEUE_JOBS,
   loading: false,
+  refreshing: false,
   error: null,
   pendingAction: null,
   onRefresh: noop,

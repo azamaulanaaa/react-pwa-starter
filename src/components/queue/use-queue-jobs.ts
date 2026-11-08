@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useWorker } from "@/components/context/worker.tsx";
 import { useReadableStreams } from "@/hooks/primitives/use-readable-stream.ts";
@@ -17,6 +17,7 @@ export interface QueueActionTarget {
 export interface UseQueueJobsResult {
   jobs: Job[];
   loading: boolean;
+  refreshing: boolean;
   error: Error | null;
   pendingAction: QueueActionTarget | null;
   refresh: () => Promise<void>;
@@ -40,6 +41,11 @@ export function useQueueJobs(): UseQueueJobsResult {
   const params = useMemo(() => [refreshKey], [refreshKey]);
   const streams = useReadableStreams(factory.current, params);
   const streamState = streams.get(refreshKey);
+  const [snapshot, setSnapshot] = useState<Job[] | null>(null);
+
+  useEffect(() => {
+    if (streamState?.data !== undefined) setSnapshot(streamState.data);
+  }, [streamState?.data]);
 
   const [pendingAction, setPendingAction] = useState<QueueActionTarget | null>(
     null,
@@ -86,9 +92,14 @@ export function useQueueJobs(): UseQueueJobsResult {
     [runAction],
   );
 
+  const jobs = streamState?.data ?? snapshot ?? [];
+  const loading = snapshot === null && (streamState?.loading ?? true);
+  const refreshing = snapshot !== null && (streamState?.loading ?? false);
+
   return {
-    jobs: streamState?.data ?? [],
-    loading: streamState?.loading ?? true,
+    jobs,
+    loading,
+    refreshing,
     error: streamState?.error ?? null,
     pendingAction,
     refresh,

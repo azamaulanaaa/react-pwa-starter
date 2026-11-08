@@ -3,6 +3,7 @@ export { OutboxView } from "@/components/outbox/outbox-view.tsx";
 export { OutboxDetail } from "@/components/outbox/outbox-detail.tsx";
 export {
   MethodBadge,
+  OUTBOX_STATE_VARIANTS,
   OutboxStateBadge,
 } from "@/components/outbox/state-badge.tsx";
 export { useOutboxOps } from "@/components/outbox/use-outbox-ops.ts";

@@ -1,7 +1,10 @@
 export { QueuePanel } from "@/components/queue/queue-panel.tsx";
 export { QueueView } from "@/components/queue/queue-view.tsx";
 export { QueueDetail } from "@/components/queue/queue-detail.tsx";
-export { QueueStateBadge } from "@/components/queue/state-badge.tsx";
+export {
+  QUEUE_STATE_VARIANTS,
+  QueueStateBadge,
+} from "@/components/queue/state-badge.tsx";
 export { useQueueJobs } from "@/components/queue/use-queue-jobs.ts";
 
 export type { QueueViewProps } from "@/components/queue/queue-view.tsx";

@@ -96,6 +96,7 @@ const OUTBOX_PROPS: OutboxViewProps = {
   onRefresh: noop,
   onFlush: noop,
   onResume: noop,
+  onDismissFlushResult: noop,
 };
 
 const EMPTY_OUTBOX_PROPS: OutboxViewProps = {

@@ -29,6 +29,7 @@ export interface UseOutboxOpsResult {
   refresh: () => Promise<void>;
   flush: () => Promise<void>;
   resume: () => Promise<void>;
+  dismissFlushResult: () => void;
 }
 
 type LoadMode = "initial" | "refresh" | "silent";
@@ -101,11 +102,13 @@ export function useOutboxOps(): UseOutboxOpsResult {
   }, [statusData, load]);
 
   const refresh = useCallback(async (): Promise<void> => {
+    setFlushResult(null);
     await load("refresh");
   }, [load]);
 
   const flush = useCallback(async (): Promise<void> => {
     setFlushing(true);
+    setFlushResult(null);
     try {
       const result = await worker.outbox.flush();
       if (!mounted.current) return;
@@ -130,6 +133,10 @@ export function useOutboxOps(): UseOutboxOpsResult {
     }
   }, [load, worker]);
 
+  const dismissFlushResult = useCallback((): void => {
+    setFlushResult(null);
+  }, []);
+
   return {
     ops,
     status,
@@ -142,5 +149,6 @@ export function useOutboxOps(): UseOutboxOpsResult {
     refresh,
     flush,
     resume,
+    dismissFlushResult,
   };
 }

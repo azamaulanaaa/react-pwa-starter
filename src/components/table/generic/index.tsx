@@ -76,6 +76,7 @@ export type TableGenericProps<TData extends RowData = RowData> = {
   containerRef?: Ref<HTMLDivElement>;
   getRowRefs?: (id: string) => Ref<HTMLTableRowElement>;
   loading?: boolean;
+  caption?: string;
 };
 
 const LOADING_ROW_COUNT = 5;
@@ -227,7 +228,7 @@ export function TableGeneric<TData extends RowData>(
       }}
     >
       <TableCaption className="sr-only">
-        {t("table_generic_caption")}
+        {props.caption ?? t("table_generic_caption")}
       </TableCaption>
       <TableHeader className="sticky top-0 z-10 bg-background">
         {table.getHeaderGroups().map((headerGroup) => (

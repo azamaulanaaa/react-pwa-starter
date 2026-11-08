@@ -18,6 +18,8 @@ import type { OutboxOp, OutboxStatus } from "@/lib/outbox/types.ts";
 
 const DICTIONARY = {
   system_action_unavailable: "The worker did not run this action.",
+  system_actions: "Actions",
+  system_clear_filters: "Clear filters",
   system_close: "Close",
   system_copied: "Copied",
   system_copy: "Copy",
@@ -35,6 +37,8 @@ const DICTIONARY = {
   system_detail_path: "Path",
   system_detail_state: "State",
   system_empty_outbox_description: "New writes appear here.",
+  system_empty_outbox_filtered_description: "Change the search or filter.",
+  system_empty_outbox_filtered_title: "No matching writes",
   system_empty_outbox_title: "No outbox writes",
   system_error_retry: "Try again",
   system_error_title: "The request failed",
@@ -47,6 +51,7 @@ const DICTIONARY = {
   system_outbox_paused: "The outbox is paused.",
   system_outbox_sign_in: "Sign in",
   system_outbox_sign_in_required: "The session expired.",
+  system_outbox_table_caption: "Outbox operations",
   system_outbox_title: "Outbox",
   system_refresh: "Refresh",
   system_resume: "Resume",
@@ -121,6 +126,7 @@ const BASE_PROPS: OutboxViewProps = {
   onRefresh: () => {},
   onFlush: () => {},
   onResume: () => {},
+  onDismissFlushResult: () => {},
 };
 
 function renderView(overrides: Partial<OutboxViewProps> = {}) {
@@ -248,5 +254,89 @@ describe("OutboxView", () => {
 
     expect(screen.getByText("No outbox writes")).toBeDefined();
     expect(screen.getByText("New writes appear here.")).toBeDefined();
+  });
+
+  it("offers a reset when the filter matches no row", async () => {
+    renderView();
+
+    fireEvent.change(screen.getByLabelText("Search id, kind, or path"), {
+      target: { value: "no-such-write" },
+    });
+
+    expect(await screen.findByText("No matching writes")).toBeDefined();
+    expect(screen.queryByText("No outbox writes")).toBeNull();
+
+    fireEvent.click(screen.getByText("Clear filters"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Showing 3 of 3")).toBeDefined();
+      expect(screen.getByText("/api/notes")).toBeDefined();
+    });
+  });
+
+  it("shows a failed flush result as an error", () => {
+    renderView({
+      flushResult: {
+        sent: 1,
+        pending: 1,
+        sending: 0,
+        failed: 2,
+        conflict: 0,
+        paused: false,
+        signInRequired: false,
+      },
+    });
+
+    const alert = document.querySelector('[data-slot="alert"]');
+    expect(alert?.className).toContain("border-destructive/32");
+    expect(
+      screen.getByText("Sent 1. Pending 1. Failed 2. Conflict 0."),
+    ).toBeDefined();
+  });
+
+  it("shows a successful flush result as a status", () => {
+    renderView({
+      flushResult: {
+        sent: 3,
+        pending: 0,
+        sending: 0,
+        failed: 0,
+        conflict: 0,
+        paused: false,
+        signInRequired: false,
+      },
+    });
+
+    const alert = document.querySelector('[data-slot="alert"]');
+    expect(alert?.className).toContain("border-success/32");
+    expect(alert?.getAttribute("role")).toBe("status");
+  });
+
+  it("dismisses the flush result", () => {
+    const onDismissFlushResult = vi.fn();
+    renderView({
+      flushResult: {
+        sent: 1,
+        pending: 0,
+        sending: 0,
+        failed: 0,
+        conflict: 0,
+        paused: false,
+        signInRequired: false,
+      },
+      onDismissFlushResult,
+    });
+
+    fireEvent.click(screen.getByLabelText("Close"));
+
+    expect(onDismissFlushResult).toHaveBeenCalledOnce();
+  });
+
+  it("does not offer the done filter", async () => {
+    renderView();
+
+    fireEvent.click(screen.getByLabelText("Filter state"));
+
+    expect(screen.queryByRole("option", { name: "Done" })).toBeNull();
   });
 });

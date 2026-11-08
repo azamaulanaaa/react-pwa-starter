@@ -85,6 +85,48 @@ describe("useQueueJobs", () => {
     expect(result.current.jobs).toEqual(JOBS);
   });
 
+  it("keeps the last snapshot while a refresh stream loads", async () => {
+    const first = createJobStream(JOBS);
+    let secondController: ReadableStreamDefaultController<Job[]> | null = null;
+    const second = new ReadableStream<Job[]>({
+      start(next) {
+        secondController = next;
+      },
+    });
+    const watch = vi
+      .fn()
+      .mockReturnValueOnce(first.stream)
+      .mockReturnValueOnce(second);
+    state.worker = {
+      queue: {
+        watch,
+        pause: vi.fn(async () => true),
+        resume: vi.fn(async () => true),
+        cancel: vi.fn(async () => true),
+      },
+    };
+
+    const { result } = renderHook(() => useQueueJobs());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.jobs).toEqual(JOBS);
+
+    act(() => {
+      void result.current.refresh();
+    });
+
+    await waitFor(() => expect(result.current.refreshing).toBe(true));
+    expect(result.current.loading).toBe(false);
+    expect(result.current.jobs).toEqual(JOBS);
+
+    const next = [makeJob("job-3", "succeeded")];
+    await act(async () => {
+      secondController?.enqueue(next);
+    });
+
+    await waitFor(() => expect(result.current.refreshing).toBe(false));
+    expect(result.current.jobs).toEqual(next);
+  });
+
   it("reports a pause result and clears the pending action", async () => {
     const fake = createWorker();
     let resolvePause: (value: boolean) => void = () => {};

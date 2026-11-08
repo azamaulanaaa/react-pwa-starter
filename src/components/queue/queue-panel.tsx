@@ -8,6 +8,7 @@ export function QueuePanel(): React.ReactElement {
   const {
     jobs,
     loading,
+    refreshing,
     error,
     pendingAction,
     refresh,
@@ -26,6 +27,7 @@ export function QueuePanel(): React.ReactElement {
       onRefresh={() => void refresh()}
       onResume={resume}
       pendingAction={pendingAction}
+      refreshing={refreshing}
     />
   );
 }

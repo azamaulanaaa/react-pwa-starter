@@ -141,6 +141,34 @@ describe("useOutboxOps", () => {
     expect(fake.list.mock.calls.length).toBeGreaterThan(before);
   });
 
+  it("clears the flush result on dismiss and on refresh", async () => {
+    const fake = createWorker();
+    state.worker = fake.worker;
+
+    const { result } = renderHook(() => useOutboxOps());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(async () => {
+      await result.current.flush();
+    });
+    expect(result.current.flushResult).toEqual(FLUSH_RESULT);
+
+    act(() => {
+      result.current.dismissFlushResult();
+    });
+    expect(result.current.flushResult).toBeNull();
+
+    await act(async () => {
+      await result.current.flush();
+    });
+    expect(result.current.flushResult).toEqual(FLUSH_RESULT);
+
+    await act(async () => {
+      await result.current.refresh();
+    });
+    expect(result.current.flushResult).toBeNull();
+  });
+
   it("reloads the list after a status change", async () => {
     const fake = createWorker();
     state.worker = fake.worker;
