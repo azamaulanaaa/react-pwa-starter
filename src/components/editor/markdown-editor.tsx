@@ -136,12 +136,18 @@ export interface MarkdownEditorProps {
   value: string;
   /** Receives the canonical Markdown after each text change. */
   onChange: (markdown: string) => void;
+  /** The element id. A visible label can point at this id. */
+  id?: string;
   /** The transformer set. The default is `"standard"`. */
   variant?: MarkdownEditorVariant;
   /** The example text for an empty editor. The placeholder is not the label. */
   placeholder?: string;
   /** The accessible name of the editable region. */
   ariaLabel?: string;
+  /** The ids of the elements that describe the editable region. */
+  ariaDescribedBy?: string;
+  /** Marks the editable region invalid when the value is true. */
+  ariaInvalid?: boolean;
   /** Blocks edits when the value is true. */
   readOnly?: boolean;
   /**
@@ -198,8 +204,12 @@ function readMarkdown(
 
 /** Defines the props of the raw Markdown fallback. */
 interface UnsupportedMarkdownFallbackProps {
+  ariaDescribedBy?: string;
+  ariaInvalid?: boolean;
   className?: string;
   features: UnsupportedFeature[];
+  handleRef: Ref<MarkdownEditorHandle>;
+  id?: string;
   onChange: (markdown: string) => void;
   placeholder?: string;
   readOnly: boolean;
@@ -211,8 +221,12 @@ interface UnsupportedMarkdownFallbackProps {
  * The component sends each edit to `onChange` without a canonicalization step.
  */
 function UnsupportedMarkdownFallback({
+  ariaDescribedBy,
+  ariaInvalid,
   className,
   features,
+  handleRef,
+  id,
   onChange,
   placeholder,
   readOnly,
@@ -221,16 +235,33 @@ function UnsupportedMarkdownFallback({
   const { t } = useTranslation();
   const labelId = useId();
   const noticeId = useId();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const controlId = id ?? labelId;
+  const describedBy =
+    [ariaDescribedBy, noticeId].filter(Boolean).join(" ") || undefined;
   const feature = features[0] ?? "unknown";
+
+  useImperativeHandle(
+    handleRef,
+    () => ({
+      getMarkdown: () => value,
+      // The parent value controls the fallback text area.
+      setMarkdown: () => undefined,
+      focus: () => textareaRef.current?.focus(),
+    }),
+    [value],
+  );
 
   return (
     <div className={cn("markdown-editor-shell grid gap-2", className)}>
-      <Label
-        className="text-base leading-relaxed sm:text-base"
-        htmlFor={labelId}
-      >
-        {t("editor_fallback_label")}
-      </Label>
+      {id === undefined ? (
+        <Label
+          className="text-base leading-relaxed sm:text-base"
+          htmlFor={labelId}
+        >
+          {t("editor_fallback_label")}
+        </Label>
+      ) : null}
       <p
         className="text-base leading-relaxed text-muted-foreground"
         id={noticeId}
@@ -238,12 +269,14 @@ function UnsupportedMarkdownFallback({
         {t(getFallbackNoticeKey(feature))}
       </p>
       <Textarea
-        aria-describedby={noticeId}
+        aria-describedby={describedBy}
+        aria-invalid={ariaInvalid}
         className="markdown-editor-fallback text-base leading-relaxed sm:text-base"
-        id={labelId}
+        id={controlId}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         readOnly={readOnly}
+        ref={textareaRef}
         rows={12}
         spellCheck={false}
         value={value}
@@ -261,9 +294,12 @@ interface EditorSurfaceProps extends MarkdownEditorProps {
 
 /** Renders the editable region and the Markdown plugins. */
 function EditorSurface({
+  ariaDescribedBy,
+  ariaInvalid,
   ariaLabel = DEFAULT_ARIA_LABEL,
   className,
   handleRef,
+  id,
   mentionSource,
   mentionsEnabled,
   onChange,
@@ -324,7 +360,7 @@ function EditorSurface({
         }
       },
       focus() {
-        editor.focus();
+        editor.getRootElement()?.focus();
       },
     }),
     [editor, transformers],
@@ -348,10 +384,14 @@ function EditorSurface({
       <RichTextPlugin
         contentEditable={
           <ContentEditable
+            ariaDescribedBy={ariaDescribedBy}
+            ariaInvalid={ariaInvalid}
             ariaLabel={ariaLabel}
             ariaMultiline
             className="markdown-body markdown-editor"
             data-slot="markdown-editor"
+            id={id}
+            tabIndex={readOnly ? -1 : 0}
           />
         }
         placeholder={
@@ -392,8 +432,11 @@ export const MarkdownEditor = forwardRef<
   MarkdownEditorProps
 >(function MarkdownEditor(
   {
+    ariaDescribedBy,
+    ariaInvalid,
     ariaLabel = DEFAULT_ARIA_LABEL,
     className,
+    id,
     mentionSource,
     onChange,
     onUploadImage,
@@ -421,8 +464,12 @@ export const MarkdownEditor = forwardRef<
   if (unsupportedFeatures.length > 0) {
     return (
       <UnsupportedMarkdownFallback
+        ariaDescribedBy={ariaDescribedBy}
+        ariaInvalid={ariaInvalid}
         className={className}
         features={unsupportedFeatures}
+        handleRef={ref}
+        id={id}
         onChange={onChange}
         placeholder={placeholder}
         readOnly={readOnly}
@@ -445,9 +492,12 @@ export const MarkdownEditor = forwardRef<
       }}
     >
       <EditorSurface
+        ariaDescribedBy={ariaDescribedBy}
+        ariaInvalid={ariaInvalid}
         ariaLabel={ariaLabel}
         className={className}
         handleRef={ref}
+        id={id}
         mentionSource={mentionSource}
         mentionsEnabled={mentionsEnabled}
         onChange={onChange}

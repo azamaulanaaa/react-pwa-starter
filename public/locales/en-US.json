@@ -176,6 +176,7 @@
   "system_announcements_empty_title": "No announcements",
   "system_announcements_form_body_label": "Message",
   "system_announcements_form_body_placeholder": "Write the announcement.",
+  "system_announcements_form_markdown_invalid": "Fix the Markdown. Remove HTML, unsafe links, and unsupported syntax.",
   "system_announcements_form_presentation_label": "Show as",
   "system_announcements_form_required": "This field is required.",
   "system_announcements_form_submit": "Create and show",

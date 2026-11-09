@@ -1,8 +1,17 @@
-import { useId, useMemo } from "react";
+import { useId, useMemo, useRef } from "react";
 import { useForm, useStore } from "@tanstack/react-form";
 import { Schema } from "effect";
 
 import { useTranslation } from "@/components/context/translation.tsx";
+import { useOptionalWorker } from "@/components/context/worker.tsx";
+import {
+  MarkdownEditor,
+  type MarkdownEditorHandle,
+} from "@/components/editor/index.ts";
+import {
+  createWorkerImageUpload,
+  type ImageUploadHandler,
+} from "@/components/editor/image-upload.ts";
 import { FieldInfo } from "@/components/form/field-info.tsx";
 import {
   type FormAnnouncementValue,
@@ -19,9 +28,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select.tsx";
-import { Textarea } from "@/components/ui/textarea.tsx";
+import {
+  createLocalMentionSource,
+  LOCAL_MENTION_TARGETS,
+} from "@/lib/mentions/index.ts";
+import { canonicalize } from "@/lib/markdown/index.ts";
 
 export type { FormAnnouncementValue } from "@/components/form/announcement/schema.ts";
+
+const LOCAL_MENTION_SOURCE = createLocalMentionSource(LOCAL_MENTION_TARGETS);
 
 export const FormAnnouncementDefaultValue: FormAnnouncementValue = {
   title: "",
@@ -34,19 +49,34 @@ export type FormAnnouncementProps = {
   defaultValues?: FormAnnouncementValue;
   onChange?: (value: FormAnnouncementValue) => void;
   onSubmit: (value: FormAnnouncementValue) => void | Promise<void>;
+  /** Uploads one image. The form uses the worker store when this is unset. */
+  onUploadImage?: ImageUploadHandler;
 };
 
 export function FormAnnouncement(props: FormAnnouncementProps) {
   const { t } = useTranslation();
   const titleId = useId();
   const bodyId = useId();
+  const bodyErrorId = useId();
+  const titleRef = useRef<HTMLInputElement>(null);
+  const bodyRef = useRef<MarkdownEditorHandle>(null);
   const variantId = useId();
   const presentationId = useId();
-  const schema = useFormAnnouncementSchema();
+  const worker = useOptionalWorker();
+  const workerUpload = useMemo(
+    () => (worker === null ? undefined : createWorkerImageUpload(worker)),
+    [worker],
+  );
+  const onUploadImage = props.onUploadImage ?? workerUpload;
+  const schema = useFormAnnouncementSchema(
+    t("system_announcements_form_markdown_invalid"),
+  );
   const standardSchema = useMemo(
     () =>
       Schema.toStandardSchemaV1(schema, {
-        checkHook: () => t("system_announcements_form_required"),
+        checkHook: (issue) =>
+          issue.filter.annotations?.message ??
+          t("system_announcements_form_required"),
       }),
     [schema, t],
   );
@@ -74,9 +104,22 @@ export function FormAnnouncement(props: FormAnnouncementProps) {
       await props.onSubmit({
         ...value,
         title: value.title.trim(),
-        body: value.body.trim(),
+        body: canonicalize(value.body.trim()),
       });
       formApi.reset(FormAnnouncementDefaultValue);
+    },
+    onSubmitInvalid: ({ formApi }) => {
+      const firstInvalid = (["title", "body"] as const).find(
+        (name) => (formApi.state.fieldMeta[name]?.errors.length ?? 0) > 0,
+      );
+
+      if (firstInvalid === "title") {
+        titleRef.current?.focus();
+      }
+
+      if (firstInvalid === "body") {
+        bodyRef.current?.focus();
+      }
     },
     listeners: {
       onChange: ({ formApi }) => {
@@ -114,6 +157,7 @@ export function FormAnnouncement(props: FormAnnouncementProps) {
               onBlur={field.handleBlur}
               onChange={(e) => field.handleChange(e.target.value)}
               placeholder={t("system_announcements_form_title_placeholder")}
+              ref={titleRef}
               value={field.state.value}
             />
             <FieldInfo
@@ -124,30 +168,41 @@ export function FormAnnouncement(props: FormAnnouncementProps) {
         )}
       </form.Field>
       <form.Field name="body">
-        {(field) => (
-          <Field>
-            <FieldLabel htmlFor={bodyId}>
-              {t("system_announcements_form_body_label")}
-            </FieldLabel>
-            <Textarea
-              aria-invalid={
-                field.state.meta.isTouched && !field.state.meta.isValid
-                  ? true
-                  : undefined
-              }
-              id={bodyId}
-              name={field.name}
-              onBlur={field.handleBlur}
-              onChange={(e) => field.handleChange(e.target.value)}
-              placeholder={t("system_announcements_form_body_placeholder")}
-              value={field.state.value}
-            />
-            <FieldInfo
-              field={field}
-              validatingLabel="system_announcements_form_validating"
-            />
-          </Field>
-        )}
+        {(field) => {
+          const showError =
+            field.state.meta.isTouched && !field.state.meta.isValid;
+          const describedBy =
+            showError || field.state.meta.isValidating
+              ? bodyErrorId
+              : undefined;
+
+          return (
+            <Field>
+              <FieldLabel htmlFor={bodyId}>
+                {t("system_announcements_form_body_label")}
+              </FieldLabel>
+              <MarkdownEditor
+                ariaDescribedBy={describedBy}
+                ariaInvalid={showError ? true : undefined}
+                ariaLabel={t("system_announcements_form_body_label")}
+                id={bodyId}
+                mentionSource={LOCAL_MENTION_SOURCE}
+                onChange={field.handleChange}
+                onUploadImage={onUploadImage}
+                placeholder={t("system_announcements_form_body_placeholder")}
+                ref={bodyRef}
+                value={field.state.value}
+                variant="standard"
+              />
+              <div id={bodyErrorId}>
+                <FieldInfo
+                  field={field}
+                  validatingLabel="system_announcements_form_validating"
+                />
+              </div>
+            </Field>
+          );
+        }}
       </form.Field>
       <form.Field name="variant">
         {(field) => (

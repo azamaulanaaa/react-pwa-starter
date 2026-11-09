@@ -40,7 +40,20 @@ const wrapShared = (): SyncRemoteProxy<WorkerType> => {
   return wrap(shared.port) as unknown as SyncRemoteProxy<WorkerType>;
 };
 
-const worker = createWorker();
+let worker: null | SyncRemoteProxy<WorkerType> = null;
+
+/**
+ * Returns the shared worker proxy.
+ * The function creates the proxy on the first call, so a module import alone
+ * does not start a worker.
+ */
+const getWorker = (): SyncRemoteProxy<WorkerType> => {
+  if (worker === null) {
+    worker = createWorker();
+  }
+
+  return worker;
+};
 
 export type WorkerProviderProps = {
   children: ReactNode;
@@ -48,7 +61,7 @@ export type WorkerProviderProps = {
 
 export const WorkerProvider = (props: WorkerProviderProps) => {
   return (
-    <WorkerContext.Provider value={worker}>
+    <WorkerContext.Provider value={getWorker()}>
       {props.children}
     </WorkerContext.Provider>
   );
@@ -63,3 +76,9 @@ export const useWorker = () => {
 
   return context;
 };
+
+/**
+ * Returns the worker proxy, or null when no `WorkerProvider` is present.
+ * Use this hook when the worker is optional.
+ */
+export const useOptionalWorker = () => useContext(WorkerContext);

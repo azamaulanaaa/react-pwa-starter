@@ -176,6 +176,7 @@
   "system_announcements_empty_title": "Tidak ada pengumuman",
   "system_announcements_form_body_label": "Pesan",
   "system_announcements_form_body_placeholder": "Tulis pengumuman.",
+  "system_announcements_form_markdown_invalid": "Perbaiki Markdown. Hapus HTML, tautan tidak aman, dan sintaks yang tidak didukung.",
   "system_announcements_form_presentation_label": "Tampilkan sebagai",
   "system_announcements_form_required": "Kolom ini wajib diisi.",
   "system_announcements_form_submit": "Buat dan tampilkan",
