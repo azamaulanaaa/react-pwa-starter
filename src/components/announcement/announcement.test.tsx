@@ -61,7 +61,7 @@ describe("AnnouncementView", () => {
     }
   });
 
-  it("calls the show handler with the dialog presentation", () => {
+  it("opens the detail sheet and shows the announcement with each presentation", () => {
     const onShow = vi.fn();
 
     renderWithProviders(
@@ -73,34 +73,97 @@ describe("AnnouncementView", () => {
       />,
     );
 
-    const buttons = screen.getAllByRole("button", {
-      name: dictionary.system_announcements_show_dialog,
-    });
+    fireEvent.click(
+      screen.getAllByRole("button", {
+        name: dictionary.system_view_details,
+      })[0],
+    );
 
-    fireEvent.click(buttons[0]);
+    expect(
+      screen.getByRole("dialog", { name: ANNOUNCEMENTS[0].title }),
+    ).toBeDefined();
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: dictionary.system_announcements_show_dialog,
+      }),
+    );
 
     expect(onShow).toHaveBeenCalledWith(ANNOUNCEMENTS[0].id, "dialog");
+
+    fireEvent.click(
+      screen.getAllByRole("button", {
+        name: dictionary.system_view_details,
+      })[0],
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: dictionary.system_announcements_show_banner,
+      }),
+    );
+
+    expect(onShow).toHaveBeenCalledWith(ANNOUNCEMENTS[0].id, "banner");
   });
 
-  it("calls the show handler with the banner presentation", () => {
-    const onShow = vi.fn();
-
+  it("truncates the content and hides the secondary columns below sm", () => {
     renderWithProviders(
       <AnnouncementView
         announcements={ANNOUNCEMENTS}
         delivery={EMPTY_DELIVERY}
         now={NOW}
-        onShow={onShow}
+        onShow={() => {}}
       />,
     );
 
-    const buttons = screen.getAllByRole("button", {
-      name: dictionary.system_announcements_show_banner,
-    });
+    expect(screen.getByRole("table").className).toContain("table-fixed");
 
-    fireEvent.click(buttons[0]);
+    const contentCell = screen.getByText(ANNOUNCEMENTS[0].title).closest("td");
+    const actionCell = screen
+      .getAllByRole("button", { name: dictionary.system_view_details })[0]
+      .closest("td");
 
-    expect(onShow).toHaveBeenCalledWith(ANNOUNCEMENTS[0].id, "banner");
+    expect(contentCell?.className).toContain("max-w-0");
+    expect(actionCell?.className).toContain("w-12");
+    expect(
+      screen.getByRole("columnheader", { name: dictionary.system_actions })
+        .className,
+    ).toContain("w-12");
+    expect(screen.getByText(ANNOUNCEMENTS[0].title).className).toContain(
+      "truncate",
+    );
+    expect(screen.getByText(ANNOUNCEMENTS[0].body).className).toContain(
+      "truncate",
+    );
+
+    for (const name of [
+      dictionary.system_announcements_column_variant,
+      dictionary.system_announcements_column_status,
+    ]) {
+      const header = screen.getByRole("columnheader", { name });
+
+      expect(header.className).toContain("hidden");
+      expect(header.className).toContain("sm:table-cell");
+    }
+  });
+
+  it("shows the empty state when the catalog is empty", () => {
+    renderWithProviders(
+      <AnnouncementView
+        announcements={[]}
+        delivery={EMPTY_DELIVERY}
+        now={NOW}
+        onShow={() => {}}
+      />,
+    );
+
+    expect(
+      screen.getByText(dictionary.system_announcements_empty_title),
+    ).toBeDefined();
+    expect(
+      screen.getByText(dictionary.system_announcements_empty_description),
+    ).toBeDefined();
+    expect(screen.queryByRole("table")).toBeNull();
   });
 });
 

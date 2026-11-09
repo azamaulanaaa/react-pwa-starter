@@ -1,8 +1,8 @@
 import type React from "react";
-import { useMemo } from "react";
+import { useState } from "react";
+import { ChevronRightIcon, InboxIcon } from "lucide-react";
 
 import { useTranslation } from "@/components/context/translation.tsx";
-import { Badge, type BadgeProps } from "@/components/ui/badge.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import {
   Card,
@@ -12,38 +12,33 @@ import {
   CardTitle,
 } from "@/components/ui/card.tsx";
 import {
-  TableGeneric,
-  type TableGenericColumnDef,
-} from "@/components/table/generic/index.tsx";
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty.tsx";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table.tsx";
+import {
+  AnnouncementPresentationBadge,
+  AnnouncementStatusBadge,
+  AnnouncementVariantBadge,
+} from "@/components/announcement/announcement-badge.tsx";
+import { AnnouncementDetail } from "@/components/announcement/announcement-detail.tsx";
 import { getAnnouncementStatus } from "@/components/announcement/delivery.ts";
 import type {
   Announcement,
   AnnouncementDelivery,
   AnnouncementPresentation,
-  AnnouncementStatus,
-  AnnouncementVariant,
 } from "@/components/announcement/types.ts";
-
-type BadgeVariant = NonNullable<BadgeProps["variant"]>;
-
-const VARIANT_BADGES: Record<AnnouncementVariant, BadgeVariant> = {
-  info: "info",
-  success: "success",
-  warning: "warning",
-  error: "error",
-};
-
-const PRESENTATION_BADGES: Record<AnnouncementPresentation, BadgeVariant> = {
-  dialog: "outline",
-  banner: "secondary",
-};
-
-const STATUS_BADGES: Record<AnnouncementStatus, BadgeVariant> = {
-  idle: "secondary",
-  visible: "success",
-  snoozed: "warning",
-  dismissed: "outline",
-};
 
 export interface AnnouncementViewProps {
   announcements: Announcement[];
@@ -52,7 +47,7 @@ export interface AnnouncementViewProps {
   onShow: (id: string, presentation: AnnouncementPresentation) => void;
 }
 
-/** Shows the announcement catalog and the two presentation actions. */
+/** Shows the announcement catalog and the detail sheet. */
 export function AnnouncementView({
   announcements,
   delivery,
@@ -60,81 +55,10 @@ export function AnnouncementView({
   onShow,
 }: AnnouncementViewProps): React.ReactElement {
   const { t } = useTranslation();
-
-  const columns = useMemo<TableGenericColumnDef<Announcement>[]>(
-    () => [
-      {
-        id: "title",
-        header: t("system_announcements_column_title"),
-        cell: ({ row }) => (
-          <div className="flex min-w-0 flex-col">
-            <span className="font-medium">{row.original.title}</span>
-            <span className="text-muted-foreground text-sm">
-              {row.original.body}
-            </span>
-          </div>
-        ),
-      },
-      {
-        id: "variant",
-        header: t("system_announcements_column_variant"),
-        cell: ({ row }) => (
-          <Badge variant={VARIANT_BADGES[row.original.variant]}>
-            {t(`system_announcement_variant_${row.original.variant}`)}
-          </Badge>
-        ),
-      },
-      {
-        id: "preferred",
-        header: t("system_announcements_column_preferred"),
-        cell: ({ row }) => (
-          <Badge
-            variant={PRESENTATION_BADGES[row.original.preferredPresentation]}
-          >
-            {t(
-              `system_announcement_presentation_${row.original.preferredPresentation}`,
-            )}
-          </Badge>
-        ),
-      },
-      {
-        id: "status",
-        header: t("system_announcements_column_status"),
-        cell: ({ row }) => {
-          const status = getAnnouncementStatus(delivery, row.original.id, now);
-
-          return (
-            <Badge variant={STATUS_BADGES[status]}>
-              {t(`system_announcement_status_${status}`)}
-            </Badge>
-          );
-        },
-      },
-      {
-        id: "actions",
-        header: t("system_actions"),
-        cell: ({ row }) => (
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button
-              onClick={() => onShow(row.original.id, "dialog")}
-              size="sm"
-              variant="outline"
-            >
-              {t("system_announcements_show_dialog")}
-            </Button>
-            <Button
-              onClick={() => onShow(row.original.id, "banner")}
-              size="sm"
-              variant="outline"
-            >
-              {t("system_announcements_show_banner")}
-            </Button>
-          </div>
-        ),
-      },
-    ],
-    [delivery, now, onShow, t],
-  );
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected =
+    announcements.find((announcement) => announcement.id === selectedId) ??
+    null;
 
   return (
     <Card data-slot="announcement-view">
@@ -145,13 +69,107 @@ export function AnnouncementView({
         </CardDescription>
       </CardHeader>
       <CardPanel>
-        <TableGeneric
-          caption={t("system_announcements_table_caption")}
-          columns={columns}
-          data={announcements}
-          getRowId={(announcement) => announcement.id}
-        />
+        {announcements.length === 0 ? (
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <InboxIcon aria-hidden="true" />
+              </EmptyMedia>
+              <EmptyTitle>{t("system_announcements_empty_title")}</EmptyTitle>
+              <EmptyDescription>
+                {t("system_announcements_empty_description")}
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        ) : (
+          <div className="overflow-hidden rounded-xl border">
+            <Table className="table-fixed">
+              <TableCaption className="sr-only">
+                {t("system_announcements_table_caption")}
+              </TableCaption>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>
+                    {t("system_announcements_column_title")}
+                  </TableHead>
+                  <TableHead className="hidden w-28 sm:table-cell">
+                    {t("system_announcements_column_variant")}
+                  </TableHead>
+                  <TableHead className="hidden w-40 md:table-cell">
+                    {t("system_announcements_column_preferred")}
+                  </TableHead>
+                  <TableHead className="hidden w-28 sm:table-cell">
+                    {t("system_announcements_column_status")}
+                  </TableHead>
+                  <TableHead className="w-12">
+                    <span className="sr-only">{t("system_actions")}</span>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {announcements.map((announcement) => (
+                  <TableRow key={announcement.id}>
+                    <TableCell className="max-w-0">
+                      <div className="flex min-w-0 flex-col leading-tight">
+                        <span className="truncate font-medium">
+                          {announcement.title}
+                        </span>
+                        <span className="truncate text-muted-foreground text-xs">
+                          {announcement.body}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden w-28 sm:table-cell">
+                      <AnnouncementVariantBadge
+                        variant={announcement.variant}
+                      />
+                    </TableCell>
+                    <TableCell className="hidden w-40 md:table-cell">
+                      <AnnouncementPresentationBadge
+                        presentation={announcement.preferredPresentation}
+                      />
+                    </TableCell>
+                    <TableCell className="hidden w-28 sm:table-cell">
+                      <AnnouncementStatusBadge
+                        status={getAnnouncementStatus(
+                          delivery,
+                          announcement.id,
+                          now,
+                        )}
+                      />
+                    </TableCell>
+                    <TableCell className="w-12">
+                      <div className="flex justify-end">
+                        <Button
+                          aria-label={t("system_view_details")}
+                          onClick={() => setSelectedId(announcement.id)}
+                          size="icon-sm"
+                          variant="ghost"
+                        >
+                          <ChevronRightIcon className="rtl:rotate-180" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </CardPanel>
+
+      {selected !== null && (
+        <AnnouncementDetail
+          announcement={selected}
+          delivery={delivery}
+          now={now}
+          onOpenChange={(next) => {
+            if (!next) setSelectedId(null);
+          }}
+          onShow={onShow}
+          open={selected !== null}
+        />
+      )}
     </Card>
   );
 }
