@@ -41,6 +41,7 @@ import {
 } from "lexical";
 
 import { useTranslation } from "@/components/context/translation.tsx";
+import { recordEditorEvent } from "@/components/editor/editor-telemetry.ts";
 import { EditorToolbar } from "@/components/editor/editor-toolbar.tsx";
 import { ImagePlugin } from "@/components/editor/image-plugin.tsx";
 import type { ImageUploadHandler } from "@/components/editor/image-upload.ts";
@@ -454,12 +455,22 @@ export const MarkdownEditor = forwardRef<
     () => getUnsupportedFeatures(value),
     [value],
   );
+  const unsupportedKey = unsupportedFeatures.join(",");
   const toolbarVisible = showToolbar ?? variant !== "plain";
   const mentionsEnabled =
     mentionSource !== undefined &&
     showMentions !== false &&
     !readOnly &&
     variant !== "plain";
+
+  useEffect(() => {
+    if (unsupportedKey === "") return;
+
+    // The key holds the full feature list, so one feature set records once.
+    recordEditorEvent("editor.markdown.unsupported", {
+      feature: unsupportedKey.split(",")[0] ?? "unknown",
+    });
+  }, [unsupportedKey]);
 
   if (unsupportedFeatures.length > 0) {
     return (

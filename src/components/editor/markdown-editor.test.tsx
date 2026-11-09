@@ -12,6 +12,7 @@ import {
   MarkdownEditor,
   type MarkdownEditorHandle,
 } from "@/components/editor/markdown-editor.tsx";
+import { recordEditorEvent } from "@/components/editor/editor-telemetry.ts";
 import { canonicalize } from "@/lib/markdown/index.ts";
 
 import enDictionary from "~/public/locales/en-US.json" with { type: "json" };
@@ -19,6 +20,10 @@ import enDictionary from "~/public/locales/en-US.json" with { type: "json" };
 // The editor tests do not start a worker. The image node reads the missing state.
 vi.mock("@/hooks/engines/use-file-blob.ts", () => ({
   useFileBlob: () => ({ status: "missing", url: null }),
+}));
+
+vi.mock("@/components/editor/editor-telemetry.ts", () => ({
+  recordEditorEvent: vi.fn(),
 }));
 
 const NOTE = [
@@ -212,6 +217,18 @@ describe("MarkdownEditor", () => {
     expect((textarea as HTMLTextAreaElement).value).toBe(TABLE);
     expect(document.querySelector("[contenteditable]")).toBeNull();
     expect(screen.getByText(/contains a table/)).toBeDefined();
+  });
+
+  it("records one unsupported event for a table document", () => {
+    const record = vi.mocked(recordEditorEvent);
+
+    record.mockClear();
+    renderEditor({ value: TABLE });
+
+    expect(record).toHaveBeenCalledTimes(1);
+    expect(record).toHaveBeenCalledWith("editor.markdown.unsupported", {
+      feature: "table",
+    });
   });
 
   it("shows an image node with its alt text", async () => {

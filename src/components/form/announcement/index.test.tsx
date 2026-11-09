@@ -22,6 +22,7 @@ import {
   type FormAnnouncementValue,
 } from "@/components/form/announcement/index.tsx";
 import type { ImageUploadHandler } from "@/components/editor/image-upload.ts";
+import { recordEditorEvent } from "@/components/editor/editor-telemetry.ts";
 import { getTransformers } from "@/components/editor/transformers.ts";
 
 import dictionary from "~/public/locales/en-US.json" with { type: "json" };
@@ -29,6 +30,10 @@ import dictionary from "~/public/locales/en-US.json" with { type: "json" };
 // The form tests do not start a worker. The image node reads the missing state.
 vi.mock("@/hooks/engines/use-file-blob.ts", () => ({
   useFileBlob: () => ({ status: "missing", url: null }),
+}));
+
+vi.mock("@/components/editor/editor-telemetry.ts", () => ({
+  recordEditorEvent: vi.fn(),
 }));
 
 const BODY_LABEL = dictionary.system_announcements_form_body_label;
@@ -309,6 +314,25 @@ describe("FormAnnouncement", () => {
       ),
     ).toBeTruthy();
     expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("records one invalid Markdown event with the validation code", async () => {
+    const record = vi.mocked(recordEditorEvent);
+    const onSubmit = vi.fn();
+
+    record.mockClear();
+    renderForm(onSubmit);
+
+    fillForm("Maintenance tonight", "[Open](javascript:alert(1))");
+    submitForm();
+
+    await screen.findByText(
+      dictionary.system_announcements_form_markdown_invalid,
+    );
+
+    expect(record).toHaveBeenCalledWith("editor.markdown.invalid", {
+      code: "link_not_allowed",
+    });
   });
 
   it("inserts an uploaded image into the Markdown", async () => {

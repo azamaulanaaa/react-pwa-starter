@@ -11,6 +11,7 @@ import {
   MarkdownEditor,
   type MarkdownEditorHandle,
 } from "@/components/editor/markdown-editor.tsx";
+import { recordEditorEvent } from "@/components/editor/editor-telemetry.ts";
 import type {
   ImageUploadHandler,
   ImageUploadResult,
@@ -21,6 +22,10 @@ import enDictionary from "~/public/locales/en-US.json" with { type: "json" };
 // The inserted image reads the missing state. The plugin never calls the worker.
 vi.mock("@/hooks/engines/use-file-blob.ts", () => ({
   useFileBlob: () => ({ status: "missing", url: null }),
+}));
+
+vi.mock("@/components/editor/editor-telemetry.ts", () => ({
+  recordEditorEvent: vi.fn(),
 }));
 
 /** Adds the translation context to one test tree. */
@@ -141,6 +146,26 @@ describe("ImagePlugin", () => {
 
     expect(ref.current?.getMarkdown()).not.toContain("/fs/");
     expect(document.querySelector('[data-slot="image-node"]')).toBeNull();
+  });
+
+  it("records one upload failure with a coarse reason", async () => {
+    const record = vi.mocked(recordEditorEvent);
+    const handler = vi.fn<ImageUploadHandler>(() =>
+      Promise.reject(new TypeError("The network request failed.")),
+    );
+
+    record.mockClear();
+    renderEditor(handler);
+
+    selectFile(new File(["image"], "private.png", { type: "image/png" }));
+
+    await waitFor(() => {
+      expect(record).toHaveBeenCalledWith("editor.upload.failed", {
+        reason: "network",
+      });
+    });
+
+    expect(record).toHaveBeenCalledTimes(1);
   });
 
   it("stops the upload when the editor closes", async () => {

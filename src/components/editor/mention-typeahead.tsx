@@ -31,6 +31,7 @@ import {
 import { CheckIcon } from "lucide-react";
 
 import { useTranslation } from "@/components/context/translation.tsx";
+import { recordEditorEvent } from "@/components/editor/editor-telemetry.ts";
 import {
   mentionHref,
   type MentionSource,
@@ -220,6 +221,9 @@ export function MentionTypeaheadPlugin({
         (error: unknown) => {
           if (controller.signal.aborted || isAbortError(error)) return;
 
+          recordEditorEvent("editor.mention.search_failed", {
+            reason: "search",
+          });
           setOptions([]);
           setStatus("error");
         },

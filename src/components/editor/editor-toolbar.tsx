@@ -64,6 +64,7 @@ import {
 } from "lucide-react";
 
 import { useTranslation } from "@/components/context/translation.tsx";
+import { recordEditorEvent } from "@/components/editor/editor-telemetry.ts";
 import { INSERT_IMAGE_COMMAND } from "@/components/editor/image-plugin.tsx";
 import type { ImageUploadHandler } from "@/components/editor/image-upload.ts";
 import { useRovingTabindex } from "@/components/editor/use-roving-tabindex.ts";
@@ -403,6 +404,7 @@ export function EditorToolbar({
     const url = linkForm.value.trim();
 
     if (!validateUrl(url)) {
+      recordEditorEvent("editor.link.invalid", { reason: "url" });
       setLinkForm((previous) => ({
         ...previous,
         error: t("editor_toolbar_link_error"),

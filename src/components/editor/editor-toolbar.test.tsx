@@ -19,6 +19,7 @@ import {
   type MarkdownEditorHandle,
   type MarkdownEditorVariant,
 } from "@/components/editor/markdown-editor.tsx";
+import { recordEditorEvent } from "@/components/editor/editor-telemetry.ts";
 import type { ImageUploadHandler } from "@/components/editor/image-upload.ts";
 
 import enDictionary from "~/public/locales/en-US.json" with { type: "json" };
@@ -26,6 +27,10 @@ import enDictionary from "~/public/locales/en-US.json" with { type: "json" };
 // The toolbar tests do not start a worker. The image node reads the missing state.
 vi.mock("@/hooks/engines/use-file-blob.ts", () => ({
   useFileBlob: () => ({ status: "missing", url: null }),
+}));
+
+vi.mock("@/components/editor/editor-telemetry.ts", () => ({
+  recordEditorEvent: vi.fn(),
 }));
 
 type EditorHost = HTMLElement & { __lexicalEditor?: LexicalEditor };
@@ -295,6 +300,27 @@ describe("EditorToolbar", () => {
     await waitFor(() => {
       expect(bold.getAttribute("aria-pressed")).toBe("true");
     });
+  });
+
+  it("records one invalid link event", () => {
+    const record = vi.mocked(recordEditorEvent);
+    renderEditor("Example\n");
+    const editor = getEditor(
+      screen.getByRole("textbox", { name: "Note body" }),
+    );
+
+    selectFirstBlock(editor, 0, 7);
+    record.mockClear();
+
+    const input = openLinkPopover();
+
+    fireEvent.change(input, { target: { value: "javascript:alert(1)" } });
+    fireEvent.click(screen.getByRole("button", { name: "Apply link" }));
+
+    expect(record).toHaveBeenCalledWith("editor.link.invalid", {
+      reason: "url",
+    });
+    expect(record).toHaveBeenCalledTimes(1);
   });
 
   it("disables undo and redo until the history can run", async () => {

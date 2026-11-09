@@ -8,6 +8,7 @@ import {
   MarkdownEditor,
   type MarkdownEditorHandle,
 } from "@/components/editor/index.ts";
+import { recordEditorEvent } from "@/components/editor/editor-telemetry.ts";
 import {
   createWorkerImageUpload,
   type ImageUploadHandler,
@@ -32,7 +33,7 @@ import {
   createLocalMentionSource,
   LOCAL_MENTION_TARGETS,
 } from "@/lib/mentions/index.ts";
-import { canonicalize } from "@/lib/markdown/index.ts";
+import { canonicalize, validate } from "@/lib/markdown/index.ts";
 
 export type { FormAnnouncementValue } from "@/components/form/announcement/schema.ts";
 
@@ -60,6 +61,7 @@ export function FormAnnouncement(props: FormAnnouncementProps) {
   const bodyErrorId = useId();
   const titleRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef<MarkdownEditorHandle>(null);
+  const lastInvalidCodeRef = useRef<string | null>(null);
   const variantId = useId();
   const presentationId = useId();
   const worker = useOptionalWorker();
@@ -95,6 +97,26 @@ export function FormAnnouncement(props: FormAnnouncementProps) {
     banner: t("system_announcement_presentation_banner"),
   };
 
+  /**
+   * Records one failed Markdown validation.
+   * The function keeps one event for each error code.
+   */
+  function recordInvalidMarkdown(markdown: string): void {
+    const validation = validate(markdown);
+
+    if (validation.ok) {
+      lastInvalidCodeRef.current = null;
+      return;
+    }
+
+    if (lastInvalidCodeRef.current === validation.code) return;
+
+    lastInvalidCodeRef.current = validation.code;
+    recordEditorEvent("editor.markdown.invalid", {
+      code: validation.code,
+    });
+  }
+
   const form = useForm({
     defaultValues: props.defaultValues ?? FormAnnouncementDefaultValue,
     validators: {
@@ -109,6 +131,8 @@ export function FormAnnouncement(props: FormAnnouncementProps) {
       formApi.reset(FormAnnouncementDefaultValue);
     },
     onSubmitInvalid: ({ formApi }) => {
+      recordInvalidMarkdown(formApi.state.values.body);
+
       const firstInvalid = (["title", "body"] as const).find(
         (name) => (formApi.state.fieldMeta[name]?.errors.length ?? 0) > 0,
       );
@@ -124,12 +148,12 @@ export function FormAnnouncement(props: FormAnnouncementProps) {
     listeners: {
       onChange: ({ formApi }) => {
         props.onChange?.(formApi.state.values);
+        recordInvalidMarkdown(formApi.state.values.body);
       },
     },
   });
 
   const isSubmitting = useStore(form.store, (state) => state.isSubmitting);
-
   return (
     <Form
       className="flex flex-col gap-4"

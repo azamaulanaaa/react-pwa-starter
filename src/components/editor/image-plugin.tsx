@@ -24,6 +24,7 @@ import {
 } from "lexical";
 
 import { useTranslation } from "@/components/context/translation.tsx";
+import { recordEditorEvent } from "@/components/editor/editor-telemetry.ts";
 import { $createImageNode } from "@/components/editor/image-node.tsx";
 import type { ImageUploadHandler } from "@/components/editor/image-upload.ts";
 
@@ -47,6 +48,15 @@ function isAbortError(error: unknown): boolean {
     "name" in error &&
     (error as { name?: unknown }).name === "AbortError"
   );
+}
+
+/** Returns a coarse reason for one upload failure. */
+function getUploadFailureReason(
+  error: unknown,
+): "network" | "worker" | "unknown" {
+  if (error instanceof TypeError) return "network";
+  if (error instanceof Error) return "worker";
+  return "unknown";
 }
 
 /** Inserts one image node at the current selection. */
@@ -136,6 +146,9 @@ export function ImagePlugin({ onUploadImage }: ImagePluginProps): ReactElement {
         return;
       }
 
+      recordEditorEvent("editor.upload.failed", {
+        reason: getUploadFailureReason(error),
+      });
       setStatus("error");
     } finally {
       if (controllerRef.current === controller) {

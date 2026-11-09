@@ -19,6 +19,7 @@ import {
   MarkdownEditor,
   type MarkdownEditorHandle,
 } from "@/components/editor/markdown-editor.tsx";
+import { recordEditorEvent } from "@/components/editor/editor-telemetry.ts";
 import type { MentionSource, MentionTarget } from "@/lib/mentions/index.ts";
 
 import enDictionary from "~/public/locales/en-US.json" with { type: "json" };
@@ -26,6 +27,10 @@ import enDictionary from "~/public/locales/en-US.json" with { type: "json" };
 // The mention tests do not start a worker. The image node reads the missing state.
 vi.mock("@/hooks/engines/use-file-blob.ts", () => ({
   useFileBlob: () => ({ status: "missing", url: null }),
+}));
+
+vi.mock("@/components/editor/editor-telemetry.ts", () => ({
+  recordEditorEvent: vi.fn(),
 }));
 
 // jsdom does not measure a DOM Range. The typeahead plugin asks for the range
@@ -296,6 +301,23 @@ describe("MentionTypeaheadPlugin", () => {
     );
 
     expect(message.getAttribute("role")).toBe("status");
+  });
+
+  it("records one mention search failure", async () => {
+    const record = vi.mocked(recordEditorEvent);
+    const { editor } = renderReadyEditor({
+      mentionSource: createErrorSource(),
+    });
+
+    record.mockClear();
+    typeText(editor, "Hello @al");
+
+    await screen.findByText("Unable to load mentions. Type again to retry.");
+
+    expect(record).toHaveBeenCalledWith("editor.mention.search_failed", {
+      reason: "search",
+    });
+    expect(record).toHaveBeenCalledTimes(1);
   });
 
   it("exposes the menu as a named listbox with options", async () => {
