@@ -10,7 +10,7 @@ export function Spinner({
   return (
     <Loader2Icon
       aria-label="Loading"
-      className={cn("animate-spin", className)}
+      className={cn("animate-spin motion-reduce:animate-none", className)}
       role="status"
       {...props}
     />
