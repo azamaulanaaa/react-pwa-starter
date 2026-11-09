@@ -1,0 +1,59 @@
+/*
+ * Adds editor-only affordances.
+ * Shared typography and colors come from markdown.css and the theme tokens in
+ * app.css.
+ */
+
+.markdown-editor-shell {
+  position: relative;
+}
+
+.markdown-editor {
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-block-size: 10rem;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  background: var(--background);
+  padding-block: 0.5rem;
+  padding-inline: 0.75rem;
+  color: var(--foreground);
+}
+
+.markdown-editor:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 2px;
+}
+
+.markdown-editor[contenteditable="false"] {
+  background: color-mix(in srgb, var(--muted) 40%, var(--background));
+}
+
+.markdown-editor-placeholder {
+  position: absolute;
+  inset-block-start: calc(0.5rem + 1px);
+  inset-inline-start: calc(0.75rem + 1px);
+  color: var(--muted-foreground);
+  pointer-events: none;
+}
+
+.markdown-body.markdown-editor .markdown-editor-code {
+  display: block;
+  max-inline-size: 100%;
+  margin-block: 0 1rem;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--code);
+  padding: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  overscroll-behavior-inline: contain;
+}
+
+.markdown-body.markdown-editor .markdown-editor-code:last-child {
+  margin-block-end: 0;
+}

@@ -167,6 +167,22 @@ export default defineConfig(({ command }) => ({
     },
   },
   resolve: {
+    // Lexical keeps editor state in module-scope singletons. A second copy of
+    // any Lexical package breaks the shared editor context and node registry.
+    // Keep every `lexical` and `@lexical/*` package on the same exact version.
+    dedupe: [
+      "lexical",
+      "@lexical/code",
+      "@lexical/headless",
+      "@lexical/history",
+      "@lexical/link",
+      "@lexical/list",
+      "@lexical/markdown",
+      "@lexical/react",
+      "@lexical/rich-text",
+      "@lexical/selection",
+      "@lexical/utils",
+    ],
     tsconfigPaths: true,
   },
 }));
