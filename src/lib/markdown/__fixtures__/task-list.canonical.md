@@ -1,0 +1,3 @@
+- [ ] Draft the plan
+- [x] Review the plan
+  - [ ] Send the plan
