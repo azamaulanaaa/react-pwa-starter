@@ -10,6 +10,7 @@
 import {
   forwardRef,
   useEffect,
+  useId,
   useImperativeHandle,
   useMemo,
   useRef,
@@ -25,6 +26,8 @@ import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
+import { HorizontalRulePlugin } from "@lexical/react/LexicalHorizontalRulePlugin";
+import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
 import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPlugin";
 import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
@@ -36,11 +39,18 @@ import {
   type EditorThemeClasses,
 } from "lexical";
 
+import { useTranslation } from "@/components/context/translation.tsx";
 import { MARKDOWN_EDITOR_NODES } from "@/components/editor/nodes.ts";
+import {
+  getUnsupportedFeatures,
+  type UnsupportedFeature,
+} from "@/components/editor/support.ts";
 import {
   getTransformers,
   type MarkdownVariant,
 } from "@/components/editor/transformers.ts";
+import { Label } from "@/components/ui/label.tsx";
+import { Textarea } from "@/components/ui/textarea.tsx";
 import { canonicalize } from "@/lib/markdown/dialect.ts";
 import { cn } from "@/lib/utils/cn.ts";
 
@@ -52,6 +62,57 @@ const NAMESPACE = "MarkdownEditor";
 
 /** Defines the fallback accessible name for the editable region. */
 const DEFAULT_ARIA_LABEL = "Markdown editor";
+
+/** Lists the URL protocols that the editor never accepts. */
+const FORBIDDEN_PROTOCOLS = new Set([
+  "data:",
+  "file:",
+  "javascript:",
+  "blob:",
+  "vbscript:",
+]);
+
+/** Matches a URL that starts with a scheme. */
+const ABSOLUTE_SCHEME = /^[A-Za-z][A-Za-z\d+.-]*:/;
+
+/**
+ * Returns true when the editor can apply one URL to a link.
+ * The function accepts https:, mailto:, and same-origin relative paths.
+ */
+export function validateUrl(url: string): boolean {
+  const candidate = url.trim();
+
+  if (candidate === "" || candidate.startsWith("//")) {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(candidate, window.location.origin);
+
+    if (FORBIDDEN_PROTOCOLS.has(parsed.protocol)) {
+      return false;
+    }
+
+    if (parsed.protocol === "https:" || parsed.protocol === "mailto:") {
+      return true;
+    }
+
+    if (ABSOLUTE_SCHEME.test(candidate)) {
+      return false;
+    }
+
+    return parsed.origin === window.location.origin;
+  } catch {
+    return false;
+  }
+}
+
+/** Returns the translation key for one unsupported feature notice. */
+function getFallbackNoticeKey(feature: UnsupportedFeature): string {
+  if (feature === "table") return "editor_fallback_table";
+  if (feature === "image") return "editor_fallback_image";
+  return "editor_fallback_generic";
+}
 
 /**
  * Maps Lexical nodes to classes.
@@ -151,6 +212,62 @@ function readMarkdown(
 ): string {
   return editorState.read(() =>
     canonicalize($convertToMarkdownString(transformers)),
+  );
+}
+
+/** Defines the props of the raw Markdown fallback. */
+interface UnsupportedMarkdownFallbackProps {
+  className?: string;
+  features: UnsupportedFeature[];
+  onChange: (markdown: string) => void;
+  placeholder?: string;
+  readOnly: boolean;
+  value: string;
+}
+
+/**
+ * Shows the raw Markdown when the editor cannot represent the document.
+ * The component sends each edit to `onChange` without a canonicalization step.
+ */
+function UnsupportedMarkdownFallback({
+  className,
+  features,
+  onChange,
+  placeholder,
+  readOnly,
+  value,
+}: UnsupportedMarkdownFallbackProps): ReactNode {
+  const { t } = useTranslation();
+  const labelId = useId();
+  const noticeId = useId();
+  const feature = features[0] ?? "unknown";
+
+  return (
+    <div className={cn("markdown-editor-shell grid gap-2", className)}>
+      <Label
+        className="text-base leading-relaxed sm:text-base"
+        htmlFor={labelId}
+      >
+        {t("editor_fallback_label")}
+      </Label>
+      <p
+        className="text-base leading-relaxed text-muted-foreground"
+        id={noticeId}
+      >
+        {t(getFallbackNoticeKey(feature))}
+      </p>
+      <Textarea
+        aria-describedby={noticeId}
+        className="markdown-editor-fallback text-base leading-relaxed sm:text-base"
+        id={labelId}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        readOnly={readOnly}
+        rows={12}
+        spellCheck={false}
+        value={value}
+      />
+    </div>
   );
 }
 
@@ -258,7 +375,13 @@ function EditorSurface({
         ErrorBoundary={LexicalErrorBoundary}
       />
       <HistoryPlugin />
-      <OnChangePlugin ignoreSelectionChange onChange={handleChange} />
+      <HorizontalRulePlugin />
+      <LinkPlugin validateUrl={validateUrl} />
+      <OnChangePlugin
+        ignoreHistoryMergeTagChange={false}
+        ignoreSelectionChange
+        onChange={handleChange}
+      />
       <MarkdownShortcutPlugin transformers={transformers} />
     </div>
   );
@@ -284,6 +407,23 @@ export const MarkdownEditor = forwardRef<
   ref,
 ): ReactNode {
   const transformers = useMemo(() => getTransformers(variant), [variant]);
+  const unsupportedFeatures = useMemo(
+    () => getUnsupportedFeatures(value),
+    [value],
+  );
+
+  if (unsupportedFeatures.length > 0) {
+    return (
+      <UnsupportedMarkdownFallback
+        className={className}
+        features={unsupportedFeatures}
+        onChange={onChange}
+        placeholder={placeholder}
+        readOnly={readOnly}
+        value={value}
+      />
+    );
+  }
 
   return (
     <LexicalComposer

@@ -1,14 +1,20 @@
 // @vitest-environment jsdom
-import { act, render, screen } from "@testing-library/react";
-import { createRef } from "react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
+import { createRef, type ReactNode } from "react";
 import { $getRoot, $isElementNode, type LexicalEditor } from "lexical";
 import { describe, expect, it, vi } from "vitest";
 
+import {
+  type NestedRecord,
+  TranslationProvider,
+} from "@/components/context/translation.tsx";
 import {
   MarkdownEditor,
   type MarkdownEditorHandle,
 } from "@/components/editor/markdown-editor.tsx";
 import { canonicalize } from "@/lib/markdown/index.ts";
+
+import enDictionary from "~/public/locales/en-US.json" with { type: "json" };
 
 const NOTE = [
   "# Title",
@@ -19,7 +25,30 @@ const NOTE = [
   "- two",
 ].join("\n");
 
+const TABLE = [
+  "| Name | Value |",
+  "| ---- | ----- |",
+  "| A    | 1     |",
+  "| B    | 2     |",
+].join("\n");
+
+const IMAGE = "![Diagram](/fs/file_01)\n";
+
 type EditorHost = HTMLElement & { __lexicalEditor?: LexicalEditor };
+
+/** Adds the translation context to one test tree. */
+function Providers({ children }: { children: ReactNode }) {
+  const dictionary = enDictionary as NestedRecord;
+
+  return (
+    <TranslationProvider
+      dictionary={dictionary}
+      fallbackDictionary={dictionary}
+    >
+      {children}
+    </TranslationProvider>
+  );
+}
 
 function renderEditor({
   ariaLabel = "Note body",
@@ -36,14 +65,16 @@ function renderEditor({
 }) {
   const ref = createRef<MarkdownEditorHandle>();
   const view = render(
-    <MarkdownEditor
-      ref={ref}
-      ariaLabel={ariaLabel}
-      onChange={onChange}
-      placeholder={placeholder}
-      readOnly={readOnly}
-      value={value}
-    />,
+    <Providers>
+      <MarkdownEditor
+        ref={ref}
+        ariaLabel={ariaLabel}
+        onChange={onChange}
+        placeholder={placeholder}
+        readOnly={readOnly}
+        value={value}
+      />
+    </Providers>,
   );
 
   return { ...view, onChange, ref };
@@ -133,12 +164,14 @@ describe("MarkdownEditor", () => {
     const { ref, rerender } = renderEditor({ onChange, value: "# First\n" });
 
     rerender(
-      <MarkdownEditor
-        ref={ref}
-        ariaLabel="Note body"
-        onChange={onChange}
-        value={"# Second\n"}
-      />,
+      <Providers>
+        <MarkdownEditor
+          ref={ref}
+          ariaLabel="Note body"
+          onChange={onChange}
+          value={"# Second\n"}
+        />
+      </Providers>,
     );
 
     const textbox = screen.getByRole("textbox", { name: "Note body" });
@@ -160,5 +193,62 @@ describe("MarkdownEditor", () => {
     expect(textbox.textContent).toContain("After");
     expect(ref.current?.getMarkdown()).toBe("# After\n");
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("shows the raw Markdown fallback for a table", () => {
+    renderEditor({ value: TABLE });
+    const textarea = screen.getByRole("textbox", { name: "Markdown source" });
+
+    expect(textarea.tagName).toBe("TEXTAREA");
+    expect((textarea as HTMLTextAreaElement).value).toBe(TABLE);
+    expect(document.querySelector("[contenteditable]")).toBeNull();
+    expect(screen.getByText(/contains a table/)).toBeDefined();
+  });
+
+  it("shows the raw Markdown fallback for an image", () => {
+    renderEditor({ value: IMAGE });
+    const textarea = screen.getByRole("textbox", { name: "Markdown source" });
+
+    expect(textarea.tagName).toBe("TEXTAREA");
+    expect((textarea as HTMLTextAreaElement).value).toBe(IMAGE);
+    expect(document.querySelector("[contenteditable]")).toBeNull();
+    expect(screen.getByText(/contains an image/)).toBeDefined();
+  });
+
+  it("shows the editor for a supported note", () => {
+    renderEditor({ value: NOTE });
+    const textbox = screen.getByRole("textbox", { name: "Note body" });
+
+    expect(textbox.getAttribute("contenteditable")).toBe("true");
+    expect(document.querySelector("textarea")).toBeNull();
+  });
+
+  it("associates the fallback label and notice", () => {
+    renderEditor({ value: TABLE });
+    const textarea = screen.getByLabelText("Markdown source");
+    const describedBy = textarea.getAttribute("aria-describedby");
+    const notice =
+      describedBy === null ? null : document.getElementById(describedBy);
+
+    expect(textarea.tagName).toBe("TEXTAREA");
+    expect(notice).not.toBeNull();
+    expect(notice?.textContent).toContain("table");
+    expect(notice?.textContent).toContain("Edit the Markdown below");
+  });
+
+  it("keeps a table as raw Markdown instead of saving paragraphs", () => {
+    const onChange = vi.fn();
+    renderEditor({ onChange, value: TABLE });
+    const textarea = screen.getByRole("textbox", {
+      name: "Markdown source",
+    }) as HTMLTextAreaElement;
+    const edited = TABLE.replace("| A    | 1     |", "| C    | 3     |");
+
+    fireEvent.change(textarea, { target: { value: edited } });
+
+    expect(document.querySelector("[contenteditable]")).toBeNull();
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenLastCalledWith(edited);
+    expect(onChange.mock.calls[0]?.[0]).toContain("| C    | 3     |");
   });
 });

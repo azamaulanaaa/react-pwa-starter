@@ -9,6 +9,25 @@ import {
   UNORDERED_LIST,
   type Transformer,
 } from "@lexical/markdown";
+import {
+  $createHorizontalRuleNode,
+  $isHorizontalRuleNode,
+  HorizontalRuleNode,
+} from "@lexical/react/LexicalHorizontalRuleNode";
+
+/**
+ * Converts one horizontal rule line to a horizontal rule node and back.
+ * The regular expression matches `---`, `***`, or `___` on a line alone.
+ */
+export const HORIZONTAL_RULE: Transformer = {
+  dependencies: [HorizontalRuleNode],
+  export: (node) => ($isHorizontalRuleNode(node) ? "---" : null),
+  regExp: /^(?:-{3}|\*{3}|_{3})\s*$/,
+  replace: (parentNode) => {
+    parentNode.replace($createHorizontalRuleNode());
+  },
+  type: "element",
+};
 
 /**
  * The standard set of Markdown transformers.
@@ -32,8 +51,11 @@ export const PLAIN_TRANSFORMERS: Transformer[] = [
   ...TEXT_FORMAT_TRANSFORMERS,
 ];
 
-/** The full set of Markdown transformers. Later issues add more blocks. */
-export const FULL_TRANSFORMERS: Transformer[] = MARKDOWN_TRANSFORMERS;
+/** The full set of Markdown transformers. It adds the horizontal rule. */
+export const FULL_TRANSFORMERS: Transformer[] = [
+  ...MARKDOWN_TRANSFORMERS,
+  HORIZONTAL_RULE,
+];
 
 /** Defines the Markdown transformer set that one editor variant uses. */
 export type MarkdownVariant = "plain" | "standard" | "full";

@@ -1,14 +1,21 @@
 import { readdirSync, readFileSync } from "node:fs";
 
 import { createHeadlessEditor } from "@lexical/headless";
+import { $isListNode } from "@lexical/list";
 import {
   $convertFromMarkdownString,
   $convertToMarkdownString,
+  type Transformer,
 } from "@lexical/markdown";
+import { $getRoot } from "lexical";
 import { describe, expect, it } from "vitest";
 
 import { MARKDOWN_EDITOR_NODES } from "@/components/editor/nodes.ts";
-import { MARKDOWN_TRANSFORMERS } from "@/components/editor/transformers.ts";
+import { getUnsupportedFeatures } from "@/components/editor/support.ts";
+import {
+  FULL_TRANSFORMERS,
+  MARKDOWN_TRANSFORMERS,
+} from "@/components/editor/transformers.ts";
 import { canonicalize } from "@/lib/markdown/index.ts";
 
 const FIXTURE_DIRECTORY = new URL(
@@ -18,24 +25,37 @@ const FIXTURE_DIRECTORY = new URL(
 const FIXTURE_NAMES = readdirSync(FIXTURE_DIRECTORY).filter(
   (name) => name.endsWith(".md") && !name.endsWith(".canonical.md"),
 );
+const UNSUPPORTED_FIXTURE_NAMES = new Set(["links-images.md", "table.md"]);
+const SUPPORTED_FIXTURE_NAMES = FIXTURE_NAMES.filter(
+  (name) => !UNSUPPORTED_FIXTURE_NAMES.has(name),
+);
 
+/** Reads one Markdown fixture. */
 function readFixture(name: string): string {
   return readFileSync(new URL(name, FIXTURE_DIRECTORY), "utf8");
 }
 
-/** Converts Markdown to an editor state and back to canonical Markdown. */
-function roundTrip(markdown: string): string {
-  const editor = createHeadlessEditor({
+/** Creates a headless editor for the transformer tests. */
+function createEditor() {
+  return createHeadlessEditor({
     namespace: "MarkdownTransformerTest",
     nodes: MARKDOWN_EDITOR_NODES,
     onError: (error) => {
       throw error;
     },
   });
+}
+
+/** Converts Markdown to an editor state and back to canonical Markdown. */
+function roundTrip(
+  markdown: string,
+  transformers: Transformer[] = MARKDOWN_TRANSFORMERS,
+): string {
+  const editor = createEditor();
 
   editor.update(
     () => {
-      $convertFromMarkdownString(canonicalize(markdown), MARKDOWN_TRANSFORMERS);
+      $convertFromMarkdownString(canonicalize(markdown), transformers);
     },
     { discrete: true },
   );
@@ -43,14 +63,14 @@ function roundTrip(markdown: string): string {
   let output = "";
 
   editor.getEditorState().read(() => {
-    output = canonicalize($convertToMarkdownString(MARKDOWN_TRANSFORMERS));
+    output = canonicalize($convertToMarkdownString(transformers));
   });
 
   return output;
 }
 
 describe("Markdown transformers", () => {
-  it.each(FIXTURE_NAMES)(
+  it.each(SUPPORTED_FIXTURE_NAMES)(
     "round-trips %s through the standard transformer set",
     (name) => {
       const markdown = readFixture(name);
@@ -59,4 +79,66 @@ describe("Markdown transformers", () => {
       expect(roundTrip(markdown)).toBe(canonical);
     },
   );
+
+  it.each([...UNSUPPORTED_FIXTURE_NAMES])(
+    "reports %s as unsupported",
+    (name) => {
+      expect(getUnsupportedFeatures(readFixture(name))).not.toEqual([]);
+    },
+  );
+
+  it("converts a horizontal rule to a rule node and back", () => {
+    const markdown = "Alpha\n\n---\n\nBeta\n";
+    const editor = createEditor();
+    const nodeTypes: string[] = [];
+
+    editor.update(
+      () => {
+        $convertFromMarkdownString(markdown, FULL_TRANSFORMERS);
+        nodeTypes.push(
+          ...$getRoot()
+            .getChildren()
+            .map((node) => node.getType()),
+        );
+      },
+      { discrete: true },
+    );
+
+    let output = "";
+
+    editor.getEditorState().read(() => {
+      output = canonicalize($convertToMarkdownString(FULL_TRANSFORMERS));
+    });
+
+    expect(nodeTypes).toContain("horizontalrule");
+    expect(output).toBe(canonicalize(markdown));
+  });
+
+  it("converts a task list to a check list and back", () => {
+    const markdown = readFixture("task-list.md");
+    const canonical = readFixture("task-list.canonical.md");
+    const editor = createEditor();
+
+    editor.update(
+      () => {
+        $convertFromMarkdownString(
+          canonicalize(markdown),
+          MARKDOWN_TRANSFORMERS,
+        );
+      },
+      { discrete: true },
+    );
+
+    let firstListType: string | null = null;
+    let output = "";
+
+    editor.getEditorState().read(() => {
+      const firstChild = $getRoot().getFirstChild();
+      firstListType = $isListNode(firstChild) ? firstChild.getListType() : null;
+      output = canonicalize($convertToMarkdownString(MARKDOWN_TRANSFORMERS));
+    });
+
+    expect(firstListType).toBe("check");
+    expect(output).toBe(canonical);
+  });
 });
