@@ -55,7 +55,7 @@ const MALICIOUS_MARKDOWN = [
 ].join("\n");
 
 export default {
-  title: "RichText / Markdown",
+  title: "Markdown",
 } as StoryDefault;
 
 export const DefaultView: Story = () => (

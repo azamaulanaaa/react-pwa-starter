@@ -117,7 +117,7 @@ function EditorStory({
 }
 
 export default {
-  title: "RichText / Editor",
+  title: "Editor",
 } as StoryDefault;
 
 export const Standard: Story = () => (
