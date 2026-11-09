@@ -12,6 +12,8 @@ export default defineConfig({
     globals: true,
     environment: "node",
     setupFiles: ["./src/vitest.setup.ts"],
+    include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    exclude: ["**/node_modules/**", "**/dist/**", "**/build/**", ".tmp/**"],
     alias: {
       "@": SRC_PATH,
       "~": ROOT_PATH,
