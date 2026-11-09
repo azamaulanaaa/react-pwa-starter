@@ -78,6 +78,27 @@ function fillForm(title: string, body: string): void {
   );
 }
 
+function submitForm(): void {
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: dictionary.system_announcements_form_submit,
+    }),
+  );
+}
+
+function choosePresentation(label: string): void {
+  fireEvent.click(
+    screen.getByLabelText(
+      dictionary.system_announcements_form_presentation_label,
+    ),
+  );
+
+  const option = screen.getByRole("option", { name: label });
+
+  fireEvent.pointerDown(option, { pointerType: "mouse" });
+  fireEvent.click(option);
+}
+
 describe("AnnouncementView", () => {
   it("shows every announcement in the table", () => {
     renderView();
@@ -103,14 +124,10 @@ describe("AnnouncementView", () => {
 
     expect(within(dialog).getByText(ANNOUNCEMENTS[0].body)).toBeDefined();
     expect(
-      within(dialog).queryByRole("button", {
-        name: dictionary.system_announcements_show_dialog,
-      }),
+      within(dialog).queryByRole("button", { name: "Show lightbox" }),
     ).toBeNull();
     expect(
-      within(dialog).queryByRole("button", {
-        name: dictionary.system_announcements_show_banner,
-      }),
+      within(dialog).queryByRole("button", { name: "Show banner" }),
     ).toBeNull();
   });
 
@@ -171,11 +188,7 @@ describe("AnnouncementView", () => {
       }),
     );
     fillForm("  Maintenance tonight  ", "  Save your work.  ");
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: dictionary.system_announcements_show_dialog,
-      }),
-    );
+    submitForm();
 
     expect(onCreate).toHaveBeenCalledWith({
       title: "Maintenance tonight",
@@ -185,7 +198,7 @@ describe("AnnouncementView", () => {
     });
   });
 
-  it("creates a banner announcement", () => {
+  it("creates a banner announcement from the presentation select", () => {
     const onCreate = vi.fn();
 
     renderView({ onCreate });
@@ -196,11 +209,8 @@ describe("AnnouncementView", () => {
       }),
     );
     fillForm("Maintenance tonight", "Save your work.");
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: dictionary.system_announcements_show_banner,
-      }),
-    );
+    choosePresentation(dictionary.system_announcement_presentation_banner);
+    submitForm();
 
     expect(onCreate).toHaveBeenCalledWith({
       title: "Maintenance tonight",
@@ -220,11 +230,7 @@ describe("AnnouncementView", () => {
         name: dictionary.system_announcements_new,
       }),
     );
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: dictionary.system_announcements_show_dialog,
-      }),
-    );
+    submitForm();
 
     const titleInput = screen.getByLabelText(
       dictionary.system_announcements_form_title_label,
@@ -264,7 +270,7 @@ describe("AnnouncementPanel", () => {
     fillForm("Custom notice", "Custom body text.");
     fireEvent.click(
       screen.getByRole("button", {
-        name: dictionary.system_announcements_show_dialog,
+        name: dictionary.system_announcements_form_submit,
       }),
     );
 

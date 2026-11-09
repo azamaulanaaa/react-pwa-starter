@@ -30,6 +30,7 @@ import type {
 } from "@/components/announcement/types.ts";
 
 const VARIANTS: AnnouncementVariant[] = ["info", "success", "warning", "error"];
+const PRESENTATIONS: AnnouncementPresentation[] = ["dialog", "banner"];
 
 interface FormErrors {
   title?: string;
@@ -54,17 +55,24 @@ export function AnnouncementForm({
   const bodyId = useId();
   const bodyErrorId = useId();
   const variantId = useId();
+  const presentationId = useId();
   const titleRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [variant, setVariant] = useState<AnnouncementVariant>("info");
+  const [presentation, setPresentation] =
+    useState<AnnouncementPresentation>("dialog");
   const [errors, setErrors] = useState<FormErrors>({});
   const variantLabels: Record<AnnouncementVariant, string> = {
     info: t("system_announcement_variant_info"),
     success: t("system_announcement_variant_success"),
     warning: t("system_announcement_variant_warning"),
     error: t("system_announcement_variant_error"),
+  };
+  const presentationLabels: Record<AnnouncementPresentation, string> = {
+    dialog: t("system_announcement_presentation_dialog"),
+    banner: t("system_announcement_presentation_banner"),
   };
 
   useEffect(() => {
@@ -73,12 +81,11 @@ export function AnnouncementForm({
     setTitle("");
     setBody("");
     setVariant("info");
+    setPresentation("dialog");
     setErrors({});
   }, [open]);
 
-  const handleCreate = (
-    preferredPresentation: AnnouncementPresentation,
-  ): void => {
+  const handleCreate = (): void => {
     const nextTitle = title.trim();
     const nextBody = body.trim();
     const nextErrors: FormErrors = {};
@@ -107,7 +114,7 @@ export function AnnouncementForm({
       title: nextTitle,
       body: nextBody,
       variant,
-      preferredPresentation,
+      preferredPresentation: presentation,
     });
     onOpenChange(false);
   };
@@ -120,7 +127,7 @@ export function AnnouncementForm({
           noValidate
           onSubmit={(event) => {
             event.preventDefault();
-            handleCreate("dialog");
+            handleCreate();
           }}
         >
           <DialogHeader>
@@ -203,6 +210,29 @@ export function AnnouncementForm({
                 </SelectPopup>
               </Select>
             </Field>
+            <Field>
+              <FieldLabel htmlFor={presentationId}>
+                {t("system_announcements_form_presentation_label")}
+              </FieldLabel>
+              <Select
+                items={presentationLabels}
+                onValueChange={(value) =>
+                  setPresentation(value as AnnouncementPresentation)
+                }
+                value={presentation}
+              >
+                <SelectTrigger id={presentationId}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectPopup>
+                  {PRESENTATIONS.map((entry) => (
+                    <SelectItem key={entry} value={entry}>
+                      {presentationLabels[entry]}
+                    </SelectItem>
+                  ))}
+                </SelectPopup>
+              </Select>
+            </Field>
           </DialogPanel>
           <DialogFooter>
             <Button
@@ -212,15 +242,8 @@ export function AnnouncementForm({
             >
               {t("system_announcements_form_cancel")}
             </Button>
-            <Button
-              onClick={() => handleCreate("banner")}
-              type="button"
-              variant="outline"
-            >
-              {t("system_announcements_show_banner")}
-            </Button>
-            <Button onClick={() => handleCreate("dialog")} type="button">
-              {t("system_announcements_show_dialog")}
+            <Button type="submit">
+              {t("system_announcements_form_submit")}
             </Button>
           </DialogFooter>
         </Form>
