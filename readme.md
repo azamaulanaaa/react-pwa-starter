@@ -20,7 +20,7 @@ application adds its own domain code.
 - The kit includes i18n for en-US and id-ID. Effect Schema validates the data and creates
   localized error messages.
 - The UI kit is based on Base UI. The kit also includes form, table, and input components.
-  Ladle shows the stories for these components.
+  Storybook shows the stories for these components.
 - The hooks in `src/hooks` handle debounce, persisted state, media queries, dark mode,
   readable streams, and infinite scroll.
 
@@ -44,7 +44,7 @@ application adds its own domain code.
   and TanStack Table handle forms and tables.
 - Tailwind CSS 4 + utility-first styling
 - Testing with Vitest 5 (fake-indexeddb included)
-- Component preview via Ladle
+- Component preview via Storybook
 - Dark mode support
 - The build groups vendor code into chunks to reduce the first load
 
@@ -63,20 +63,21 @@ cd react-pwa-starter && npm install && npm run dev
 
 ### Scripts
 
-| Script                  | Description                               |
-| ----------------------- | ----------------------------------------- |
-| `npm run dev`           | Start the Vite dev server                 |
-| `npm run build`         | Production build (with bundle visualizer) |
-| `npm run preview`       | Preview the production build              |
-| `npm run check`         | Type-check with TypeScript 7              |
-| `npm run test`          | Run tests with Vitest                     |
-| `npm run test:run`      | Run tests with Vitest one time            |
-| `npm run ladle`         | Serve Ladle component previews            |
-| `npm run fmt`           | Format the code with Prettier             |
-| `npm run fmt:check`     | Check formatting without writing changes  |
-| `npm run lint`          | Lint the code with oxlint                 |
-| `npm run ci`            | Run all CI checks locally                 |
-| `npm run hooks:install` | Install the local Git hooks               |
+| Script                    | Description                               |
+| ------------------------- | ----------------------------------------- |
+| `npm run dev`             | Start the Vite dev server                 |
+| `npm run build`           | Production build (with bundle visualizer) |
+| `npm run preview`         | Preview the production build              |
+| `npm run check`           | Type-check with TypeScript 7              |
+| `npm run test`            | Run tests with Vitest                     |
+| `npm run test:run`        | Run tests with Vitest one time            |
+| `npm run storybook`       | Serve Storybook component previews        |
+| `npm run build-storybook` | Build the static Storybook preview        |
+| `npm run fmt`             | Format the code with Prettier             |
+| `npm run fmt:check`       | Check formatting without writing changes  |
+| `npm run lint`            | Lint the code with oxlint                 |
+| `npm run ci`              | Run all CI checks locally                 |
+| `npm run hooks:install`   | Install the local Git hooks               |
 
 Prettier formats the code and oxlint lints it. The configurations are in
 `.prettierrc.json`, `.prettierignore`, and `.oxlintrc.json`.
@@ -278,7 +279,7 @@ and `npm run check` for the frontend tests, build, and type check.
 - `@base-ui/react` — unstyled, accessible components
 - `class-variance-authority`, `cnfast`, `tailwindcss` — styling utilities
 - `vitest` — test runner
-- `@ladle/react` — component preview
+- `storybook`, `@storybook/react-vite` — component preview
 - `uuid` — UUID v7 generation
 - `prettier`, `oxlint` — formatting and linting
 - `@types/node`, `@types/bun` — type support for Node.js and Bun development
@@ -1098,7 +1099,7 @@ const ready = uploadsComplete(files, progressByFileId);
 </Button>
 ```
 
-The stories run with `npm run ladle`. The tests run with `npm run test:run`.
+The stories run with `npm run storybook`. The tests run with `npm run test:run`.
 
 ## Image thumbnail
 
@@ -1138,7 +1139,7 @@ const [open, setOpen] = useState(false);
 <ImageThumbnail alt="Report" onOpenChange={setOpen} open={open} src={src} />;
 ```
 
-The stories run with `npm run ladle`. The tests run with `npm run test:run`.
+The stories run with `npm run storybook`. The tests run with `npm run test:run`.
 
 ## Image view
 
@@ -1177,13 +1178,14 @@ const [open, setOpen] = useState(false);
 />
 ```
 
-The stories run with `npm run ladle`. The tests run with `npm run test:run`.
+The stories run with `npm run storybook`. The tests run with `npm run test:run`.
 
-## Component previews (Ladle)
+## Component previews (Storybook)
 
-- Each component has a `stories.tsx` file. Ladle serves stories in `src/components` and
-  `src/examples`. The configuration is in `.ladle/`. Run `npm run ladle` to open the
-  previews.
+- Each component has a `stories.tsx` file. Storybook serves stories in `src/components`,
+  `src/examples`, and `src/rust-api`. The configuration is in `.storybook/`. Run
+  `npm run storybook` to open the previews. Run `npm run build-storybook` to make a
+  static build in `storybook-static/`.
 
 ## Bundle Analysis
 
