@@ -16,6 +16,7 @@ import {
 } from "@/components/context/translation.tsx";
 import type { ImageUploadHandler } from "@/components/editor/image-upload.ts";
 import {
+  EDITOR_THEME,
   MarkdownEditor,
   type MarkdownEditorHandle,
   type MarkdownEditorVariant,
@@ -251,6 +252,41 @@ describe("MarkdownEditor", () => {
     expect(textbox.getAttribute("aria-multiline")).toBe("true");
     expect(textbox.hasAttribute("aria-readonly")).toBe(false);
     expect(textbox.getAttribute("data-slot")).toBe("markdown-editor");
+  });
+
+  it("uses the shared markdown-body class on the editable region", () => {
+    renderEditor({ value: NOTE });
+    const textbox = screen.getByRole("textbox", { name: "Note body" });
+
+    expect(textbox.classList.contains("markdown-body")).toBe(true);
+    expect(textbox.classList.contains("markdown-editor")).toBe(true);
+  });
+
+  it("keeps the editor theme free of a second type scale", () => {
+    const listTheme = EDITOR_THEME.list ?? {};
+    const themeClasses = [
+      EDITOR_THEME.paragraph,
+      EDITOR_THEME.quote,
+      EDITOR_THEME.code,
+      EDITOR_THEME.link,
+      ...Object.values(EDITOR_THEME.heading ?? {}),
+      ...Object.values(EDITOR_THEME.text ?? {}),
+      listTheme.ul,
+      listTheme.ol,
+      listTheme.checklist,
+      listTheme.listitem,
+      listTheme.listitemChecked,
+      listTheme.listitemUnchecked,
+      listTheme.nested?.list,
+      listTheme.nested?.listitem,
+    ].join(" ");
+
+    expect(themeClasses).not.toMatch(/\btext-(xs|sm|base|lg|xl|2xl|3xl|4xl)\b/);
+    expect(themeClasses).not.toMatch(/\b(?:leading|tracking)-/);
+    expect(themeClasses).not.toMatch(/\b(?:m|p)[tbyse]?-\d/);
+    expect(listTheme.checklist).toBe("contains-task-list");
+    expect(listTheme.listitemChecked).toBe("task-list-item");
+    expect(listTheme.listitemUnchecked).toBe("task-list-item");
   });
 
   it("shows a placeholder that is not the accessible name", () => {

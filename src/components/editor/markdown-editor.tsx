@@ -86,41 +86,41 @@ function getFallbackNoticeKey(feature: UnsupportedFeature): string {
 }
 
 /**
- * Maps Lexical nodes to classes.
- * The shared Markdown styles supply the typography. The classes below add the
- * matching token-based colors and the code block layout.
+ * Maps Lexical nodes to the shared Markdown classes.
+ * The `markdown-body` styles supply the type scale and the block rhythm.
+ * This map adds only the classes that the editor needs.
  */
-const EDITOR_THEME: EditorThemeClasses = {
-  paragraph: "my-0",
+export const EDITOR_THEME: EditorThemeClasses = {
+  paragraph: "",
   heading: {
-    h1: "mt-6 mb-2 font-semibold leading-tight tracking-[-0.02em]",
-    h2: "mt-6 mb-2 font-semibold leading-tight tracking-[-0.02em]",
-    h3: "mt-4 mb-2 font-semibold leading-tight tracking-[-0.01em]",
-    h4: "mt-4 mb-2 font-semibold leading-tight",
-    h5: "mt-4 mb-2 font-semibold leading-tight",
-    h6: "mt-4 mb-2 font-semibold leading-tight",
+    h1: "",
+    h2: "",
+    h3: "",
+    h4: "",
+    h5: "",
+    h6: "",
   },
   list: {
-    ul: "my-0 mb-4 list-disc ps-6",
-    ol: "my-0 mb-4 list-decimal ps-6",
-    checklist: "list-none ps-0",
-    listitem: "my-0 mt-1 first:mt-0",
-    listitemChecked: "text-muted-foreground line-through",
-    listitemUnchecked: "",
+    ul: "",
+    ol: "",
+    checklist: "contains-task-list",
+    listitem: "",
+    listitemChecked: "task-list-item",
+    listitemUnchecked: "task-list-item",
     nested: {
-      list: "my-0 mt-1 mb-0",
-      listitem: "my-0 mt-1 first:mt-0",
+      list: "",
+      listitem: "",
     },
   },
-  quote: "my-0 mb-4 border-s-4 border-border ps-4 text-muted-foreground",
-  code: "markdown-editor-code my-0 mb-4 block max-w-full overflow-x-auto rounded-lg border border-border bg-code p-4 font-mono text-sm leading-normal",
-  link: "text-info-foreground underline underline-offset-[0.15em]",
+  quote: "",
+  code: "markdown-editor-code",
+  link: "md-link",
   text: {
-    bold: "font-semibold",
-    italic: "italic",
-    strikethrough: "line-through",
-    underline: "underline",
-    code: "markdown-editor-inline-code rounded-sm bg-code-highlight px-1.5 py-0.5 font-mono text-sm",
+    bold: "",
+    italic: "",
+    strikethrough: "",
+    underline: "",
+    code: "markdown-editor-inline-code",
   },
 };
 

@@ -73,6 +73,14 @@ beforeEach(() => {
 });
 
 describe("MarkdownView", () => {
+  it("uses the shared markdown-body class", () => {
+    const { container } = renderMarkdown("# Heading");
+
+    const body = container.querySelector(".markdown-body");
+    expect(body).not.toBeNull();
+    expect(body?.getAttribute("data-slot")).toBe("markdown-view");
+  });
+
   it("renders headings, paragraphs, inline styles, lists, a quote, and a code fence", () => {
     const markdown = [
       "# Heading",

@@ -161,32 +161,11 @@
   color: var(--destructive-foreground);
 }
 
-.markdown-body.markdown-editor .markdown-editor-code {
-  display: block;
-  max-inline-size: 100%;
-  margin-block: 0 1rem;
-  overflow-x: auto;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--code);
-  padding: 1rem;
-  font-family: var(--font-mono);
-  font-size: 0.875rem;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  overscroll-behavior-inline: contain;
-}
-
-.markdown-body.markdown-editor .markdown-editor-code:last-child {
-  margin-block-end: 0;
-}
-
 /* The image wrapper stays inside the editor width. The image keeps its ratio. */
 .markdown-body.markdown-editor .image-node {
   display: block;
   max-inline-size: 100%;
-  margin-block: 0 1rem;
+  margin-block: 0 var(--md-flow);
 }
 
 .markdown-body.markdown-editor .image-node-content {
@@ -197,15 +176,6 @@
 
 .markdown-body.markdown-editor .image-node-image {
   display: block;
-  max-inline-size: 100%;
-  block-size: auto;
-  border-radius: var(--radius-md);
-  outline: 1px solid oklch(0 0 0 / 0.1);
-  outline-offset: -1px;
-}
-
-.dark .markdown-body.markdown-editor .image-node-image {
-  outline-color: oklch(1 0 0 / 0.1);
 }
 
 /*

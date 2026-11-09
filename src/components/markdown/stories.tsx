@@ -54,6 +54,60 @@ const MALICIOUS_MARKDOWN = [
   "![External image](https://example.com/cat.png)",
 ].join("\n");
 
+const TYPOGRAPHY_MARKDOWN = [
+  "# Heading one",
+  "",
+  "Body text at 16px with **bold**, *italic*, ~~strike~~, `inline code`, and a [link](https://example.com). Ask [Alice](/users/123) or open the [Q3 Plan](/pages/456).",
+  "",
+  "## Heading two",
+  "",
+  "A paragraph with a long unbroken value: pneumonoultramicroscopicsilicovolcanoconiosis.",
+  "",
+  "### Heading three",
+  "",
+  "#### Heading four",
+  "",
+  "##### Heading five",
+  "",
+  "###### Heading six",
+  "",
+  "Ordered list:",
+  "",
+  "1. First item",
+  "2. Second item",
+  "3. Third item",
+  "",
+  "Unordered list:",
+  "",
+  "- First item",
+  "- Second item",
+  "  - Nested item",
+  "",
+  "Task list:",
+  "",
+  "- [x] Done",
+  "- [ ] Open",
+  "",
+  "> A quote with a [link](https://example.com) and `inline code`.",
+  "",
+  "```ts",
+  "export function formatBytes(bytes: number): string {",
+  '  return new Intl.NumberFormat("en-US").format(bytes) + " B";',
+  "}",
+  "```",
+  "",
+  "| Left | Center | Right |",
+  "| :--- | :----: | ----: |",
+  "| Alpha | Beta | 128 |",
+  "| A long cell that wraps at narrow widths | Gamma | 42 |",
+  "",
+  "![Diagram](https://example.com/diagram.png)",
+  "",
+  "---",
+  "",
+  "Final paragraph with a long URL: https://example.com/a/very/long/path/that/keeps/going/without/a/break.",
+].join("\n");
+
 export default {
   title: "Markdown",
 } as StoryDefault;
@@ -85,5 +139,18 @@ export const MaliciousInput: Story = () => (
 export const Empty: Story = () => (
   <div className="p-6">
     <MarkdownView markdown="" />
+  </div>
+);
+
+/** Shows every prose element at the normal width and in a narrow container. */
+export const Typography: Story = () => (
+  <div className="grid gap-8 p-6 lg:grid-cols-[minmax(0,48rem)_20rem]">
+    <div className="min-w-0">
+      <MarkdownView markdown={TYPOGRAPHY_MARKDOWN} />
+    </div>
+    <div className="min-w-0 self-start rounded-lg border border-border p-4">
+      <p className="mb-3 text-muted-foreground text-sm">Narrow container</p>
+      <MarkdownView markdown={TYPOGRAPHY_MARKDOWN} />
+    </div>
   </div>
 );
