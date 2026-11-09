@@ -261,6 +261,22 @@ describe("MarkdownEditor", () => {
     expect(screen.getByRole("textbox", { name: "Note body" })).toBeDefined();
   });
 
+  it("keeps the placeholder inside the editor content", () => {
+    renderEditor({ placeholder: "# Project notes", value: "" });
+    const placeholder = screen.getByText("# Project notes");
+    const shell = document.querySelector(".markdown-editor-shell");
+    const content = document.querySelector(".markdown-editor-content");
+    const toolbar = screen.getByRole("toolbar");
+
+    expect(shell).not.toBeNull();
+    expect(content).not.toBeNull();
+    expect(content?.contains(placeholder)).toBe(true);
+    expect(toolbar.contains(placeholder)).toBe(false);
+    expect(content?.parentElement).toBe(shell);
+    expect(toolbar.parentElement).toBe(shell);
+    expect(placeholder.getAttribute("aria-hidden")).toBe("true");
+  });
+
   it("replaces the content when the value changes from outside", () => {
     const onChange = vi.fn();
     const { ref, rerender } = renderEditor({ onChange, value: "# First\n" });

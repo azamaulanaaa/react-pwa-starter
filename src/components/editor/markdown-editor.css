@@ -8,6 +8,11 @@
   position: relative;
 }
 
+/* The content container starts at the textbox top, so the placeholder aligns there. */
+.markdown-editor-content {
+  position: relative;
+}
+
 .markdown-editor {
   box-sizing: border-box;
   inline-size: 100%;

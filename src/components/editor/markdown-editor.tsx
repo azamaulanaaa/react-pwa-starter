@@ -369,28 +369,30 @@ function EditorSurface({
           onUploadImage={onUploadImage}
         />
       ) : null}
-      <RichTextPlugin
-        contentEditable={
-          <ContentEditable
-            ariaDescribedBy={ariaDescribedBy}
-            ariaInvalid={ariaInvalid}
-            ariaLabel={ariaLabel}
-            ariaMultiline
-            className="markdown-body markdown-editor"
-            data-slot="markdown-editor"
-            id={id}
-            tabIndex={readOnly ? -1 : 0}
-          />
-        }
-        placeholder={
-          placeholder === undefined ? null : (
-            <div aria-hidden="true" className="markdown-editor-placeholder">
-              {placeholder}
-            </div>
-          )
-        }
-        ErrorBoundary={LexicalErrorBoundary}
-      />
+      <div className="markdown-editor-content">
+        <RichTextPlugin
+          contentEditable={
+            <ContentEditable
+              ariaDescribedBy={ariaDescribedBy}
+              ariaInvalid={ariaInvalid}
+              ariaLabel={ariaLabel}
+              ariaMultiline
+              className="markdown-body markdown-editor"
+              data-slot="markdown-editor"
+              id={id}
+              tabIndex={readOnly ? -1 : 0}
+            />
+          }
+          placeholder={
+            placeholder === undefined ? null : (
+              <div aria-hidden="true" className="markdown-editor-placeholder">
+                {placeholder}
+              </div>
+            )
+          }
+          ErrorBoundary={LexicalErrorBoundary}
+        />
+      </div>
       <HistoryPlugin />
       <PasteMarkdownPlugin
         enabled={pasteMarkdown && !readOnly}
