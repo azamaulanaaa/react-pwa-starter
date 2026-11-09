@@ -42,6 +42,7 @@ import {
 
 import { useTranslation } from "@/components/context/translation.tsx";
 import { EditorToolbar } from "@/components/editor/editor-toolbar.tsx";
+import { MentionTypeaheadPlugin } from "@/components/editor/mention-typeahead.tsx";
 import { MARKDOWN_EDITOR_NODES } from "@/components/editor/nodes.ts";
 import {
   getUnsupportedFeatures,
@@ -54,6 +55,7 @@ import {
 import { validateUrl } from "@/components/editor/url.ts";
 import { Label } from "@/components/ui/label.tsx";
 import { Textarea } from "@/components/ui/textarea.tsx";
+import type { MentionSource } from "@/lib/mentions/index.ts";
 import { canonicalize } from "@/lib/markdown/dialect.ts";
 import { cn } from "@/lib/utils/cn.ts";
 
@@ -146,6 +148,13 @@ export interface MarkdownEditorProps {
    * full variants. The plain variant has no block commands.
    */
   showToolbar?: boolean;
+  /** Searches for the `@` mention targets. */
+  mentionSource?: MentionSource;
+  /**
+   * Shows the `@` mention picker. The default is true when a source is given.
+   * The picker stays off in the read-only, plain, and fallback states.
+   */
+  showMentions?: boolean;
   /** The extra class names for the outer element. */
   className?: string;
 }
@@ -240,6 +249,7 @@ function UnsupportedMarkdownFallback({
 /** Defines the props of the inner surface that reads the composer context. */
 interface EditorSurfaceProps extends MarkdownEditorProps {
   handleRef: Ref<MarkdownEditorHandle>;
+  mentionsEnabled: boolean;
   transformers: Transformer[];
 }
 
@@ -248,6 +258,8 @@ function EditorSurface({
   ariaLabel = DEFAULT_ARIA_LABEL,
   className,
   handleRef,
+  mentionSource,
+  mentionsEnabled,
   onChange,
   placeholder,
   readOnly = false,
@@ -346,6 +358,9 @@ function EditorSurface({
       <HorizontalRulePlugin />
       <LinkPlugin validateUrl={validateUrl} />
       <ListPlugin />
+      {mentionsEnabled && mentionSource !== undefined ? (
+        <MentionTypeaheadPlugin enabled source={mentionSource} />
+      ) : null}
       <OnChangePlugin
         ignoreHistoryMergeTagChange={false}
         ignoreSelectionChange
@@ -367,9 +382,11 @@ export const MarkdownEditor = forwardRef<
   {
     ariaLabel = DEFAULT_ARIA_LABEL,
     className,
+    mentionSource,
     onChange,
     placeholder,
     readOnly = false,
+    showMentions,
     showToolbar,
     value,
     variant = "standard",
@@ -382,6 +399,11 @@ export const MarkdownEditor = forwardRef<
     [value],
   );
   const toolbarVisible = showToolbar ?? variant !== "plain";
+  const mentionsEnabled =
+    mentionSource !== undefined &&
+    showMentions !== false &&
+    !readOnly &&
+    variant !== "plain";
 
   if (unsupportedFeatures.length > 0) {
     return (
@@ -413,6 +435,8 @@ export const MarkdownEditor = forwardRef<
         ariaLabel={ariaLabel}
         className={className}
         handleRef={ref}
+        mentionSource={mentionSource}
+        mentionsEnabled={mentionsEnabled}
         onChange={onChange}
         placeholder={placeholder}
         readOnly={readOnly}

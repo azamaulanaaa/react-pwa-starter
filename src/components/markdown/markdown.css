@@ -138,7 +138,8 @@
 }
 
 @media (hover: hover) {
-  .markdown-body a:not(.md-chip):hover {
+  .markdown-body
+    a:not(.md-chip):not([href^="/users/"]):not([href^="/pages/"]):hover {
     background: var(--accent);
   }
 }
@@ -156,7 +157,9 @@
   text-decoration-thickness: from-font;
 }
 
-.markdown-body .md-chip {
+.markdown-body .md-chip,
+.markdown-body a[href^="/users/"],
+.markdown-body a[href^="/pages/"] {
   display: inline-flex;
   gap: 0.25em;
   align-items: center;
@@ -165,7 +168,7 @@
   border-radius: 999px;
   padding-block: 0.0625em;
   padding-inline: 0.5em;
-  font-size: 0.875em;
+  font-size: 1em;
   font-weight: 500;
   line-height: 1.5;
   overflow-wrap: anywhere;
@@ -173,13 +176,15 @@
   vertical-align: baseline;
 }
 
-.markdown-body .md-chip-mention {
+.markdown-body .md-chip-mention,
+.markdown-body a[href^="/users/"] {
   border-color: var(--info);
   background: color-mix(in srgb, var(--info) 10%, transparent);
   color: var(--info-foreground);
 }
 
-.markdown-body .md-chip-page {
+.markdown-body .md-chip-page,
+.markdown-body a[href^="/pages/"] {
   border-color: color-mix(in srgb, var(--foreground) 60%, transparent);
   background: color-mix(in srgb, var(--foreground) 5%, transparent);
   color: var(--foreground);

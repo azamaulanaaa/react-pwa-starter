@@ -2,6 +2,11 @@ import { useRef, useState } from "react";
 import type { Story, StoryDefault } from "@ladle/react";
 
 import {
+  createLocalMentionSource,
+  LOCAL_MENTION_TARGETS,
+  type MentionSource,
+} from "@/lib/mentions/index.ts";
+import {
   MarkdownEditor,
   type MarkdownEditorHandle,
   type MarkdownEditorVariant,
@@ -25,14 +30,28 @@ const PLAIN_MARKDOWN = [
   "# This heading stays as text in the plain variant.",
 ].join("\n");
 
+const MENTION_MARKDOWN = [
+  "# Mentions",
+  "",
+  "Ask [Alex Morgan](/users/alex-morgan) about the [Product Roadmap](/pages/product-roadmap).",
+  "",
+  "Type `@` to add a user or a page.",
+].join("\n");
+
+const LOCAL_MENTION_SOURCE = createLocalMentionSource(LOCAL_MENTION_TARGETS);
+
 /** Shows one editor and the Markdown that it emits. */
 function EditorStory({
   initialMarkdown,
+  mentionSource,
   readOnly = false,
+  showMentions,
   variant = "standard",
 }: {
   initialMarkdown: string;
+  mentionSource?: MentionSource;
   readOnly?: boolean;
+  showMentions?: boolean;
   variant?: MarkdownEditorVariant;
 }) {
   const [markdown, setMarkdown] = useState(initialMarkdown);
@@ -44,9 +63,11 @@ function EditorStory({
         <MarkdownEditor
           ref={editorRef}
           ariaLabel="Story note"
+          mentionSource={mentionSource}
           onChange={setMarkdown}
           placeholder="# Project notes"
           readOnly={readOnly}
+          showMentions={showMentions}
           value={markdown}
           variant={variant}
         />
@@ -64,6 +85,13 @@ export default {
 
 export const Standard: Story = () => (
   <EditorStory initialMarkdown={DEFAULT_MARKDOWN} />
+);
+
+export const Mentions: Story = () => (
+  <EditorStory
+    initialMarkdown={MENTION_MARKDOWN}
+    mentionSource={LOCAL_MENTION_SOURCE}
+  />
 );
 
 export const Plain: Story = () => (

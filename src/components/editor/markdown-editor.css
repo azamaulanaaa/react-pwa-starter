@@ -62,6 +62,100 @@
   pointer-events: none;
 }
 
+/*
+ * The mention menu renders in a body-level portal. The width cap keeps the
+ * menu inside a 320px viewport.
+ */
+.mention-typeahead-menu {
+  box-sizing: border-box;
+  inline-size: min(18rem, calc(100vw - 1rem));
+  max-inline-size: calc(100vw - 1rem);
+  margin-block-start: 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--foreground) 12%, transparent);
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+.mention-typeahead-list {
+  max-block-size: 15rem;
+  margin: 0;
+  padding: 0.25rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+}
+
+.mention-typeahead-option {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  min-block-size: 2.5rem;
+  border-radius: calc(var(--radius) * 0.6);
+  padding-block: 0.5rem;
+  padding-inline: 0.625rem;
+  cursor: pointer;
+}
+
+.mention-typeahead-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-inline-size: 0;
+}
+
+.mention-typeahead-option-label {
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.mention-typeahead-option-description {
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.mention-typeahead-check {
+  flex: none;
+  inline-size: 1rem;
+  block-size: 1rem;
+  margin-inline-start: auto;
+  color: var(--info-foreground);
+}
+
+.mention-typeahead-option[aria-selected="true"] {
+  background: color-mix(in srgb, var(--info) 16%, var(--popover));
+}
+
+@media (hover: hover) {
+  .mention-typeahead-option:hover {
+    background: color-mix(in srgb, var(--foreground) 8%, var(--popover));
+  }
+
+  .mention-typeahead-option[aria-selected="true"]:hover {
+    background: color-mix(in srgb, var(--info) 20%, var(--popover));
+  }
+}
+
+.mention-typeahead-message {
+  margin: 0;
+  padding-block: 0.75rem;
+  padding-inline: 0.875rem;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.mention-typeahead-message[data-state="error"] {
+  color: var(--destructive-foreground);
+}
+
 .markdown-body.markdown-editor .markdown-editor-code {
   display: block;
   max-inline-size: 100%;
