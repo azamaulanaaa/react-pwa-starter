@@ -62,7 +62,7 @@ export function AnnouncementForm({
   const [body, setBody] = useState("");
   const [variant, setVariant] = useState<AnnouncementVariant>("info");
   const [presentation, setPresentation] =
-    useState<AnnouncementPresentation>("dialog");
+    useState<AnnouncementPresentation>("banner");
   const [errors, setErrors] = useState<FormErrors>({});
   const variantLabels: Record<AnnouncementVariant, string> = {
     info: t("system_announcement_variant_info"),
@@ -81,7 +81,7 @@ export function AnnouncementForm({
     setTitle("");
     setBody("");
     setVariant("info");
-    setPresentation("dialog");
+    setPresentation("banner");
     setErrors({});
   }, [open]);
 

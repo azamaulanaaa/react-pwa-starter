@@ -177,7 +177,7 @@ describe("AnnouncementView", () => {
     expect(screen.queryByRole("table")).toBeNull();
   });
 
-  it("creates a lightbox announcement from trimmed values", () => {
+  it("creates a banner announcement from trimmed values by default", () => {
     const onCreate = vi.fn();
 
     renderView({ onCreate });
@@ -194,11 +194,11 @@ describe("AnnouncementView", () => {
       title: "Maintenance tonight",
       body: "Save your work.",
       variant: "info",
-      preferredPresentation: "dialog",
+      preferredPresentation: "banner",
     });
   });
 
-  it("creates a banner announcement from the presentation select", () => {
+  it("creates a lightbox announcement from the presentation select", () => {
     const onCreate = vi.fn();
 
     renderView({ onCreate });
@@ -209,14 +209,14 @@ describe("AnnouncementView", () => {
       }),
     );
     fillForm("Maintenance tonight", "Save your work.");
-    choosePresentation(dictionary.system_announcement_presentation_banner);
+    choosePresentation(dictionary.system_announcement_presentation_dialog);
     submitForm();
 
     expect(onCreate).toHaveBeenCalledWith({
       title: "Maintenance tonight",
       body: "Save your work.",
       variant: "info",
-      preferredPresentation: "banner",
+      preferredPresentation: "dialog",
     });
   });
 
@@ -281,7 +281,7 @@ describe("AnnouncementPanel", () => {
       localStorage.getItem(CATALOG_KEY) ?? "[]",
     ) as Announcement[];
 
-    expect(delivery.presentation).toBe("dialog");
+    expect(delivery.presentation).toBe("banner");
     expect(
       catalog.some(
         (entry) =>

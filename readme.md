@@ -703,7 +703,7 @@ const provider: SessionContract = {
 - The `/system` page has an `Announcements` tab. The tab shows the announcement archive.
 - The table lists the seed catalog and the custom announcements.
 - A row opens a read-only detail sheet with the full content. A hidden announcement stays in the table and the sheet.
-- The `New announcement` form has a `Show as` dropdown and one `Create and show` button. The dropdown selects a lightbox or a banner.
+- The `New announcement` form has a `Show as` dropdown and one `Create and show` button. The dropdown selects a lightbox or a banner. The default is a banner.
 - Custom announcements persist under `state-announcement_catalog` in `localStorage`.
 - The table uses a fixed layout. Long content truncates with an ellipsis. The table hides the secondary columns on small screens.
 - `src/components/announcement/data.ts` holds the seed catalog. An application can replace the list with its own data source.
