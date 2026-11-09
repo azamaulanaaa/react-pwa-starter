@@ -52,6 +52,7 @@ import { ImagePlugin } from "@/components/editor/image-plugin.tsx";
 import type { ImageUploadHandler } from "@/components/editor/image-upload.ts";
 import { MentionTypeaheadPlugin } from "@/components/editor/mention-typeahead.tsx";
 import { MARKDOWN_EDITOR_NODES } from "@/components/editor/nodes.ts";
+import { PasteMarkdownPlugin } from "@/components/editor/paste-markdown-plugin.tsx";
 import {
   getUnsupportedFeatures,
   type UnsupportedFeature,
@@ -180,6 +181,11 @@ export interface MarkdownEditorProps {
   resolveImageFile?: ImageResolver;
   /** The extra class names for the outer element. */
   className?: string;
+  /**
+   * Parses pasted plain-text Markdown as rich text. The default is true.
+   * Rich HTML and Lexical JSON always use the Lexical importer.
+   */
+  pasteMarkdown?: boolean;
 }
 
 /**
@@ -291,6 +297,7 @@ function EditorSurface({
   mentionSource,
   onChange,
   onUploadImage,
+  pasteMarkdown = true,
   placeholder,
   readOnly = false,
   showToolbar = false,
@@ -385,6 +392,10 @@ function EditorSurface({
         ErrorBoundary={LexicalErrorBoundary}
       />
       <HistoryPlugin />
+      <PasteMarkdownPlugin
+        enabled={pasteMarkdown && !readOnly}
+        transformers={transformers}
+      />
       {capabilities.horizontalRule ? <HorizontalRulePlugin /> : null}
       <LinkPlugin validateUrl={validateUrl} />
       {capabilities.block ? <ListPlugin /> : null}
@@ -421,6 +432,7 @@ export const MarkdownEditor = forwardRef<
     mentionSource,
     onChange,
     onUploadImage,
+    pasteMarkdown,
     placeholder,
     readOnly = false,
     resolveImageFile,
@@ -501,6 +513,7 @@ export const MarkdownEditor = forwardRef<
           mentionSource={mentionSource}
           onChange={onChange}
           onUploadImage={onUploadImage}
+          pasteMarkdown={pasteMarkdown}
           placeholder={placeholder}
           readOnly={readOnly}
           showToolbar={toolbarVisible}
