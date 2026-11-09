@@ -86,6 +86,7 @@ function renderEditor(value: string) {
         ariaLabel="Note body"
         onChange={vi.fn()}
         value={value}
+        variant="full"
       />
     </Providers>,
   );

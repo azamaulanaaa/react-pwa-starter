@@ -7,6 +7,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { createRef, type ReactNode } from "react";
+import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { $getRoot, $isElementNode, type LexicalEditor } from "lexical";
 import { describe, expect, it, vi } from "vitest";
 
@@ -14,6 +15,8 @@ import {
   type NestedRecord,
   TranslationProvider,
 } from "@/components/context/translation.tsx";
+import type { EditorToolbarCapabilities } from "@/components/editor/capabilities.ts";
+import { EditorToolbar } from "@/components/editor/editor-toolbar.tsx";
 import {
   MarkdownEditor,
   type MarkdownEditorHandle,
@@ -21,6 +24,7 @@ import {
 } from "@/components/editor/markdown-editor.tsx";
 import { recordEditorEvent } from "@/components/editor/editor-telemetry.ts";
 import type { ImageUploadHandler } from "@/components/editor/image-upload.ts";
+import { MARKDOWN_EDITOR_NODES } from "@/components/editor/nodes.ts";
 
 import enDictionary from "~/public/locales/en-US.json" with { type: "json" };
 
@@ -84,6 +88,50 @@ function renderEditor(
   return { ...view, onChange, ref };
 }
 
+const ALL_CAPABILITIES: EditorToolbarCapabilities = {
+  block: true,
+  horizontalRule: true,
+  image: true,
+  inline: true,
+};
+
+const INLINE_ONLY_CAPABILITIES: EditorToolbarCapabilities = {
+  block: false,
+  horizontalRule: false,
+  image: false,
+  inline: true,
+};
+
+const FAKE_IMAGE_UPLOAD: ImageUploadHandler = async (file) => ({
+  alt: file.name,
+  id: "file_01",
+});
+
+/** Shows one toolbar with the given capabilities. */
+function renderToolbar(
+  capabilities: EditorToolbarCapabilities,
+  onUploadImage?: ImageUploadHandler,
+) {
+  return render(
+    <Providers>
+      <LexicalComposer
+        initialConfig={{
+          namespace: "EditorToolbarTest",
+          nodes: MARKDOWN_EDITOR_NODES,
+          onError: (error) => {
+            throw error;
+          },
+        }}
+      >
+        <EditorToolbar
+          capabilities={capabilities}
+          onUploadImage={onUploadImage}
+        />
+      </LexicalComposer>
+    </Providers>,
+  );
+}
+
 /** Returns the Lexical editor that owns one contenteditable element. */
 function getEditor(element: HTMLElement): LexicalEditor {
   const editor = (element as EditorHost).__lexicalEditor;
@@ -131,10 +179,44 @@ describe("EditorToolbar", () => {
     ).toBeDefined();
   });
 
-  it("hides the toolbar for the plain variant", () => {
+  it("shows the inline controls and hides the block controls for plain", () => {
     renderEditor("Alpha\n", { variant: "plain" });
 
-    expect(screen.queryByRole("toolbar")).toBeNull();
+    expect(screen.getByRole("toolbar")).toBeDefined();
+    expect(screen.getByRole("button", { name: "Bold" })).toBeDefined();
+    expect(screen.queryByRole("combobox", { name: "Block type" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Bullet list" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Insert horizontal rule" }),
+    ).toBeNull();
+  });
+
+  it("hides the image button when the capability is off", () => {
+    renderToolbar(INLINE_ONLY_CAPABILITIES, FAKE_IMAGE_UPLOAD);
+
+    expect(screen.queryByRole("button", { name: "Insert image" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Bold" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Add link" })).toBeDefined();
+  });
+
+  it("shows the block groups when the capability is on", () => {
+    renderToolbar({ ...ALL_CAPABILITIES, image: false });
+
+    expect(screen.getByRole("combobox", { name: "Block type" })).toBeDefined();
+    expect(screen.getByRole("group", { name: "Lists" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Blockquote" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Code block" })).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Insert image" })).toBeNull();
+  });
+
+  it("shows the image and horizontal rule for the full capability set", () => {
+    renderToolbar(ALL_CAPABILITIES, FAKE_IMAGE_UPLOAD);
+    const image = screen.getByRole("button", { name: "Insert image" });
+
+    expect((image as HTMLButtonElement).disabled).toBe(false);
+    expect(
+      screen.getByRole("button", { name: "Insert horizontal rule" }),
+    ).toBeDefined();
   });
 
   it("hides the toolbar when readOnly is true", () => {
@@ -149,23 +231,13 @@ describe("EditorToolbar", () => {
     expect(screen.queryByRole("toolbar")).toBeNull();
   });
 
-  it("disables the image button without an upload handler", () => {
-    renderEditor("Alpha\n");
-    const image = screen.getByRole("button", { name: "Insert image" });
-
-    expect((image as HTMLButtonElement).disabled).toBe(true);
-  });
-
-  it("enables the image button with an upload handler", () => {
-    const onUploadImage: ImageUploadHandler = async (file) => ({
-      alt: file.name,
-      id: "file_01",
+  it("hides the image button for standard with an upload handler", () => {
+    renderEditor("Alpha\n", {
+      onUploadImage: FAKE_IMAGE_UPLOAD,
+      variant: "standard",
     });
 
-    renderEditor("Alpha\n", { onUploadImage });
-    const image = screen.getByRole("button", { name: "Insert image" });
-
-    expect((image as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.queryByRole("button", { name: "Insert image" })).toBeNull();
   });
 
   it("toggles bold text in the Markdown output", () => {
@@ -213,8 +285,8 @@ describe("EditorToolbar", () => {
     expect(ref.current?.getMarkdown()).toBe("- Alpha\n");
   });
 
-  it("inserts a horizontal rule", () => {
-    const { ref } = renderEditor("Alpha\n");
+  it("inserts a horizontal rule in the full variant", () => {
+    const { ref } = renderEditor("Alpha\n", { variant: "full" });
     const editor = getEditor(
       screen.getByRole("textbox", { name: "Note body" }),
     );
@@ -355,7 +427,7 @@ describe("EditorToolbar", () => {
   });
 
   it("moves focus with the arrow keys, Home, and End", () => {
-    renderEditor("Alpha\n");
+    renderEditor("Alpha\n", { variant: "full" });
     const bold = screen.getByRole("button", { name: "Bold" });
     const italic = screen.getByRole("button", { name: "Italic" });
     const horizontalRule = screen.getByRole("button", {
@@ -389,13 +461,17 @@ describe("EditorToolbar", () => {
   });
 
   it("gives every toolbar item an accessible name", () => {
-    renderEditor("Alpha\n");
+    // The full variant with an upload handler shows every toolbar capability.
+    renderEditor("Alpha\n", {
+      onUploadImage: FAKE_IMAGE_UPLOAD,
+      variant: "full",
+    });
 
     const items = Array.from(
       document.querySelectorAll<HTMLElement>("[data-toolbar-item]"),
     );
 
-    expect(items.length).toBe(15);
+    expect(items.length).toBe(16);
 
     for (const item of items) {
       const name = item.getAttribute("aria-label");

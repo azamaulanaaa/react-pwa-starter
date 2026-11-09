@@ -57,15 +57,45 @@ export const IMAGE: TextMatchTransformer = {
   type: "text-match",
 };
 
+/** The plain set of Markdown transformers. It keeps links and inline formats. */
+export const PLAIN_TRANSFORMERS: Transformer[] = [
+  LINK,
+  ...TEXT_FORMAT_TRANSFORMERS,
+];
+
+/**
+ * The compact set of Markdown transformers.
+ * A mention is a normal link. The set keeps links and inline formats, so the
+ * set supports mentions too.
+ */
+export const COMPACT_TRANSFORMERS: Transformer[] = [
+  LINK,
+  ...TEXT_FORMAT_TRANSFORMERS,
+];
+
 /**
  * The standard set of Markdown transformers.
  * The check list transformer comes before the unordered list transformer.
  * The unordered list transformer reads `- [ ]` as a plain list item otherwise.
+ * The set does not include the horizontal rule or the image.
+ */
+export const STANDARD_TRANSFORMERS: Transformer[] = [
+  HEADING,
+  QUOTE,
+  CHECK_LIST,
+  UNORDERED_LIST,
+  ORDERED_LIST,
+  CODE,
+  ...TEXT_FORMAT_TRANSFORMERS,
+  LINK,
+];
+
+/**
+ * The full set of Markdown transformers.
  * The image transformer comes before the link transformer, so the leading `!`
  * stays with the image.
- * The set includes the horizontal rule, so the toolbar always round-trips it.
  */
-export const MARKDOWN_TRANSFORMERS: Transformer[] = [
+export const FULL_TRANSFORMERS: Transformer[] = [
   HEADING,
   QUOTE,
   CHECK_LIST,
@@ -78,17 +108,14 @@ export const MARKDOWN_TRANSFORMERS: Transformer[] = [
   LINK,
 ];
 
-/** The plain set of Markdown transformers. It keeps links and inline formats. */
-export const PLAIN_TRANSFORMERS: Transformer[] = [
-  LINK,
-  ...TEXT_FORMAT_TRANSFORMERS,
-];
-
-/** The full set of Markdown transformers. It matches the standard set. */
-export const FULL_TRANSFORMERS: Transformer[] = MARKDOWN_TRANSFORMERS;
+/**
+ * The full transformer set.
+ * The name stays for callers that use the first public set.
+ */
+export const MARKDOWN_TRANSFORMERS: Transformer[] = FULL_TRANSFORMERS;
 
 /** Defines the Markdown transformer set that one editor variant uses. */
-export type MarkdownVariant = "plain" | "standard" | "full";
+export type MarkdownVariant = "plain" | "compact" | "standard" | "full";
 
 /**
  * Returns the transformer list for one editor variant.
@@ -97,6 +124,7 @@ export type MarkdownVariant = "plain" | "standard" | "full";
  */
 export function getTransformers(variant: MarkdownVariant): Transformer[] {
   if (variant === "plain") return PLAIN_TRANSFORMERS;
+  if (variant === "compact") return COMPACT_TRANSFORMERS;
   if (variant === "full") return FULL_TRANSFORMERS;
-  return MARKDOWN_TRANSFORMERS;
+  return STANDARD_TRANSFORMERS;
 }

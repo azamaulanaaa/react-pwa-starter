@@ -216,7 +216,7 @@ export function FormAnnouncement(props: FormAnnouncementProps) {
                 placeholder={t("system_announcements_form_body_placeholder")}
                 ref={bodyRef}
                 value={field.state.value}
-                variant="standard"
+                variant="full"
               />
               <div id={bodyErrorId}>
                 <FieldInfo

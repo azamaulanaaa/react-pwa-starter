@@ -64,6 +64,7 @@ import {
 } from "lucide-react";
 
 import { useTranslation } from "@/components/context/translation.tsx";
+import type { EditorToolbarCapabilities } from "@/components/editor/capabilities.ts";
 import { recordEditorEvent } from "@/components/editor/editor-telemetry.ts";
 import { INSERT_IMAGE_COMMAND } from "@/components/editor/image-plugin.tsx";
 import type { ImageUploadHandler } from "@/components/editor/image-upload.ts";
@@ -95,25 +96,64 @@ type BlockType = "paragraph" | "h1" | "h2" | "h3";
 /** Defines the text formats that the toolbar can toggle. */
 type TextFormat = "bold" | "italic" | "underline" | "strikethrough" | "code";
 
-/** Lists the toolbar control positions in the roving tab order. */
-const ITEM = {
-  block: 7,
-  blockquote: 11,
-  bold: 2,
-  bulletList: 8,
-  checkList: 10,
-  codeBlock: 12,
-  horizontalRule: 15,
-  image: 13,
-  inlineCode: 6,
-  italic: 3,
-  link: 14,
-  orderedList: 9,
-  redo: 1,
-  strikethrough: 5,
-  underline: 4,
-  undo: 0,
-} as const;
+/** Defines one control key in the roving tab order. */
+type ToolbarItem =
+  | "block"
+  | "blockquote"
+  | "bold"
+  | "bulletList"
+  | "checkList"
+  | "codeBlock"
+  | "horizontalRule"
+  | "image"
+  | "inlineCode"
+  | "italic"
+  | "link"
+  | "orderedList"
+  | "redo"
+  | "strikethrough"
+  | "underline"
+  | "undo";
+
+/**
+ * Returns the roving tab order positions for the visible controls.
+ * The order matches the DOM order. A hidden group does not leave a gap, so the
+ * toolbar keeps one tab stop for every variant.
+ */
+function getToolbarItemIndices(
+  capabilities: EditorToolbarCapabilities,
+): Record<ToolbarItem, number> {
+  const order: ToolbarItem[] = ["undo", "redo"];
+
+  if (capabilities.inline) {
+    order.push("bold", "italic", "underline", "strikethrough", "inlineCode");
+  }
+
+  if (capabilities.block) {
+    order.push("block", "bulletList", "orderedList", "checkList");
+    order.push("blockquote", "codeBlock");
+  }
+
+  if (capabilities.image) {
+    order.push("image");
+  }
+
+  if (capabilities.inline) {
+    order.push("link");
+  }
+
+  if (capabilities.horizontalRule) {
+    order.push("horizontalRule");
+  }
+
+  return order.reduce(
+    (indices, item, index) => {
+      indices[item] = index;
+      return indices;
+    },
+    {} as Record<ToolbarItem, number>,
+  );
+}
 
 /** Defines the toolbar state that one editor selection reports. */
 interface ToolbarState {
@@ -191,6 +231,8 @@ const LINK_FORM_CLOSED: LinkFormState = {
 
 /** Defines the props of the formatting toolbar. */
 export interface EditorToolbarProps {
+  /** Selects the groups and controls that the toolbar renders. */
+  capabilities: EditorToolbarCapabilities;
   /** Enables the image button when the editor has an upload handler. */
   onUploadImage?: ImageUploadHandler;
 }
@@ -200,6 +242,7 @@ export interface EditorToolbarProps {
  * The toolbar must render inside `LexicalComposer`.
  */
 export function EditorToolbar({
+  capabilities,
   onUploadImage,
 }: EditorToolbarProps): ReactNode {
   const { t } = useTranslation();
@@ -210,6 +253,7 @@ export function EditorToolbar({
   const roving = useRovingTabindex();
   const linkInputId = useId();
   const linkErrorId = useId();
+  const item = getToolbarItemIndices(capabilities);
 
   useEffect(() => {
     const syncState = (): void => {
@@ -453,7 +497,7 @@ export function EditorToolbar({
           disabled={!state.canUndo}
           size="icon"
           variant="ghost"
-          {...roving.getItemProps(ITEM.undo)}
+          {...roving.getItemProps(item.undo)}
           onClick={() => runCommand(UNDO_COMMAND, undefined)}
         >
           <Undo2Icon aria-hidden="true" />
@@ -463,249 +507,288 @@ export function EditorToolbar({
           disabled={!state.canRedo}
           size="icon"
           variant="ghost"
-          {...roving.getItemProps(ITEM.redo)}
+          {...roving.getItemProps(item.redo)}
           onClick={() => runCommand(REDO_COMMAND, undefined)}
         >
           <Redo2Icon aria-hidden="true" />
         </Button>
       </div>
 
-      <Separator className="mx-0.5 h-6" orientation="vertical" />
+      {capabilities.inline ? (
+        <>
+          <Separator className="mx-0.5 h-6" orientation="vertical" />
 
-      <div
-        aria-label={t("editor_toolbar_format")}
-        className="flex flex-wrap items-center gap-0.5"
-        role="group"
-      >
-        <Toggle
-          aria-label={t("editor_toolbar_bold")}
-          onPressedChange={() => toggleFormat("bold")}
-          pressed={state.formats.bold}
-          {...roving.getItemProps(ITEM.bold)}
-        >
-          <BoldIcon aria-hidden="true" />
-        </Toggle>
-        <Toggle
-          aria-label={t("editor_toolbar_italic")}
-          onPressedChange={() => toggleFormat("italic")}
-          pressed={state.formats.italic}
-          {...roving.getItemProps(ITEM.italic)}
-        >
-          <ItalicIcon aria-hidden="true" />
-        </Toggle>
-        <Toggle
-          aria-label={t("editor_toolbar_underline")}
-          onPressedChange={() => toggleFormat("underline")}
-          pressed={state.formats.underline}
-          {...roving.getItemProps(ITEM.underline)}
-        >
-          <UnderlineIcon aria-hidden="true" />
-        </Toggle>
-        <Toggle
-          aria-label={t("editor_toolbar_strikethrough")}
-          onPressedChange={() => toggleFormat("strikethrough")}
-          pressed={state.formats.strikethrough}
-          {...roving.getItemProps(ITEM.strikethrough)}
-        >
-          <StrikethroughIcon aria-hidden="true" />
-        </Toggle>
-        <Toggle
-          aria-label={t("editor_toolbar_inline_code")}
-          onPressedChange={() => toggleFormat("code")}
-          pressed={state.formats.code}
-          {...roving.getItemProps(ITEM.inlineCode)}
-        >
-          <CodeIcon aria-hidden="true" />
-        </Toggle>
-      </div>
-
-      <Separator className="mx-0.5 h-6" orientation="vertical" />
-
-      <div
-        aria-label={t("editor_toolbar_block_type")}
-        className="flex items-center"
-        role="group"
-      >
-        <Select
-          items={blockLabels}
-          onValueChange={applyBlockType}
-          value={state.block}
-        >
-          <SelectTrigger
-            aria-label={t("editor_toolbar_block_type")}
-            className="min-w-0"
-            size="sm"
-            {...roving.getItemProps(ITEM.block)}
+          <div
+            aria-label={t("editor_toolbar_format")}
+            className="flex flex-wrap items-center gap-0.5"
+            role="group"
           >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectPopup>
-            <SelectItem value="paragraph">{blockLabels.paragraph}</SelectItem>
-            <SelectItem value="h1">{blockLabels.h1}</SelectItem>
-            <SelectItem value="h2">{blockLabels.h2}</SelectItem>
-            <SelectItem value="h3">{blockLabels.h3}</SelectItem>
-          </SelectPopup>
-        </Select>
-      </div>
+            <Toggle
+              aria-label={t("editor_toolbar_bold")}
+              onPressedChange={() => toggleFormat("bold")}
+              pressed={state.formats.bold}
+              {...roving.getItemProps(item.bold)}
+            >
+              <BoldIcon aria-hidden="true" />
+            </Toggle>
+            <Toggle
+              aria-label={t("editor_toolbar_italic")}
+              onPressedChange={() => toggleFormat("italic")}
+              pressed={state.formats.italic}
+              {...roving.getItemProps(item.italic)}
+            >
+              <ItalicIcon aria-hidden="true" />
+            </Toggle>
+            <Toggle
+              aria-label={t("editor_toolbar_underline")}
+              onPressedChange={() => toggleFormat("underline")}
+              pressed={state.formats.underline}
+              {...roving.getItemProps(item.underline)}
+            >
+              <UnderlineIcon aria-hidden="true" />
+            </Toggle>
+            <Toggle
+              aria-label={t("editor_toolbar_strikethrough")}
+              onPressedChange={() => toggleFormat("strikethrough")}
+              pressed={state.formats.strikethrough}
+              {...roving.getItemProps(item.strikethrough)}
+            >
+              <StrikethroughIcon aria-hidden="true" />
+            </Toggle>
+            <Toggle
+              aria-label={t("editor_toolbar_inline_code")}
+              onPressedChange={() => toggleFormat("code")}
+              pressed={state.formats.code}
+              {...roving.getItemProps(item.inlineCode)}
+            >
+              <CodeIcon aria-hidden="true" />
+            </Toggle>
+          </div>
+        </>
+      ) : null}
 
-      <Separator className="mx-0.5 h-6" orientation="vertical" />
+      {capabilities.block ? (
+        <>
+          <Separator className="mx-0.5 h-6" orientation="vertical" />
 
-      <div
-        aria-label={t("editor_toolbar_list")}
-        className="flex flex-wrap items-center gap-0.5"
-        role="group"
-      >
-        <Toggle
-          aria-label={t("editor_toolbar_bullet_list")}
-          onPressedChange={() => toggleList("bullet")}
-          pressed={state.list === "bullet"}
-          {...roving.getItemProps(ITEM.bulletList)}
-        >
-          <ListIcon aria-hidden="true" />
-        </Toggle>
-        <Toggle
-          aria-label={t("editor_toolbar_ordered_list")}
-          onPressedChange={() => toggleList("number")}
-          pressed={state.list === "number"}
-          {...roving.getItemProps(ITEM.orderedList)}
-        >
-          <ListOrderedIcon aria-hidden="true" />
-        </Toggle>
-        <Toggle
-          aria-label={t("editor_toolbar_check_list")}
-          onPressedChange={() => toggleList("check")}
-          pressed={state.list === "check"}
-          {...roving.getItemProps(ITEM.checkList)}
-        >
-          <ListChecksIcon aria-hidden="true" />
-        </Toggle>
-      </div>
+          <div
+            aria-label={t("editor_toolbar_block_type")}
+            className="flex items-center"
+            role="group"
+          >
+            <Select
+              items={blockLabels}
+              onValueChange={applyBlockType}
+              value={state.block}
+            >
+              <SelectTrigger
+                aria-label={t("editor_toolbar_block_type")}
+                className="min-w-0"
+                size="sm"
+                {...roving.getItemProps(item.block)}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectPopup>
+                <SelectItem value="paragraph">
+                  {blockLabels.paragraph}
+                </SelectItem>
+                <SelectItem value="h1">{blockLabels.h1}</SelectItem>
+                <SelectItem value="h2">{blockLabels.h2}</SelectItem>
+                <SelectItem value="h3">{blockLabels.h3}</SelectItem>
+              </SelectPopup>
+            </Select>
+          </div>
 
-      <Separator className="mx-0.5 h-6" orientation="vertical" />
+          <Separator className="mx-0.5 h-6" orientation="vertical" />
 
-      <div
-        aria-label={t("editor_toolbar_insert")}
-        className="flex flex-wrap items-center gap-0.5"
-        role="group"
-      >
-        <Toggle
-          aria-label={t("editor_toolbar_blockquote")}
-          onPressedChange={toggleBlockquote}
-          pressed={state.isQuote}
-          {...roving.getItemProps(ITEM.blockquote)}
-        >
-          <QuoteIcon aria-hidden="true" />
-        </Toggle>
-        <Toggle
-          aria-label={t("editor_toolbar_code_block")}
-          onPressedChange={toggleCodeBlock}
-          pressed={state.isCodeBlock}
-          {...roving.getItemProps(ITEM.codeBlock)}
-        >
-          <SquareCodeIcon aria-hidden="true" />
-        </Toggle>
-        <Button
-          aria-label={t("editor_image_button")}
-          disabled={onUploadImage === undefined}
-          size="icon"
-          variant="ghost"
-          {...roving.getItemProps(ITEM.image)}
-          onClick={() => runCommand(INSERT_IMAGE_COMMAND, undefined)}
-        >
-          <ImageIcon aria-hidden="true" />
-        </Button>
-        <Popover onOpenChange={handleLinkOpenChange} open={linkForm.open}>
-          <PopoverTrigger
-            aria-label={linkLabel}
-            render={
+          <div
+            aria-label={t("editor_toolbar_list")}
+            className="flex flex-wrap items-center gap-0.5"
+            role="group"
+          >
+            <Toggle
+              aria-label={t("editor_toolbar_bullet_list")}
+              onPressedChange={() => toggleList("bullet")}
+              pressed={state.list === "bullet"}
+              {...roving.getItemProps(item.bulletList)}
+            >
+              <ListIcon aria-hidden="true" />
+            </Toggle>
+            <Toggle
+              aria-label={t("editor_toolbar_ordered_list")}
+              onPressedChange={() => toggleList("number")}
+              pressed={state.list === "number"}
+              {...roving.getItemProps(item.orderedList)}
+            >
+              <ListOrderedIcon aria-hidden="true" />
+            </Toggle>
+            <Toggle
+              aria-label={t("editor_toolbar_check_list")}
+              onPressedChange={() => toggleList("check")}
+              pressed={state.list === "check"}
+              {...roving.getItemProps(item.checkList)}
+            >
+              <ListChecksIcon aria-hidden="true" />
+            </Toggle>
+          </div>
+        </>
+      ) : null}
+
+      {capabilities.inline ||
+      capabilities.block ||
+      capabilities.image ||
+      capabilities.horizontalRule ? (
+        <>
+          <Separator className="mx-0.5 h-6" orientation="vertical" />
+
+          <div
+            aria-label={t("editor_toolbar_insert")}
+            className="flex flex-wrap items-center gap-0.5"
+            role="group"
+          >
+            {capabilities.block ? (
+              <>
+                <Toggle
+                  aria-label={t("editor_toolbar_blockquote")}
+                  onPressedChange={toggleBlockquote}
+                  pressed={state.isQuote}
+                  {...roving.getItemProps(item.blockquote)}
+                >
+                  <QuoteIcon aria-hidden="true" />
+                </Toggle>
+                <Toggle
+                  aria-label={t("editor_toolbar_code_block")}
+                  onPressedChange={toggleCodeBlock}
+                  pressed={state.isCodeBlock}
+                  {...roving.getItemProps(item.codeBlock)}
+                >
+                  <SquareCodeIcon aria-hidden="true" />
+                </Toggle>
+              </>
+            ) : null}
+            {capabilities.image ? (
               <Button
-                className={cn(state.isLink && "bg-accent")}
-                disabled={!state.hasSelection}
+                aria-label={t("editor_image_button")}
+                disabled={onUploadImage === undefined}
                 size="icon"
                 variant="ghost"
-              />
-            }
-            {...roving.getItemProps(ITEM.link)}
-          >
-            <LinkIcon aria-hidden="true" />
-          </PopoverTrigger>
-          <PopoverPopup align="start" initialFocus={linkInputRef} side="bottom">
-            <form
-              className="markdown-editor-link-popover flex w-72 max-w-[calc(100vw-2rem)] flex-col gap-3"
-              noValidate
-              onSubmit={(event) => {
-                event.preventDefault();
-                applyLink();
-              }}
-            >
-              <PopoverTitle>{linkLabel}</PopoverTitle>
-              <Field>
-                <FieldLabel htmlFor={linkInputId}>
-                  {t("editor_toolbar_link_label")}
-                </FieldLabel>
-                <Input
-                  aria-describedby={linkForm.error ? linkErrorId : undefined}
-                  aria-invalid={linkForm.error ? true : undefined}
-                  autoComplete="url"
-                  id={linkInputId}
-                  inputMode="url"
-                  name="linkUrl"
-                  onChange={(event) =>
-                    setLinkForm((previous) => ({
-                      ...previous,
-                      error: null,
-                      value: event.target.value,
-                    }))
+                {...roving.getItemProps(item.image)}
+                onClick={() => runCommand(INSERT_IMAGE_COMMAND, undefined)}
+              >
+                <ImageIcon aria-hidden="true" />
+              </Button>
+            ) : null}
+            {capabilities.inline ? (
+              <Popover onOpenChange={handleLinkOpenChange} open={linkForm.open}>
+                <PopoverTrigger
+                  aria-label={linkLabel}
+                  render={
+                    <Button
+                      aria-pressed={state.isLink}
+                      className={cn(state.isLink && "bg-accent")}
+                      data-pressed={state.isLink ? "" : undefined}
+                      disabled={!state.hasSelection}
+                      size="icon"
+                      variant="ghost"
+                    />
                   }
-                  placeholder={t("editor_toolbar_link_placeholder")}
-                  ref={linkInputRef}
-                  type="url"
-                  value={linkForm.value}
-                />
-                <p
-                  aria-atomic="true"
-                  className={cn(
-                    "flex items-start gap-1 text-destructive-foreground text-xs",
-                    linkForm.error === null && "sr-only",
-                  )}
-                  id={linkErrorId}
-                  role="alert"
+                  {...roving.getItemProps(item.link)}
                 >
-                  {linkForm.error === null ? null : (
-                    <>
-                      <CircleAlertIcon
-                        aria-hidden="true"
-                        className="mt-0.5 size-3.5 shrink-0"
+                  <LinkIcon aria-hidden="true" />
+                </PopoverTrigger>
+                <PopoverPopup
+                  align="start"
+                  initialFocus={linkInputRef}
+                  side="bottom"
+                >
+                  <form
+                    className="markdown-editor-link-popover flex w-72 max-w-[calc(100vw-2rem)] flex-col gap-3"
+                    noValidate
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      applyLink();
+                    }}
+                  >
+                    <PopoverTitle>{linkLabel}</PopoverTitle>
+                    <Field>
+                      <FieldLabel htmlFor={linkInputId}>
+                        {t("editor_toolbar_link_label")}
+                      </FieldLabel>
+                      <Input
+                        aria-describedby={
+                          linkForm.error ? linkErrorId : undefined
+                        }
+                        aria-invalid={linkForm.error ? true : undefined}
+                        autoComplete="url"
+                        id={linkInputId}
+                        inputMode="url"
+                        name="linkUrl"
+                        onChange={(event) =>
+                          setLinkForm((previous) => ({
+                            ...previous,
+                            error: null,
+                            value: event.target.value,
+                          }))
+                        }
+                        placeholder={t("editor_toolbar_link_placeholder")}
+                        ref={linkInputRef}
+                        type="url"
+                        value={linkForm.value}
                       />
-                      {linkForm.error}
-                    </>
-                  )}
-                </p>
-              </Field>
-              <div className="flex flex-wrap items-center justify-end gap-2">
-                <Button
-                  disabled={!state.isLink}
-                  onClick={removeLink}
-                  type="button"
-                  variant="outline"
-                >
-                  {t("editor_toolbar_link_remove")}
-                </Button>
-                <Button type="submit">{t("editor_toolbar_link_apply")}</Button>
-              </div>
-            </form>
-          </PopoverPopup>
-        </Popover>
-        <Button
-          aria-label={t("editor_toolbar_horizontal_rule")}
-          size="icon"
-          variant="ghost"
-          {...roving.getItemProps(ITEM.horizontalRule)}
-          onClick={() => runCommand(INSERT_HORIZONTAL_RULE_COMMAND, undefined)}
-        >
-          <MinusIcon aria-hidden="true" />
-        </Button>
-      </div>
+                      <p
+                        aria-atomic="true"
+                        className={cn(
+                          "flex items-start gap-1 text-destructive-foreground text-xs",
+                          linkForm.error === null && "sr-only",
+                        )}
+                        id={linkErrorId}
+                        role="alert"
+                      >
+                        {linkForm.error === null ? null : (
+                          <>
+                            <CircleAlertIcon
+                              aria-hidden="true"
+                              className="mt-0.5 size-3.5 shrink-0"
+                            />
+                            {linkForm.error}
+                          </>
+                        )}
+                      </p>
+                    </Field>
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      <Button
+                        disabled={!state.isLink}
+                        onClick={removeLink}
+                        type="button"
+                        variant="outline"
+                      >
+                        {t("editor_toolbar_link_remove")}
+                      </Button>
+                      <Button type="submit">
+                        {t("editor_toolbar_link_apply")}
+                      </Button>
+                    </div>
+                  </form>
+                </PopoverPopup>
+              </Popover>
+            ) : null}
+            {capabilities.horizontalRule ? (
+              <Button
+                aria-label={t("editor_toolbar_horizontal_rule")}
+                size="icon"
+                variant="ghost"
+                {...roving.getItemProps(item.horizontalRule)}
+                onClick={() =>
+                  runCommand(INSERT_HORIZONTAL_RULE_COMMAND, undefined)
+                }
+              >
+                <MinusIcon aria-hidden="true" />
+              </Button>
+            ) : null}
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }

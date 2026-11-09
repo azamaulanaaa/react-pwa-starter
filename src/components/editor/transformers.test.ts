@@ -14,6 +14,7 @@ import { MARKDOWN_EDITOR_NODES } from "@/components/editor/nodes.ts";
 import { getUnsupportedFeatures } from "@/components/editor/support.ts";
 import {
   FULL_TRANSFORMERS,
+  getTransformers,
   MARKDOWN_TRANSFORMERS,
 } from "@/components/editor/transformers.ts";
 import { canonicalize } from "@/lib/markdown/index.ts";
@@ -117,6 +118,55 @@ describe("Markdown transformers", () => {
 
     expect(nodeTypes).toContain("horizontalrule");
     expect(output).toBe(canonicalize(markdown));
+  });
+
+  it("keeps block syntax as text in the compact set", () => {
+    const markdown = [
+      "# Title",
+      "",
+      "- one",
+      "",
+      "> Quote",
+      "",
+      "```",
+      "code",
+      "```",
+      "",
+      "---",
+    ].join("\n");
+    const editor = createEditor();
+    const transformers = getTransformers("compact");
+    const nodeTypes: string[] = [];
+
+    editor.update(
+      () => {
+        $getRoot().clear();
+        $convertFromMarkdownString(canonicalize(markdown), transformers);
+        nodeTypes.push(
+          ...$getRoot()
+            .getChildren()
+            .map((node) => node.getType()),
+        );
+      },
+      { discrete: true },
+    );
+
+    let output = "";
+
+    editor.getEditorState().read(() => {
+      output = canonicalize($convertToMarkdownString(transformers));
+    });
+
+    expect(nodeTypes).not.toContain("heading");
+    expect(nodeTypes).not.toContain("list");
+    expect(nodeTypes).not.toContain("quote");
+    expect(nodeTypes).not.toContain("code");
+    expect(nodeTypes).not.toContain("horizontalrule");
+    expect(nodeTypes.every((type) => type === "paragraph")).toBe(true);
+    expect(output).toContain("Title");
+    expect(output).toContain("one");
+    expect(output).toContain("Quote");
+    expect(output).toContain("code");
   });
 
   it("converts a task list to a check list and back", () => {

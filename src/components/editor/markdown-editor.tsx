@@ -33,6 +33,10 @@ import { type EditorState, type EditorThemeClasses } from "lexical";
 
 import { useTranslation } from "@/components/context/translation.tsx";
 import {
+  getEditorCapabilities,
+  type EditorCapabilities,
+} from "@/components/editor/capabilities.ts";
+import {
   getMarkdown,
   loadMarkdown,
   readMarkdown,
@@ -149,8 +153,8 @@ export interface MarkdownEditorProps {
   /** Blocks edits when the value is true. */
   readOnly?: boolean;
   /**
-   * Shows the formatting toolbar. The default is true for the standard and
-   * full variants. The plain variant has no block commands.
+   * Shows the formatting toolbar. The default is true. The toolbar shows only
+   * the controls that the variant supports. The read-only state hides it.
    */
   showToolbar?: boolean;
   /** Searches for the `@` mention targets. */
@@ -261,8 +265,8 @@ function UnsupportedMarkdownFallback({
 
 /** Defines the props of the inner surface that reads the composer context. */
 interface EditorSurfaceProps extends MarkdownEditorProps {
+  capabilities: EditorCapabilities;
   handleRef: Ref<MarkdownEditorHandle>;
-  mentionsEnabled: boolean;
   transformers: Transformer[];
 }
 
@@ -271,11 +275,11 @@ function EditorSurface({
   ariaDescribedBy,
   ariaInvalid,
   ariaLabel = DEFAULT_ARIA_LABEL,
+  capabilities,
   className,
   handleRef,
   id,
   mentionSource,
-  mentionsEnabled,
   onChange,
   onUploadImage,
   placeholder,
@@ -344,7 +348,10 @@ function EditorSurface({
   return (
     <div className={cn("markdown-editor-shell", className)}>
       {showToolbar && !readOnly ? (
-        <EditorToolbar onUploadImage={onUploadImage} />
+        <EditorToolbar
+          capabilities={capabilities}
+          onUploadImage={onUploadImage}
+        />
       ) : null}
       <RichTextPlugin
         contentEditable={
@@ -369,15 +376,15 @@ function EditorSurface({
         ErrorBoundary={LexicalErrorBoundary}
       />
       <HistoryPlugin />
-      <HorizontalRulePlugin />
+      {capabilities.horizontalRule ? <HorizontalRulePlugin /> : null}
       <LinkPlugin validateUrl={validateUrl} />
-      <ListPlugin />
-      {mentionsEnabled && mentionSource !== undefined ? (
+      {capabilities.block ? <ListPlugin /> : null}
+      {capabilities.mentions && mentionSource !== undefined ? (
         <MentionTypeaheadPlugin enabled source={mentionSource} />
       ) : null}
-      {onUploadImage === undefined ? null : (
+      {capabilities.image && onUploadImage !== undefined ? (
         <ImagePlugin onUploadImage={onUploadImage} />
-      )}
+      ) : null}
       <OnChangePlugin
         ignoreHistoryMergeTagChange={false}
         ignoreSelectionChange
@@ -415,17 +422,23 @@ export const MarkdownEditor = forwardRef<
   ref,
 ): ReactNode {
   const transformers = useMemo(() => getTransformers(variant), [variant]);
+  const capabilities = useMemo(
+    () =>
+      getEditorCapabilities({
+        hasImageUpload: onUploadImage !== undefined,
+        mentionsRequested:
+          mentionSource !== undefined && showMentions !== false,
+        readOnly,
+        variant,
+      }),
+    [mentionSource, onUploadImage, readOnly, showMentions, variant],
+  );
   const unsupportedFeatures = useMemo(
     () => getUnsupportedFeatures(value),
     [value],
   );
   const unsupportedKey = unsupportedFeatures.join(",");
-  const toolbarVisible = showToolbar ?? variant !== "plain";
-  const mentionsEnabled =
-    mentionSource !== undefined &&
-    showMentions !== false &&
-    !readOnly &&
-    variant !== "plain";
+  const toolbarVisible = showToolbar ?? true;
 
   useEffect(() => {
     if (unsupportedKey === "") return;
@@ -470,11 +483,11 @@ export const MarkdownEditor = forwardRef<
         ariaDescribedBy={ariaDescribedBy}
         ariaInvalid={ariaInvalid}
         ariaLabel={ariaLabel}
+        capabilities={capabilities}
         className={className}
         handleRef={ref}
         id={id}
         mentionSource={mentionSource}
-        mentionsEnabled={mentionsEnabled}
         onChange={onChange}
         onUploadImage={onUploadImage}
         placeholder={placeholder}

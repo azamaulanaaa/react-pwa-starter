@@ -31,6 +31,25 @@ const PLAIN_MARKDOWN = [
   "# This heading stays as text in the plain variant.",
 ].join("\n");
 
+const COMPACT_MARKDOWN = [
+  "A compact note with a **bold** word and a [link](https://example.com).",
+  "",
+  "Ask [Alex Morgan](/users/alex-morgan) about the plan.",
+].join("\n");
+
+const FULL_MARKDOWN = [
+  "# Full note",
+  "",
+  "A **bold** note with a [link](https://example.com).",
+  "",
+  "- one",
+  "- two",
+  "",
+  "---",
+  "",
+  "![Sample diagram](/fs/story_image)",
+].join("\n");
+
 const MENTION_MARKDOWN = [
   "# Mentions",
   "",
@@ -103,6 +122,22 @@ export default {
 
 export const Standard: Story = () => (
   <EditorStory initialMarkdown={DEFAULT_MARKDOWN} />
+);
+
+export const Compact: Story = () => (
+  <EditorStory
+    initialMarkdown={COMPACT_MARKDOWN}
+    mentionSource={LOCAL_MENTION_SOURCE}
+    variant="compact"
+  />
+);
+
+export const Full: Story = () => (
+  <EditorStory
+    initialMarkdown={FULL_MARKDOWN}
+    onUploadImage={FAKE_IMAGE_UPLOAD}
+    variant="full"
+  />
 );
 
 export const Mentions: Story = () => (

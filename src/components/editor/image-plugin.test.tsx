@@ -66,6 +66,7 @@ function renderEditor(onUploadImage: ImageUploadHandler) {
         onChange={onChange}
         onUploadImage={onUploadImage}
         value="Alpha\n"
+        variant="full"
       />
     </Providers>,
   );
