@@ -6,7 +6,7 @@
  */
 
 .markdown-body {
-  --md-flow: 1rem;
+  --md-flow: 1.5rem;
 
   max-inline-size: 70ch;
   color: var(--foreground);
@@ -30,37 +30,46 @@
 .markdown-body h4,
 .markdown-body h5,
 .markdown-body h6 {
-  margin-block: 1.5em 0.5em;
+  color: var(--foreground);
   font-weight: 600;
   line-height: 1.25;
   text-wrap: balance;
 }
 
 .markdown-body h1 {
+  margin-block: 3rem 1rem;
+  font-family: var(--font-heading);
   font-size: 1.875rem;
+  font-weight: 700;
   letter-spacing: -0.02em;
 }
 
 .markdown-body h2 {
+  margin-block: 3rem 1rem;
+  font-family: var(--font-heading);
   font-size: 1.5rem;
   letter-spacing: -0.02em;
 }
 
 .markdown-body h3 {
-  font-size: 1.25rem;
-  letter-spacing: -0.01em;
-}
-
-.markdown-body h4 {
+  margin-block: 2rem 1rem;
   font-size: 1.125rem;
   letter-spacing: -0.01em;
 }
 
+.markdown-body h4 {
+  margin-block: 1.5rem 1rem;
+  font-size: 1rem;
+  letter-spacing: -0.01em;
+}
+
 .markdown-body h5 {
+  margin-block: 1.5rem 1rem;
   font-size: 1rem;
 }
 
 .markdown-body h6 {
+  margin-block: 1.5rem 1rem;
   color: var(--muted-foreground);
   font-size: 0.875rem;
   letter-spacing: 0.05em;
@@ -100,6 +109,13 @@
 
 .markdown-body li + li {
   margin-block-start: 0.25rem;
+}
+
+.markdown-body p,
+.markdown-body li,
+.markdown-body dd,
+.markdown-body dt {
+  color: var(--muted-foreground);
 }
 
 .markdown-body li > ul,
@@ -158,17 +174,12 @@
 
 .markdown-body a {
   border-radius: var(--radius-sm);
-  color: var(--info-foreground);
+  color: var(--foreground);
+  font-weight: 500;
   text-decoration-line: underline;
   text-decoration-thickness: from-font;
-  text-underline-offset: 0.15em;
-}
-
-@media (hover: hover) {
-  .markdown-body
-    a:not(.md-chip):not([href^="/users/"]):not([href^="/pages/"]):hover {
-    background: var(--accent);
-  }
+  text-underline-offset: 0.25rem;
+  text-underline-position: from-font;
 }
 
 .markdown-body a:focus-visible,
@@ -251,11 +262,12 @@
 
 .markdown-body :not(pre) > code,
 .markdown-body .markdown-editor-inline-code {
-  border-radius: var(--radius-sm);
-  background: var(--code-highlight);
-  padding-block: 0.125rem;
-  padding-inline: 0.375rem;
-  font-size: 0.875em;
+  border-radius: var(--radius-md);
+  background: var(--muted);
+  color: var(--muted-foreground);
+  padding-block: 0.2rem;
+  padding-inline: 0.3rem;
+  font-size: 0.8125em;
   overflow-wrap: anywhere;
 }
 
@@ -275,15 +287,15 @@
   inline-size: max-content;
   min-inline-size: 100%;
   margin: 0;
-  padding: 1rem;
-  font-size: 0.875rem;
+  padding: 0.875rem 1rem;
+  font-size: 0.8125rem;
   line-height: 1.5;
 }
 
 .markdown-body .markdown-editor-code {
   display: block;
-  padding: 1rem;
-  font-size: 0.875rem;
+  padding: 0.875rem 1rem;
+  font-size: 0.8125rem;
   line-height: 1.5;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -309,7 +321,7 @@
 .markdown-body th,
 .markdown-body td {
   padding-block: 0.5rem;
-  padding-inline: 0.625rem;
+  padding-inline: 1rem;
   border-block-end: 1px solid var(--border);
   text-align: start;
   vertical-align: middle;
@@ -318,7 +330,6 @@
 }
 
 .markdown-body th {
-  background: var(--muted);
   color: var(--foreground);
   font-weight: 500;
 }

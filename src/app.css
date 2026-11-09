@@ -8,6 +8,8 @@
 
 body {
   position: relative;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .root {
@@ -226,7 +228,7 @@ body {
   --muted: --alpha(var(--color-white) / 4%);
   --muted-foreground: color-mix(
     in srgb,
-    var(--color-neutral-500) 90%,
+    var(--color-neutral-500) 85%,
     var(--color-white)
   );
   --accent: --alpha(var(--color-white) / 4%);
