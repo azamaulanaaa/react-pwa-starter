@@ -75,3 +75,10 @@ export const ReadOnly: Story = () => (
 );
 
 export const Empty: Story = () => <EditorStory initialMarkdown="" />;
+
+/** Shows the editor at the 320px reflow width. */
+export const Narrow: Story = () => (
+  <div className="w-80 max-w-full">
+    <EditorStory initialMarkdown={DEFAULT_MARKDOWN} />
+  </div>
+);

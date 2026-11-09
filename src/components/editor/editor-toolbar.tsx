@@ -638,19 +638,25 @@ export function EditorToolbar(): ReactNode {
                   type="url"
                   value={linkForm.value}
                 />
-                {linkForm.error ? (
-                  <p
-                    className="flex items-start gap-1 text-destructive-foreground text-xs"
-                    id={linkErrorId}
-                    role="alert"
-                  >
-                    <CircleAlertIcon
-                      aria-hidden="true"
-                      className="mt-0.5 size-3.5 shrink-0"
-                    />
-                    {linkForm.error}
-                  </p>
-                ) : null}
+                <p
+                  aria-atomic="true"
+                  className={cn(
+                    "flex items-start gap-1 text-destructive-foreground text-xs",
+                    linkForm.error === null && "sr-only",
+                  )}
+                  id={linkErrorId}
+                  role="alert"
+                >
+                  {linkForm.error === null ? null : (
+                    <>
+                      <CircleAlertIcon
+                        aria-hidden="true"
+                        className="mt-0.5 size-3.5 shrink-0"
+                      />
+                      {linkForm.error}
+                    </>
+                  )}
+                </p>
               </Field>
               <div className="flex flex-wrap items-center justify-end gap-2">
                 <Button

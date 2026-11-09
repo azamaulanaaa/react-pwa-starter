@@ -230,6 +230,45 @@ describe("EditorToolbar", () => {
     expect(ref.current?.getMarkdown()).toBe("Example\n");
   });
 
+  it("keeps the alert region mounted before the first error", () => {
+    renderEditor("Example\n");
+    const editor = getEditor(
+      screen.getByRole("textbox", { name: "Note body" }),
+    );
+
+    selectFirstBlock(editor, 0, 7);
+
+    const input = openLinkPopover();
+    const alert = screen.getByRole("alert");
+
+    expect(alert.textContent).toBe("");
+
+    fireEvent.change(input, { target: { value: "javascript:alert(1)" } });
+    fireEvent.click(screen.getByRole("button", { name: "Apply link" }));
+
+    expect(screen.getByRole("alert")).toBe(alert);
+    expect(alert.textContent).toContain("Enter an https:// or mailto: link");
+    expect(input.getAttribute("aria-invalid")).toBe("true");
+    expect(input.getAttribute("aria-describedby")).toBe(alert.id);
+  });
+
+  it("reports the pressed state of a formatting toggle", async () => {
+    renderEditor("Alpha\n");
+    const editor = getEditor(
+      screen.getByRole("textbox", { name: "Note body" }),
+    );
+    const bold = screen.getByRole("button", { name: "Bold" });
+
+    expect(bold.getAttribute("aria-pressed")).toBe("false");
+
+    selectFirstBlock(editor, 0, 5);
+    fireEvent.click(bold);
+
+    await waitFor(() => {
+      expect(bold.getAttribute("aria-pressed")).toBe("true");
+    });
+  });
+
   it("disables undo and redo until the history can run", async () => {
     const { ref } = renderEditor("Alpha\n");
     const editor = getEditor(
@@ -278,5 +317,94 @@ describe("EditorToolbar", () => {
 
     fireEvent.keyDown(bold, { key: "End" });
     expect(document.activeElement).toBe(horizontalRule);
+  });
+
+  it("does not change the document when the arrow keys move focus", () => {
+    const { ref } = renderEditor("Alpha\n");
+    const before = ref.current?.getMarkdown();
+    const bold = screen.getByRole("button", { name: "Bold" });
+    const italic = screen.getByRole("button", { name: "Italic" });
+
+    bold.focus();
+    fireEvent.keyDown(bold, { key: "ArrowRight" });
+    fireEvent.keyDown(italic, { key: "ArrowLeft" });
+    fireEvent.keyDown(bold, { key: "ArrowRight" });
+
+    expect(document.activeElement).toBe(italic);
+    expect(ref.current?.getMarkdown()).toBe(before);
+  });
+
+  it("gives every toolbar item an accessible name", () => {
+    renderEditor("Alpha\n");
+
+    const items = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-toolbar-item]"),
+    );
+
+    expect(items.length).toBe(15);
+
+    for (const item of items) {
+      const name = item.getAttribute("aria-label");
+      const role =
+        item.getAttribute("role") === "combobox" ? "combobox" : "button";
+
+      expect(name).not.toBeNull();
+      expect(name?.trim()).not.toBe("");
+      expect(screen.getByRole(role, { name: name ?? "" })).toBe(item);
+    }
+  });
+
+  it("moves focus into the link input and back to the link button on Escape", async () => {
+    renderEditor("Example\n");
+    const editor = getEditor(
+      screen.getByRole("textbox", { name: "Note body" }),
+    );
+
+    selectFirstBlock(editor, 0, 7);
+
+    const linkButton = screen.getByRole("button", { name: "Add link" });
+
+    fireEvent.click(linkButton);
+
+    const input = screen.getByLabelText("Link address") as HTMLInputElement;
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(input);
+    });
+
+    fireEvent.keyDown(input, { key: "Escape" });
+
+    await waitFor(() => {
+      expect(screen.queryByLabelText("Link address")).toBeNull();
+    });
+
+    expect(document.activeElement).toBe(linkButton);
+  });
+
+  it("returns focus to the link button after the form submits", async () => {
+    const { ref } = renderEditor("Example\n");
+    const editor = getEditor(
+      screen.getByRole("textbox", { name: "Note body" }),
+    );
+
+    selectFirstBlock(editor, 0, 7);
+
+    const linkButton = screen.getByRole("button", { name: "Add link" });
+    const input = openLinkPopover();
+
+    fireEvent.change(input, { target: { value: "https://example.com" } });
+
+    const form = input.closest("form");
+
+    if (form === null) throw new Error("The link input has no form.");
+
+    fireEvent.submit(form);
+
+    await waitFor(() => {
+      expect(screen.queryByLabelText("Link address")).toBeNull();
+    });
+
+    expect(ref.current?.getMarkdown()).toBe("[Example](https://example.com)\n");
+    expect(document.activeElement).toBe(linkButton);
   });
 });

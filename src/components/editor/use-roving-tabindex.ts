@@ -41,6 +41,7 @@ function isDisabled(element: HTMLElement): boolean {
  */
 export function useRovingTabindex(): RovingTabindex {
   const containerRef = useRef<HTMLDivElement>(null);
+  const hadFocusRef = useRef(false);
   const [activeIndex, setActiveIndex] = useState(0);
 
   const getItems = useCallback((): HTMLElement[] => {
@@ -52,16 +53,39 @@ export function useRovingTabindex(): RovingTabindex {
   }, []);
 
   useEffect(() => {
+    const container = containerRef.current;
     const items = getItems();
-    const active = items[activeIndex];
+    const focused =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement.closest<HTMLElement>(ITEM_SELECTOR)
+        : null;
+    const focusInside =
+      focused !== null && container?.contains(focused) === true;
+    const active = focusInside ? focused : items[activeIndex];
+    const hadFocus = hadFocusRef.current || focusInside;
 
-    if (active !== undefined && !isDisabled(active)) return;
+    hadFocusRef.current = focusInside;
+
+    if (active !== undefined && !isDisabled(active)) {
+      const index = items.indexOf(active);
+
+      if (index !== -1 && index !== activeIndex) setActiveIndex(index);
+
+      return;
+    }
 
     const nextIndex = items.findIndex((item) => !isDisabled(item));
 
-    if (nextIndex !== -1 && nextIndex !== activeIndex) {
-      setActiveIndex(nextIndex);
-    }
+    if (nextIndex === -1) return;
+
+    /*
+     * The active control became unavailable. Move the focus to the first
+     * available control when the toolbar had the focus. The keyboard user
+     * must not lose the tab position.
+     */
+    if (hadFocus) items[nextIndex].focus();
+
+    if (nextIndex !== activeIndex) setActiveIndex(nextIndex);
   });
 
   const getItemProps = useCallback(

@@ -106,5 +106,9 @@ describe("useRovingTabindex", () => {
         screen.getByRole("button", { name: "First" }).getAttribute("tabindex"),
       ).toBe("0");
     });
+
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "First" }),
+    );
   });
 });

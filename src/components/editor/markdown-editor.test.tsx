@@ -138,6 +138,8 @@ describe("MarkdownEditor", () => {
     const textbox = screen.getByRole("textbox", { name: "Note body" });
 
     expect(textbox.getAttribute("contenteditable")).toBe("false");
+    expect(textbox.getAttribute("role")).toBe("textbox");
+    expect(textbox.getAttribute("aria-multiline")).toBe("true");
     expect(textbox.getAttribute("aria-readonly")).toBe("true");
     expect(ref.current?.getMarkdown()).toBe("# Read only\n");
   });
@@ -146,8 +148,10 @@ describe("MarkdownEditor", () => {
     renderEditor({ value: "# Named\n" });
     const textbox = screen.getByRole("textbox", { name: "Note body" });
 
+    expect(textbox.getAttribute("role")).toBe("textbox");
     expect(textbox.getAttribute("aria-label")).toBe("Note body");
     expect(textbox.getAttribute("aria-multiline")).toBe("true");
+    expect(textbox.hasAttribute("aria-readonly")).toBe(false);
     expect(textbox.getAttribute("data-slot")).toBe("markdown-editor");
   });
 
@@ -226,11 +230,17 @@ describe("MarkdownEditor", () => {
   it("associates the fallback label and notice", () => {
     renderEditor({ value: TABLE });
     const textarea = screen.getByLabelText("Markdown source");
+    const label =
+      textarea.id === ""
+        ? null
+        : document.querySelector(`label[for="${textarea.id}"]`);
     const describedBy = textarea.getAttribute("aria-describedby");
     const notice =
       describedBy === null ? null : document.getElementById(describedBy);
 
     expect(textarea.tagName).toBe("TEXTAREA");
+    expect(label).not.toBeNull();
+    expect(label?.textContent).toBe("Markdown source");
     expect(notice).not.toBeNull();
     expect(notice?.textContent).toContain("table");
     expect(notice?.textContent).toContain("Edit the Markdown below");
