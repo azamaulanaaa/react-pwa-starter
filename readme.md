@@ -704,6 +704,7 @@ const provider: SessionContract = {
 - The table lists the seed catalog and the custom announcements.
 - A row opens a read-only detail sheet with the full content. A hidden announcement stays in the table and the sheet.
 - The `New announcement` form has a `Show as` dropdown and one `Create and show` button. The dropdown selects a lightbox or a banner. The default is a banner.
+- The form component is in `src/components/form/announcement`. It uses TanStack Form for the field state and Effect Schema for validation. The dialog wrapper is in `src/components/announcement/announcement-form.tsx`.
 - Custom announcements persist under `state-announcement_catalog` in `localStorage`.
 - The table uses a fixed layout. Long content truncates with an ellipsis. The table hides the secondary columns on small screens.
 - `src/components/announcement/data.ts` holds the seed catalog. An application can replace the list with its own data source.
