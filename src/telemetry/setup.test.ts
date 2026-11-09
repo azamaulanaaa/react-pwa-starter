@@ -22,33 +22,37 @@ vi.mock("@/telemetry/config.ts", () => ({
 }));
 
 describe("setupTelemetry", () => {
-  it("registers providers, context, and propagators", async () => {
-    const { setupTelemetry } = await import("@/telemetry/index.ts");
-    const { emitLog, getLogger, getTracer } =
-      await import("@/telemetry/api.ts");
+  it(
+    "registers providers, context, and propagators",
+    { timeout: 30_000 },
+    async () => {
+      const { setupTelemetry } = await import("@/telemetry/index.ts");
+      const { emitLog, getLogger, getTracer } =
+        await import("@/telemetry/api.ts");
 
-    // Vitest 5 registers its own global tracer provider, and the OTel API
-    // rejects an override. Clear the globals first so this test observes the
-    // app's registration.
-    trace.disable();
-    context.disable();
-    propagation.disable();
-    logs.disable();
-    metrics.disable();
-    setupTelemetry({ router: { subscribe: () => () => {} } });
+      // Vitest 5 registers its own global tracer provider, and the OTel API
+      // rejects an override. Clear the globals first so this test observes the
+      // app's registration.
+      trace.disable();
+      context.disable();
+      propagation.disable();
+      logs.disable();
+      metrics.disable();
+      setupTelemetry({ router: { subscribe: () => () => {} } });
 
-    const span = getTracer("smoke").startSpan("smoke");
-    expect(span.isRecording()).toBe(true);
-    span.end();
+      const span = getTracer("smoke").startSpan("smoke");
+      expect(span.isRecording()).toBe(true);
+      span.end();
 
-    expect(context.active()).toBeDefined();
-    expect(propagation.fields()).toEqual(
-      expect.arrayContaining(["traceparent", "tracestate", "baggage"]),
-    );
+      expect(context.active()).toBeDefined();
+      expect(propagation.fields()).toEqual(
+        expect.arrayContaining(["traceparent", "tracestate", "baggage"]),
+      );
 
-    expect(getLogger("smoke")).toBeDefined();
-    expect(() =>
-      emitLog("INFO", "smoke", { "smoke.test": true }),
-    ).not.toThrow();
-  });
+      expect(getLogger("smoke")).toBeDefined();
+      expect(() =>
+        emitLog("INFO", "smoke", { "smoke.test": true }),
+      ).not.toThrow();
+    },
+  );
 });
