@@ -698,6 +698,16 @@ const provider: SessionContract = {
   status change. The hook calls `worker.outbox.list()` on mount.
 - Run the system tests with `npm run test:run`.
 
+## Announcements
+
+- The `/system` page has an `Announcements` tab. The tab shows the announcement table.
+- `src/components/announcement/data.ts` holds the seed catalog. An application can replace the list with its own data source.
+- The `Show lightbox` action uses the existing `Dialog` primitive. The `Show banner` action uses the existing `Alert` primitive. The feature adds no new UI primitive.
+- `Hide for later` snoozes the announcement for 24 hours. The announcement returns when the snooze ends.
+- `Got it` dismisses the announcement. A dismissed announcement does not return.
+- The delivery state is stored under `state-announcement_delivery` in `localStorage`.
+- `AnnouncementHost` renders the active announcement one time in the dashboard shell. A banner shows in the page flow. A lightbox shows in a dialog with a blurred backdrop.
+
 ## Replica reader
 
 - The generic reader is in `src/lib/sync`. The reader has no domain type.
