@@ -28,6 +28,7 @@ import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { HorizontalRulePlugin } from "@lexical/react/LexicalHorizontalRulePlugin";
 import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
+import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPlugin";
 import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
@@ -40,6 +41,7 @@ import {
 } from "lexical";
 
 import { useTranslation } from "@/components/context/translation.tsx";
+import { EditorToolbar } from "@/components/editor/editor-toolbar.tsx";
 import { MARKDOWN_EDITOR_NODES } from "@/components/editor/nodes.ts";
 import {
   getUnsupportedFeatures,
@@ -49,6 +51,7 @@ import {
   getTransformers,
   type MarkdownVariant,
 } from "@/components/editor/transformers.ts";
+import { validateUrl } from "@/components/editor/url.ts";
 import { Label } from "@/components/ui/label.tsx";
 import { Textarea } from "@/components/ui/textarea.tsx";
 import { canonicalize } from "@/lib/markdown/dialect.ts";
@@ -63,49 +66,7 @@ const NAMESPACE = "MarkdownEditor";
 /** Defines the fallback accessible name for the editable region. */
 const DEFAULT_ARIA_LABEL = "Markdown editor";
 
-/** Lists the URL protocols that the editor never accepts. */
-const FORBIDDEN_PROTOCOLS = new Set([
-  "data:",
-  "file:",
-  "javascript:",
-  "blob:",
-  "vbscript:",
-]);
-
-/** Matches a URL that starts with a scheme. */
-const ABSOLUTE_SCHEME = /^[A-Za-z][A-Za-z\d+.-]*:/;
-
-/**
- * Returns true when the editor can apply one URL to a link.
- * The function accepts https:, mailto:, and same-origin relative paths.
- */
-export function validateUrl(url: string): boolean {
-  const candidate = url.trim();
-
-  if (candidate === "" || candidate.startsWith("//")) {
-    return false;
-  }
-
-  try {
-    const parsed = new URL(candidate, window.location.origin);
-
-    if (FORBIDDEN_PROTOCOLS.has(parsed.protocol)) {
-      return false;
-    }
-
-    if (parsed.protocol === "https:" || parsed.protocol === "mailto:") {
-      return true;
-    }
-
-    if (ABSOLUTE_SCHEME.test(candidate)) {
-      return false;
-    }
-
-    return parsed.origin === window.location.origin;
-  } catch {
-    return false;
-  }
-}
+export { validateUrl };
 
 /** Returns the translation key for one unsupported feature notice. */
 function getFallbackNoticeKey(feature: UnsupportedFeature): string {
@@ -180,6 +141,11 @@ export interface MarkdownEditorProps {
   ariaLabel?: string;
   /** Blocks edits when the value is true. */
   readOnly?: boolean;
+  /**
+   * Shows the formatting toolbar. The default is true for the standard and
+   * full variants. The plain variant has no block commands.
+   */
+  showToolbar?: boolean;
   /** The extra class names for the outer element. */
   className?: string;
 }
@@ -285,6 +251,7 @@ function EditorSurface({
   onChange,
   placeholder,
   readOnly = false,
+  showToolbar = false,
   transformers,
   value,
 }: EditorSurfaceProps): ReactNode {
@@ -356,6 +323,7 @@ function EditorSurface({
 
   return (
     <div className={cn("markdown-editor-shell", className)}>
+      {showToolbar && !readOnly ? <EditorToolbar /> : null}
       <RichTextPlugin
         contentEditable={
           <ContentEditable
@@ -377,6 +345,7 @@ function EditorSurface({
       <HistoryPlugin />
       <HorizontalRulePlugin />
       <LinkPlugin validateUrl={validateUrl} />
+      <ListPlugin />
       <OnChangePlugin
         ignoreHistoryMergeTagChange={false}
         ignoreSelectionChange
@@ -401,6 +370,7 @@ export const MarkdownEditor = forwardRef<
     onChange,
     placeholder,
     readOnly = false,
+    showToolbar,
     value,
     variant = "standard",
   },
@@ -411,6 +381,7 @@ export const MarkdownEditor = forwardRef<
     () => getUnsupportedFeatures(value),
     [value],
   );
+  const toolbarVisible = showToolbar ?? variant !== "plain";
 
   if (unsupportedFeatures.length > 0) {
     return (
@@ -445,6 +416,7 @@ export const MarkdownEditor = forwardRef<
         onChange={onChange}
         placeholder={placeholder}
         readOnly={readOnly}
+        showToolbar={toolbarVisible}
         transformers={transformers}
         value={value}
       />

@@ -34,6 +34,26 @@
   outline-offset: 2px;
 }
 
+/*
+ * The shared focus ring is light against the toolbar surface. The toolbar uses
+ * the foreground color, which keeps the ring at 3:1 or more in both themes.
+ */
+.markdown-editor-toolbar :is(button, [role="combobox"]):focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 2px;
+}
+
+/* The link popover renders in a portal, so it needs its own focus rule. */
+.markdown-editor-link-popover :is(button, input):focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 2px;
+}
+
+/* A pressed toggle keeps its full icon weight in addition to aria-pressed. */
+.markdown-editor-toolbar [data-slot="toggle"][data-pressed] svg {
+  opacity: 1;
+}
+
 .markdown-editor-placeholder {
   position: absolute;
   inset-block-start: calc(0.5rem + 1px);

@@ -33,6 +33,7 @@ export const HORIZONTAL_RULE: Transformer = {
  * The standard set of Markdown transformers.
  * The check list transformer comes before the unordered list transformer.
  * The unordered list transformer reads `- [ ]` as a plain list item otherwise.
+ * The set includes the horizontal rule, so the toolbar always round-trips it.
  */
 export const MARKDOWN_TRANSFORMERS: Transformer[] = [
   HEADING,
@@ -41,6 +42,7 @@ export const MARKDOWN_TRANSFORMERS: Transformer[] = [
   UNORDERED_LIST,
   ORDERED_LIST,
   CODE,
+  HORIZONTAL_RULE,
   ...TEXT_FORMAT_TRANSFORMERS,
   LINK,
 ];
@@ -51,11 +53,8 @@ export const PLAIN_TRANSFORMERS: Transformer[] = [
   ...TEXT_FORMAT_TRANSFORMERS,
 ];
 
-/** The full set of Markdown transformers. It adds the horizontal rule. */
-export const FULL_TRANSFORMERS: Transformer[] = [
-  ...MARKDOWN_TRANSFORMERS,
-  HORIZONTAL_RULE,
-];
+/** The full set of Markdown transformers. It matches the standard set. */
+export const FULL_TRANSFORMERS: Transformer[] = MARKDOWN_TRANSFORMERS;
 
 /** Defines the Markdown transformer set that one editor variant uses. */
 export type MarkdownVariant = "plain" | "standard" | "full";
