@@ -700,15 +700,15 @@ const provider: SessionContract = {
 
 ## Announcements
 
-- The `/system` page has an `Announcements` tab. The tab shows the announcement archive.
+- The `/system` page has an `Announcements` tab. The tab shows the inline announcement form above the announcement archive.
 - The table lists the seed catalog and the custom announcements.
 - A row opens a read-only detail sheet with the full content. A hidden announcement stays in the table and the sheet.
-- The `New announcement` form has a `Show as` dropdown and one `Create and show` button. The dropdown selects a lightbox or a banner. The default is a banner.
-- The form component is in `src/components/form/announcement`. It uses TanStack Form for the field state and Effect Schema for validation. The dialog wrapper is in `src/components/announcement/announcement-form.tsx`.
+- The inline `New announcement` form has a `Show as` dropdown and one `Create and show` button. The dropdown selects a lightbox or a banner. The default is a banner. The form resets after each successful submit.
+- The form component is in `src/components/form/announcement`. It uses TanStack Form for the field state and Effect Schema for validation. The form is not a dialog.
 - Custom announcements persist under `state-announcement_catalog` in `localStorage`.
 - The table uses a fixed layout. Long content truncates with an ellipsis. The table hides the secondary columns on small screens.
 - `src/components/announcement/data.ts` holds the seed catalog. An application can replace the list with its own data source.
-- The form uses the existing `Dialog` primitive. The lightbox uses the existing `Dialog` primitive. The banner uses the existing `Alert` primitive. The feature adds no new UI primitive.
+- The lightbox uses the existing `Dialog` primitive. The banner uses the existing `Alert` primitive. The feature adds no new UI primitive.
 - `Hide for later` snoozes the announcement for 24 hours. The announcement returns when the snooze ends.
 - `Got it` dismisses the announcement. A dismissed announcement does not return.
 - The delivery state is stored under `state-announcement_delivery` in `localStorage`.
