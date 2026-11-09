@@ -700,11 +700,12 @@ const provider: SessionContract = {
 
 ## Announcements
 
-- The `/system` page has an `Announcements` tab. The tab shows the inline announcement form above the announcement archive.
-- The table lists the seed catalog and the custom announcements.
-- A row opens a read-only detail sheet with the full content. A hidden announcement stays in the table and the sheet.
-- The inline `New announcement` form has a `Show as` dropdown and one `Create and show` button. The dropdown selects a lightbox or a banner. The default is a banner. The form resets after each successful submit.
-- The form component is in `src/components/form/announcement`. It uses TanStack Form for the field state and Effect Schema for validation. The form is not a dialog.
+- The `/system` page has an `Announcements` tab. The tab is a read-only history for users.
+- The table lists the seed catalog and any custom announcements from the catalog.
+- The tab shows no creation UI. Only selected people can create announcements.
+- The reusable creation form is in `src/components/form/announcement`. It is available to an authorized admin surface, not the user-facing history. It uses TanStack Form for the field state and Effect Schema for validation.
+- The form story is in `src/components/form/announcement/stories.tsx`.
+- A row opens the read-only detail sheet. A hidden announcement remains in the history.
 - Custom announcements persist under `state-announcement_catalog` in `localStorage`.
 - The table uses a fixed layout. Long content truncates with an ellipsis. The table hides the secondary columns on small screens.
 - `src/components/announcement/data.ts` holds the seed catalog. An application can replace the list with its own data source.
