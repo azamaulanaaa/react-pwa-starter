@@ -176,3 +176,55 @@
 .markdown-body.markdown-editor .markdown-editor-code:last-child {
   margin-block-end: 0;
 }
+
+/* The image wrapper stays inside the editor width. The image keeps its ratio. */
+.markdown-body.markdown-editor .image-node {
+  display: block;
+  max-inline-size: 100%;
+  margin-block: 0 1rem;
+}
+
+.markdown-body.markdown-editor .image-node-content {
+  display: block;
+  max-inline-size: 100%;
+  border-radius: var(--radius-md);
+}
+
+.markdown-body.markdown-editor .image-node-image {
+  display: block;
+  max-inline-size: 100%;
+  block-size: auto;
+  border-radius: var(--radius-md);
+  outline: 1px solid oklch(0 0 0 / 0.1);
+  outline-offset: -1px;
+}
+
+.dark .markdown-body.markdown-editor .image-node-image {
+  outline-color: oklch(1 0 0 / 0.1);
+}
+
+/*
+ * The foreground ring is dark on the light theme and light on the dark theme.
+ * It keeps 3:1 or more against the editor surface.
+ */
+.markdown-body.markdown-editor .image-node-content[data-selected="true"],
+.markdown-body.markdown-editor .image-node-content:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 2px;
+}
+
+.image-upload-status {
+  margin-block: 0.5rem 0;
+  margin-inline: 0;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.image-upload-status:empty {
+  margin-block-start: 0;
+}
+
+.image-upload-status[data-state="error"] {
+  color: var(--destructive-foreground);
+}

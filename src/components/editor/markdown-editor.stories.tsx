@@ -11,6 +11,7 @@ import {
   type MarkdownEditorHandle,
   type MarkdownEditorVariant,
 } from "@/components/editor/markdown-editor.tsx";
+import type { ImageUploadHandler } from "@/components/editor/image-upload.ts";
 import { MarkdownView } from "@/components/markdown/markdown-view.tsx";
 
 const DEFAULT_MARKDOWN = [
@@ -40,16 +41,32 @@ const MENTION_MARKDOWN = [
 
 const LOCAL_MENTION_SOURCE = createLocalMentionSource(LOCAL_MENTION_TARGETS);
 
+const IMAGE_MARKDOWN = [
+  "# Image note",
+  "",
+  "![Sample diagram](/fs/story_image)",
+  "",
+  "Use the image button to upload one image.",
+].join("\n");
+
+/** Returns one fake upload result for the image story. */
+const FAKE_IMAGE_UPLOAD: ImageUploadHandler = async (file, { onProgress }) => {
+  onProgress(100);
+  return { alt: file.name, id: "story_image" };
+};
+
 /** Shows one editor and the Markdown that it emits. */
 function EditorStory({
   initialMarkdown,
   mentionSource,
+  onUploadImage,
   readOnly = false,
   showMentions,
   variant = "standard",
 }: {
   initialMarkdown: string;
   mentionSource?: MentionSource;
+  onUploadImage?: ImageUploadHandler;
   readOnly?: boolean;
   showMentions?: boolean;
   variant?: MarkdownEditorVariant;
@@ -65,6 +82,7 @@ function EditorStory({
           ariaLabel="Story note"
           mentionSource={mentionSource}
           onChange={setMarkdown}
+          onUploadImage={onUploadImage}
           placeholder="# Project notes"
           readOnly={readOnly}
           showMentions={showMentions}
@@ -91,6 +109,13 @@ export const Mentions: Story = () => (
   <EditorStory
     initialMarkdown={MENTION_MARKDOWN}
     mentionSource={LOCAL_MENTION_SOURCE}
+  />
+);
+
+export const Images: Story = () => (
+  <EditorStory
+    initialMarkdown={IMAGE_MARKDOWN}
+    onUploadImage={FAKE_IMAGE_UPLOAD}
   />
 );
 

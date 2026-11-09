@@ -1,5 +1,6 @@
 export {
   Empty as EditorEmpty,
+  Images as EditorImages,
   Mentions as EditorMentions,
   Plain as EditorPlain,
   ReadOnly as EditorReadOnly,

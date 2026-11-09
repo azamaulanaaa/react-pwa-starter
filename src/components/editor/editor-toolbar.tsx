@@ -48,6 +48,7 @@ import {
   BoldIcon,
   CircleAlertIcon,
   CodeIcon,
+  ImageIcon,
   ItalicIcon,
   LinkIcon,
   ListChecksIcon,
@@ -63,6 +64,8 @@ import {
 } from "lucide-react";
 
 import { useTranslation } from "@/components/context/translation.tsx";
+import { INSERT_IMAGE_COMMAND } from "@/components/editor/image-plugin.tsx";
+import type { ImageUploadHandler } from "@/components/editor/image-upload.ts";
 import { useRovingTabindex } from "@/components/editor/use-roving-tabindex.ts";
 import { validateUrl } from "@/components/editor/url.ts";
 import { Button } from "@/components/ui/button.tsx";
@@ -99,10 +102,11 @@ const ITEM = {
   bulletList: 8,
   checkList: 10,
   codeBlock: 12,
-  horizontalRule: 14,
+  horizontalRule: 15,
+  image: 13,
   inlineCode: 6,
   italic: 3,
-  link: 13,
+  link: 14,
   orderedList: 9,
   redo: 1,
   strikethrough: 5,
@@ -184,11 +188,19 @@ const LINK_FORM_CLOSED: LinkFormState = {
   value: "",
 };
 
+/** Defines the props of the formatting toolbar. */
+export interface EditorToolbarProps {
+  /** Enables the image button when the editor has an upload handler. */
+  onUploadImage?: ImageUploadHandler;
+}
+
 /**
  * Shows the formatting toolbar for the current Lexical editor.
  * The toolbar must render inside `LexicalComposer`.
  */
-export function EditorToolbar(): ReactNode {
+export function EditorToolbar({
+  onUploadImage,
+}: EditorToolbarProps): ReactNode {
   const { t } = useTranslation();
   const [editor] = useLexicalComposerContext();
   const [state, setState] = useState<ToolbarState>(EMPTY_STATE);
@@ -590,6 +602,16 @@ export function EditorToolbar(): ReactNode {
         >
           <SquareCodeIcon aria-hidden="true" />
         </Toggle>
+        <Button
+          aria-label={t("editor_image_button")}
+          disabled={onUploadImage === undefined}
+          size="icon"
+          variant="ghost"
+          {...roving.getItemProps(ITEM.image)}
+          onClick={() => runCommand(INSERT_IMAGE_COMMAND, undefined)}
+        >
+          <ImageIcon aria-hidden="true" />
+        </Button>
         <Popover onOpenChange={handleLinkOpenChange} open={linkForm.open}>
           <PopoverTrigger
             aria-label={linkLabel}

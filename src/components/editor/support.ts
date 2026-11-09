@@ -3,8 +3,7 @@ import { SKIP, visit } from "unist-util-visit";
 import { parse } from "@/lib/markdown/index.ts";
 
 /** Defines a feature that the Markdown editor cannot represent yet. */
-export type UnsupportedFeature =
-  "table" | "image" | "html" | "footnote" | "unknown";
+export type UnsupportedFeature = "table" | "html" | "footnote" | "unknown";
 
 /**
  * Lists the node types that the Markdown editor can represent.
@@ -18,6 +17,8 @@ const SUPPORTED_NODE_TYPES = new Set([
   "delete",
   "emphasis",
   "heading",
+  "image",
+  "imageReference",
   "inlineCode",
   "link",
   "linkReference",
@@ -44,11 +45,6 @@ export function getUnsupportedFeatures(markdown: string): UnsupportedFeature[] {
   visit(parse(markdown), (node) => {
     if (node.type === "table") {
       features.add("table");
-      return SKIP;
-    }
-
-    if (node.type === "image" || node.type === "imageReference") {
-      features.add("image");
       return SKIP;
     }
 

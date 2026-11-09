@@ -8,7 +8,7 @@ import {
   type Transformer,
 } from "@lexical/markdown";
 import { $getRoot } from "lexical";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { MARKDOWN_EDITOR_NODES } from "@/components/editor/nodes.ts";
 import { getUnsupportedFeatures } from "@/components/editor/support.ts";
@@ -18,6 +18,11 @@ import {
 } from "@/components/editor/transformers.ts";
 import { canonicalize } from "@/lib/markdown/index.ts";
 
+// The transformer tests do not start a worker. The image node only needs its class.
+vi.mock("@/hooks/engines/use-file-blob.ts", () => ({
+  useFileBlob: () => ({ status: "missing", url: null }),
+}));
+
 const FIXTURE_DIRECTORY = new URL(
   "../../lib/markdown/__fixtures__/",
   import.meta.url,
@@ -25,7 +30,7 @@ const FIXTURE_DIRECTORY = new URL(
 const FIXTURE_NAMES = readdirSync(FIXTURE_DIRECTORY).filter(
   (name) => name.endsWith(".md") && !name.endsWith(".canonical.md"),
 );
-const UNSUPPORTED_FIXTURE_NAMES = new Set(["links-images.md", "table.md"]);
+const UNSUPPORTED_FIXTURE_NAMES = new Set(["table.md"]);
 const SUPPORTED_FIXTURE_NAMES = FIXTURE_NAMES.filter(
   (name) => !UNSUPPORTED_FIXTURE_NAMES.has(name),
 );

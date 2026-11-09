@@ -19,8 +19,14 @@ import {
   type MarkdownEditorHandle,
   type MarkdownEditorVariant,
 } from "@/components/editor/markdown-editor.tsx";
+import type { ImageUploadHandler } from "@/components/editor/image-upload.ts";
 
 import enDictionary from "~/public/locales/en-US.json" with { type: "json" };
+
+// The toolbar tests do not start a worker. The image node reads the missing state.
+vi.mock("@/hooks/engines/use-file-blob.ts", () => ({
+  useFileBlob: () => ({ status: "missing", url: null }),
+}));
 
 type EditorHost = HTMLElement & { __lexicalEditor?: LexicalEditor };
 
@@ -42,10 +48,12 @@ function Providers({ children }: { children: ReactNode }) {
 function renderEditor(
   value: string,
   {
+    onUploadImage,
     readOnly,
     showToolbar,
     variant,
   }: {
+    onUploadImage?: ImageUploadHandler;
     readOnly?: boolean;
     showToolbar?: boolean;
     variant?: MarkdownEditorVariant;
@@ -59,6 +67,7 @@ function renderEditor(
         ref={ref}
         ariaLabel="Note body"
         onChange={onChange}
+        onUploadImage={onUploadImage}
         readOnly={readOnly}
         showToolbar={showToolbar}
         value={value}
@@ -133,6 +142,25 @@ describe("EditorToolbar", () => {
     renderEditor("| A | B |\n| - | - |\n| 1 | 2 |\n");
 
     expect(screen.queryByRole("toolbar")).toBeNull();
+  });
+
+  it("disables the image button without an upload handler", () => {
+    renderEditor("Alpha\n");
+    const image = screen.getByRole("button", { name: "Insert image" });
+
+    expect((image as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("enables the image button with an upload handler", () => {
+    const onUploadImage: ImageUploadHandler = async (file) => ({
+      alt: file.name,
+      id: "file_01",
+    });
+
+    renderEditor("Alpha\n", { onUploadImage });
+    const image = screen.getByRole("button", { name: "Insert image" });
+
+    expect((image as HTMLButtonElement).disabled).toBe(false);
   });
 
   it("toggles bold text in the Markdown output", () => {

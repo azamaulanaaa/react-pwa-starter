@@ -23,6 +23,11 @@ import type { MentionSource, MentionTarget } from "@/lib/mentions/index.ts";
 
 import enDictionary from "~/public/locales/en-US.json" with { type: "json" };
 
+// The mention tests do not start a worker. The image node reads the missing state.
+vi.mock("@/hooks/engines/use-file-blob.ts", () => ({
+  useFileBlob: () => ({ status: "missing", url: null }),
+}));
+
 // jsdom does not measure a DOM Range. The typeahead plugin asks for the range
 // rectangle to position the menu, so the test supplies a zero-size rectangle.
 if (typeof Range !== "undefined") {

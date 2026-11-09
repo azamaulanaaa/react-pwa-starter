@@ -42,6 +42,8 @@ import {
 
 import { useTranslation } from "@/components/context/translation.tsx";
 import { EditorToolbar } from "@/components/editor/editor-toolbar.tsx";
+import { ImagePlugin } from "@/components/editor/image-plugin.tsx";
+import type { ImageUploadHandler } from "@/components/editor/image-upload.ts";
 import { MentionTypeaheadPlugin } from "@/components/editor/mention-typeahead.tsx";
 import { MARKDOWN_EDITOR_NODES } from "@/components/editor/nodes.ts";
 import {
@@ -73,7 +75,6 @@ export { validateUrl };
 /** Returns the translation key for one unsupported feature notice. */
 function getFallbackNoticeKey(feature: UnsupportedFeature): string {
   if (feature === "table") return "editor_fallback_table";
-  if (feature === "image") return "editor_fallback_image";
   return "editor_fallback_generic";
 }
 
@@ -155,6 +156,11 @@ export interface MarkdownEditorProps {
    * The picker stays off in the read-only, plain, and fallback states.
    */
   showMentions?: boolean;
+  /**
+   * Uploads one image and returns its stored id.
+   * The image button and the image plugin appear when this value is set.
+   */
+  onUploadImage?: ImageUploadHandler;
   /** The extra class names for the outer element. */
   className?: string;
 }
@@ -261,6 +267,7 @@ function EditorSurface({
   mentionSource,
   mentionsEnabled,
   onChange,
+  onUploadImage,
   placeholder,
   readOnly = false,
   showToolbar = false,
@@ -335,7 +342,9 @@ function EditorSurface({
 
   return (
     <div className={cn("markdown-editor-shell", className)}>
-      {showToolbar && !readOnly ? <EditorToolbar /> : null}
+      {showToolbar && !readOnly ? (
+        <EditorToolbar onUploadImage={onUploadImage} />
+      ) : null}
       <RichTextPlugin
         contentEditable={
           <ContentEditable
@@ -361,6 +370,9 @@ function EditorSurface({
       {mentionsEnabled && mentionSource !== undefined ? (
         <MentionTypeaheadPlugin enabled source={mentionSource} />
       ) : null}
+      {onUploadImage === undefined ? null : (
+        <ImagePlugin onUploadImage={onUploadImage} />
+      )}
       <OnChangePlugin
         ignoreHistoryMergeTagChange={false}
         ignoreSelectionChange
@@ -384,6 +396,7 @@ export const MarkdownEditor = forwardRef<
     className,
     mentionSource,
     onChange,
+    onUploadImage,
     placeholder,
     readOnly = false,
     showMentions,
@@ -438,6 +451,7 @@ export const MarkdownEditor = forwardRef<
         mentionSource={mentionSource}
         mentionsEnabled={mentionsEnabled}
         onChange={onChange}
+        onUploadImage={onUploadImage}
         placeholder={placeholder}
         readOnly={readOnly}
         showToolbar={toolbarVisible}

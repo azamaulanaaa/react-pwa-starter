@@ -19,10 +19,8 @@ describe("getUnsupportedFeatures", () => {
     expect(getUnsupportedFeatures(readFixture("table.md"))).toEqual(["table"]);
   });
 
-  it("reports an image", () => {
-    expect(getUnsupportedFeatures(readFixture("links-images.md"))).toEqual([
-      "image",
-    ]);
+  it("accepts an image", () => {
+    expect(getUnsupportedFeatures(readFixture("links-images.md"))).toEqual([]);
   });
 
   it("accepts a basic document", () => {

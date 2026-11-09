@@ -7,6 +7,7 @@ import {
   QUOTE,
   TEXT_FORMAT_TRANSFORMERS,
   UNORDERED_LIST,
+  type TextMatchTransformer,
   type Transformer,
 } from "@lexical/markdown";
 import {
@@ -14,6 +15,12 @@ import {
   $isHorizontalRuleNode,
   HorizontalRuleNode,
 } from "@lexical/react/LexicalHorizontalRuleNode";
+
+import {
+  $createImageNode,
+  $isImageNode,
+  ImageNode,
+} from "@/components/editor/image-node.tsx";
 
 /**
  * Converts one horizontal rule line to a horizontal rule node and back.
@@ -30,9 +37,32 @@ export const HORIZONTAL_RULE: Transformer = {
 };
 
 /**
+ * Converts one image to an image node and back.
+ * The regular expression accepts `/fs/{id}` sources only.
+ */
+export const IMAGE: TextMatchTransformer = {
+  dependencies: [ImageNode],
+  export: (node) =>
+    $isImageNode(node) ? `![${node.getAltText()}](${node.getSrc()})` : null,
+  importRegExp: /!\[([^\]]*)\]\((\/fs\/[A-Za-z0-9_-]+)\)/,
+  regExp: /!\[([^\]]*)\]\((\/fs\/[A-Za-z0-9_-]+)\)/,
+  replace: (textNode, match) => {
+    const alt = match[1] ?? "";
+    const src = match[2];
+
+    if (src === undefined) return;
+
+    textNode.replace($createImageNode({ alt, src, title: "" }));
+  },
+  type: "text-match",
+};
+
+/**
  * The standard set of Markdown transformers.
  * The check list transformer comes before the unordered list transformer.
  * The unordered list transformer reads `- [ ]` as a plain list item otherwise.
+ * The image transformer comes before the link transformer, so the leading `!`
+ * stays with the image.
  * The set includes the horizontal rule, so the toolbar always round-trips it.
  */
 export const MARKDOWN_TRANSFORMERS: Transformer[] = [
@@ -44,6 +74,7 @@ export const MARKDOWN_TRANSFORMERS: Transformer[] = [
   CODE,
   HORIZONTAL_RULE,
   ...TEXT_FORMAT_TRANSFORMERS,
+  IMAGE,
   LINK,
 ];
 

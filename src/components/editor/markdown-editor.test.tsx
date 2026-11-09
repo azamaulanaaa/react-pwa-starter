@@ -16,6 +16,11 @@ import { canonicalize } from "@/lib/markdown/index.ts";
 
 import enDictionary from "~/public/locales/en-US.json" with { type: "json" };
 
+// The editor tests do not start a worker. The image node reads the missing state.
+vi.mock("@/hooks/engines/use-file-blob.ts", () => ({
+  useFileBlob: () => ({ status: "missing", url: null }),
+}));
+
 const NOTE = [
   "# Title",
   "",
@@ -209,14 +214,15 @@ describe("MarkdownEditor", () => {
     expect(screen.getByText(/contains a table/)).toBeDefined();
   });
 
-  it("shows the raw Markdown fallback for an image", () => {
+  it("shows an image node with its alt text", async () => {
     renderEditor({ value: IMAGE });
-    const textarea = screen.getByRole("textbox", { name: "Markdown source" });
 
-    expect(textarea.tagName).toBe("TEXTAREA");
-    expect((textarea as HTMLTextAreaElement).value).toBe(IMAGE);
-    expect(document.querySelector("[contenteditable]")).toBeNull();
-    expect(screen.getByText(/contains an image/)).toBeDefined();
+    expect(document.querySelector('[data-slot="image-node"]')).not.toBeNull();
+    expect(screen.getByText("Diagram")).toBeDefined();
+    expect(await screen.findByText("Image unavailable")).toBeDefined();
+    expect(
+      screen.queryByRole("textbox", { name: "Markdown source" }),
+    ).toBeNull();
   });
 
   it("shows the editor for a supported note", () => {

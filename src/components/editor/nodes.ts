@@ -4,6 +4,8 @@ import { ListItemNode, ListNode } from "@lexical/list";
 import { HorizontalRuleNode } from "@lexical/react/LexicalHorizontalRuleNode";
 import { HeadingNode, QuoteNode } from "@lexical/rich-text";
 
+import { ImageNode } from "@/components/editor/image-node.tsx";
+
 /**
  * Lists the Lexical node classes that the Markdown adapter registers.
  * Every class maps to one md-lite/1 block or inline element.
@@ -17,4 +19,5 @@ export const MARKDOWN_EDITOR_NODES = [
   CodeHighlightNode,
   LinkNode,
   HorizontalRuleNode,
+  ImageNode,
 ];
