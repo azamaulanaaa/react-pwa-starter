@@ -1,13 +1,7 @@
 // @vitest-environment jsdom
 import type { ReactNode } from "react";
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import { IntlProvider } from "@/components/context/intl.tsx";
 import { TranslationProvider } from "@/components/context/translation.tsx";
@@ -22,7 +16,6 @@ import {
 import type {
   Announcement,
   AnnouncementDelivery,
-  AnnouncementInput,
 } from "@/components/announcement/types.ts";
 
 import dictionary from "~/public/locales/en-US.json" with { type: "json" };
@@ -48,17 +41,14 @@ function renderWithProviders(ui: ReactNode) {
 
 function renderView({
   announcements = ANNOUNCEMENTS,
-  onCreate = () => {},
 }: {
   announcements?: Announcement[];
-  onCreate?: (input: AnnouncementInput) => void;
 } = {}) {
   return renderWithProviders(
     <AnnouncementView
       announcements={announcements}
       delivery={EMPTY_DELIVERY}
       now={NOW}
-      onCreate={onCreate}
     />,
   );
 }
@@ -71,38 +61,6 @@ function readDelivery(): AnnouncementDelivery {
   return JSON.parse(
     localStorage.getItem(STORAGE_KEY) ?? "{}",
   ) as AnnouncementDelivery;
-}
-
-function fillForm(title: string, body: string): void {
-  fireEvent.change(
-    screen.getByLabelText(dictionary.system_announcements_form_title_label),
-    { target: { value: title } },
-  );
-  fireEvent.change(
-    screen.getByLabelText(dictionary.system_announcements_form_body_label),
-    { target: { value: body } },
-  );
-}
-
-function submitForm(): void {
-  fireEvent.click(
-    screen.getByRole("button", {
-      name: dictionary.system_announcements_form_submit,
-    }),
-  );
-}
-
-function choosePresentation(label: string): void {
-  fireEvent.click(
-    screen.getByLabelText(
-      dictionary.system_announcements_form_presentation_label,
-    ),
-  );
-
-  const option = screen.getByRole("option", { name: label });
-
-  fireEvent.pointerDown(option, { pointerType: "mouse" });
-  fireEvent.click(option);
 }
 
 describe("AnnouncementView", () => {
@@ -182,85 +140,6 @@ describe("AnnouncementView", () => {
     ).toBeDefined();
     expect(screen.queryByRole("table")).toBeNull();
   });
-
-  it("creates a banner announcement from trimmed values by default", async () => {
-    const onCreate = vi.fn();
-
-    renderView({ onCreate });
-
-    fillForm("  Maintenance tonight  ", "  Save your work.  ");
-    submitForm();
-
-    await waitFor(() => {
-      expect(onCreate).toHaveBeenCalledWith({
-        title: "Maintenance tonight",
-        body: "Save your work.",
-        variant: "info",
-        preferredPresentation: "banner",
-      });
-    });
-  });
-
-  it("creates a lightbox announcement from the presentation select", async () => {
-    const onCreate = vi.fn();
-
-    renderView({ onCreate });
-
-    fillForm("Maintenance tonight", "Save your work.");
-    choosePresentation(dictionary.system_announcement_presentation_dialog);
-    submitForm();
-
-    await waitFor(() => {
-      expect(onCreate).toHaveBeenCalledWith({
-        title: "Maintenance tonight",
-        body: "Save your work.",
-        variant: "info",
-        preferredPresentation: "dialog",
-      });
-    });
-  });
-
-  it("shows both required errors and does not create an announcement", async () => {
-    const onCreate = vi.fn();
-
-    renderView({ onCreate });
-
-    submitForm();
-
-    const titleInput = screen.getByLabelText(
-      dictionary.system_announcements_form_title_label,
-    );
-    const bodyInput = screen.getByLabelText(
-      dictionary.system_announcements_form_body_label,
-    );
-    const requiredErrors = await screen.findAllByText(
-      dictionary.system_announcements_form_required,
-    );
-
-    expect(onCreate).not.toHaveBeenCalled();
-    expect(requiredErrors).toHaveLength(2);
-    expect(titleInput.getAttribute("aria-invalid")).toBe("true");
-    expect(bodyInput.getAttribute("aria-invalid")).toBe("true");
-  });
-
-  it("resets the title and message after a successful submit", async () => {
-    renderView();
-
-    fillForm("Maintenance tonight", "Save your work.");
-    submitForm();
-
-    const titleInput = screen.getByLabelText(
-      dictionary.system_announcements_form_title_label,
-    ) as HTMLInputElement;
-    const bodyInput = screen.getByLabelText(
-      dictionary.system_announcements_form_body_label,
-    ) as HTMLTextAreaElement;
-
-    await waitFor(() => {
-      expect(titleInput.value).toBe("");
-      expect(bodyInput.value).toBe("");
-    });
-  });
 });
 
 describe("AnnouncementPanel", () => {
@@ -269,30 +148,25 @@ describe("AnnouncementPanel", () => {
     localStorage.removeItem(STORAGE_KEY);
   });
 
-  it("adds a custom announcement to the table and the delivery state", async () => {
+  it("shows a custom announcement in the read-only history", () => {
+    const custom: Announcement = {
+      id: "custom-notice",
+      title: "Custom notice",
+      body: "Custom body text.",
+      variant: "info",
+      preferredPresentation: "banner",
+    };
+
+    localStorage.setItem(CATALOG_KEY, JSON.stringify([custom]));
+
     renderWithProviders(<AnnouncementPanel />);
 
-    fillForm("Custom notice", "Custom body text.");
-    fireEvent.click(
-      screen.getByRole("button", {
+    expect(screen.getByText("Custom notice")).toBeDefined();
+    expect(
+      screen.queryByRole("button", {
         name: dictionary.system_announcements_form_submit,
       }),
-    );
-
-    expect(await screen.findByText("Custom notice")).toBeDefined();
-
-    const delivery = readDelivery();
-    const catalog = JSON.parse(
-      localStorage.getItem(CATALOG_KEY) ?? "[]",
-    ) as Announcement[];
-
-    expect(delivery.presentation).toBe("banner");
-    expect(
-      catalog.some(
-        (entry) =>
-          entry.id === delivery.activeId && entry.title === "Custom notice",
-      ),
-    ).toBe(true);
+    ).toBeNull();
   });
 });
 
