@@ -2,6 +2,7 @@ import type { Story, StoryDefault } from "@ladle/react";
 
 import { AnnouncementBanner } from "@/components/announcement/announcement-banner.tsx";
 import { AnnouncementDialog } from "@/components/announcement/announcement-dialog.tsx";
+import { AnnouncementForm } from "@/components/announcement/announcement-form.tsx";
 import { AnnouncementView as AnnouncementViewComponent } from "@/components/announcement/announcement-view.tsx";
 import { ANNOUNCEMENTS } from "@/components/announcement/data.ts";
 import { SNOOZE_MS } from "@/components/announcement/delivery.ts";
@@ -27,8 +28,12 @@ export const AnnouncementView: Story = () => (
     announcements={ANNOUNCEMENTS}
     delivery={DELIVERY}
     now={NOW}
-    onShow={noop}
+    onCreate={noop}
   />
+);
+
+export const AnnouncementFormStory: Story = () => (
+  <AnnouncementForm onCreate={noop} onOpenChange={noop} open />
 );
 
 export const AnnouncementBannerStory: Story = () => (

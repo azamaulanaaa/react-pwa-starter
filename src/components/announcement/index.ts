@@ -4,6 +4,7 @@ export { AnnouncementHost } from "@/components/announcement/announcement-host.ts
 export type {
   Announcement,
   AnnouncementDelivery,
+  AnnouncementInput,
   AnnouncementPresentation,
   AnnouncementStatus,
   AnnouncementVariant,

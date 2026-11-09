@@ -1,22 +1,28 @@
 // @vitest-environment jsdom
 import type { ReactNode } from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { IntlProvider } from "@/components/context/intl.tsx";
 import { TranslationProvider } from "@/components/context/translation.tsx";
 import { AnnouncementHost } from "@/components/announcement/announcement-host.tsx";
+import { AnnouncementPanel } from "@/components/announcement/announcement-panel.tsx";
 import { AnnouncementView } from "@/components/announcement/announcement-view.tsx";
 import { ANNOUNCEMENTS } from "@/components/announcement/data.ts";
 import {
   EMPTY_DELIVERY,
   SNOOZE_MS,
 } from "@/components/announcement/delivery.ts";
-import type { AnnouncementDelivery } from "@/components/announcement/types.ts";
+import type {
+  Announcement,
+  AnnouncementDelivery,
+  AnnouncementInput,
+} from "@/components/announcement/types.ts";
 
 import dictionary from "~/public/locales/en-US.json" with { type: "json" };
 
 const STORAGE_KEY = "state-announcement_delivery";
+const CATALOG_KEY = "state-announcement_catalog";
 const NOW = 1_700_000_000_000;
 
 function Providers({ children }: { children: ReactNode }) {
@@ -34,6 +40,23 @@ function renderWithProviders(ui: ReactNode) {
   return render(<Providers>{ui}</Providers>);
 }
 
+function renderView({
+  announcements = ANNOUNCEMENTS,
+  onCreate = () => {},
+}: {
+  announcements?: Announcement[];
+  onCreate?: (input: AnnouncementInput) => void;
+} = {}) {
+  return renderWithProviders(
+    <AnnouncementView
+      announcements={announcements}
+      delivery={EMPTY_DELIVERY}
+      now={NOW}
+      onCreate={onCreate}
+    />,
+  );
+}
+
 function seedDelivery(delivery: AnnouncementDelivery): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(delivery));
 }
@@ -44,16 +67,20 @@ function readDelivery(): AnnouncementDelivery {
   ) as AnnouncementDelivery;
 }
 
+function fillForm(title: string, body: string): void {
+  fireEvent.change(
+    screen.getByLabelText(dictionary.system_announcements_form_title_label),
+    { target: { value: title } },
+  );
+  fireEvent.change(
+    screen.getByLabelText(dictionary.system_announcements_form_body_label),
+    { target: { value: body } },
+  );
+}
+
 describe("AnnouncementView", () => {
   it("shows every announcement in the table", () => {
-    renderWithProviders(
-      <AnnouncementView
-        announcements={ANNOUNCEMENTS}
-        delivery={EMPTY_DELIVERY}
-        now={NOW}
-        onShow={() => {}}
-      />,
-    );
+    renderView();
 
     for (const announcement of ANNOUNCEMENTS) {
       expect(screen.getByText(announcement.title)).toBeDefined();
@@ -61,17 +88,8 @@ describe("AnnouncementView", () => {
     }
   });
 
-  it("opens the detail sheet and shows the announcement with each presentation", () => {
-    const onShow = vi.fn();
-
-    renderWithProviders(
-      <AnnouncementView
-        announcements={ANNOUNCEMENTS}
-        delivery={EMPTY_DELIVERY}
-        now={NOW}
-        onShow={onShow}
-      />,
-    );
+  it("opens the detail sheet with the full announcement and no show actions", () => {
+    renderView();
 
     fireEvent.click(
       screen.getAllByRole("button", {
@@ -79,42 +97,25 @@ describe("AnnouncementView", () => {
       })[0],
     );
 
-    expect(
-      screen.getByRole("dialog", { name: ANNOUNCEMENTS[0].title }),
-    ).toBeDefined();
+    const dialog = screen.getByRole("dialog", {
+      name: ANNOUNCEMENTS[0].title,
+    });
 
-    fireEvent.click(
-      screen.getByRole("button", {
+    expect(within(dialog).getByText(ANNOUNCEMENTS[0].body)).toBeDefined();
+    expect(
+      within(dialog).queryByRole("button", {
         name: dictionary.system_announcements_show_dialog,
       }),
-    );
-
-    expect(onShow).toHaveBeenCalledWith(ANNOUNCEMENTS[0].id, "dialog");
-
-    fireEvent.click(
-      screen.getAllByRole("button", {
-        name: dictionary.system_view_details,
-      })[0],
-    );
-
-    fireEvent.click(
-      screen.getByRole("button", {
+    ).toBeNull();
+    expect(
+      within(dialog).queryByRole("button", {
         name: dictionary.system_announcements_show_banner,
       }),
-    );
-
-    expect(onShow).toHaveBeenCalledWith(ANNOUNCEMENTS[0].id, "banner");
+    ).toBeNull();
   });
 
   it("truncates the content and hides the secondary columns below sm", () => {
-    renderWithProviders(
-      <AnnouncementView
-        announcements={ANNOUNCEMENTS}
-        delivery={EMPTY_DELIVERY}
-        now={NOW}
-        onShow={() => {}}
-      />,
-    );
+    renderView();
 
     expect(screen.getByRole("table").className).toContain("table-fixed");
 
@@ -148,14 +149,7 @@ describe("AnnouncementView", () => {
   });
 
   it("shows the empty state when the catalog is empty", () => {
-    renderWithProviders(
-      <AnnouncementView
-        announcements={[]}
-        delivery={EMPTY_DELIVERY}
-        now={NOW}
-        onShow={() => {}}
-      />,
-    );
+    renderView({ announcements: [] });
 
     expect(
       screen.getByText(dictionary.system_announcements_empty_title),
@@ -164,6 +158,130 @@ describe("AnnouncementView", () => {
       screen.getByText(dictionary.system_announcements_empty_description),
     ).toBeDefined();
     expect(screen.queryByRole("table")).toBeNull();
+  });
+
+  it("creates a lightbox announcement from trimmed values", () => {
+    const onCreate = vi.fn();
+
+    renderView({ onCreate });
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: dictionary.system_announcements_new,
+      }),
+    );
+    fillForm("  Maintenance tonight  ", "  Save your work.  ");
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: dictionary.system_announcements_show_dialog,
+      }),
+    );
+
+    expect(onCreate).toHaveBeenCalledWith({
+      title: "Maintenance tonight",
+      body: "Save your work.",
+      variant: "info",
+      preferredPresentation: "dialog",
+    });
+  });
+
+  it("creates a banner announcement", () => {
+    const onCreate = vi.fn();
+
+    renderView({ onCreate });
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: dictionary.system_announcements_new,
+      }),
+    );
+    fillForm("Maintenance tonight", "Save your work.");
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: dictionary.system_announcements_show_banner,
+      }),
+    );
+
+    expect(onCreate).toHaveBeenCalledWith({
+      title: "Maintenance tonight",
+      body: "Save your work.",
+      variant: "info",
+      preferredPresentation: "banner",
+    });
+  });
+
+  it("shows both required errors and does not create an announcement", () => {
+    const onCreate = vi.fn();
+
+    renderView({ onCreate });
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: dictionary.system_announcements_new,
+      }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: dictionary.system_announcements_show_dialog,
+      }),
+    );
+
+    const titleInput = screen.getByLabelText(
+      dictionary.system_announcements_form_title_label,
+    );
+    const bodyInput = screen.getByLabelText(
+      dictionary.system_announcements_form_body_label,
+    );
+    const titleError = screen.getByText(
+      dictionary.system_announcements_form_title_required,
+    );
+    const bodyError = screen.getByText(
+      dictionary.system_announcements_form_body_required,
+    );
+
+    expect(onCreate).not.toHaveBeenCalled();
+    expect(titleInput.getAttribute("aria-invalid")).toBe("true");
+    expect(bodyInput.getAttribute("aria-invalid")).toBe("true");
+    expect(titleInput.getAttribute("aria-describedby")).toBe(titleError.id);
+    expect(bodyInput.getAttribute("aria-describedby")).toBe(bodyError.id);
+  });
+});
+
+describe("AnnouncementPanel", () => {
+  beforeEach(() => {
+    localStorage.removeItem(CATALOG_KEY);
+    localStorage.removeItem(STORAGE_KEY);
+  });
+
+  it("adds a custom announcement to the table and the delivery state", async () => {
+    renderWithProviders(<AnnouncementPanel />);
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: dictionary.system_announcements_new,
+      }),
+    );
+    fillForm("Custom notice", "Custom body text.");
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: dictionary.system_announcements_show_dialog,
+      }),
+    );
+
+    expect(await screen.findByText("Custom notice")).toBeDefined();
+
+    const delivery = readDelivery();
+    const catalog = JSON.parse(
+      localStorage.getItem(CATALOG_KEY) ?? "[]",
+    ) as Announcement[];
+
+    expect(delivery.presentation).toBe("dialog");
+    expect(
+      catalog.some(
+        (entry) =>
+          entry.id === delivery.activeId && entry.title === "Custom notice",
+      ),
+    ).toBe(true);
   });
 });
 

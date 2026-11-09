@@ -11,11 +11,15 @@ import {
 import type {
   Announcement,
   AnnouncementDelivery,
+  AnnouncementInput,
   AnnouncementPresentation,
 } from "@/components/announcement/types.ts";
 import { usePersistState } from "@/hooks/primitives/use-persist-state.ts";
 
 export const ANNOUNCEMENT_DELIVERY_KEY = "announcement_delivery";
+export const ANNOUNCEMENT_CATALOG_KEY = "announcement_catalog";
+
+const EMPTY_CATALOG: Announcement[] = [];
 
 export type VisibleAnnouncement = ReturnType<typeof getVisibleAnnouncement>;
 
@@ -25,17 +29,38 @@ export interface UseAnnouncementsResult {
   now: number;
   visible: VisibleAnnouncement;
   announce: (id: string, presentation: AnnouncementPresentation) => void;
+  createAnnouncement: (input: AnnouncementInput) => string;
   hideForLater: (id: string) => void;
   dismiss: (id: string) => void;
 }
 
+function createAnnouncementId(): string {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
+    return crypto.randomUUID();
+  }
+
+  return `announcement-${Date.now()}`;
+}
+
 /** Reads the announcement catalog and the delivery state. */
 export function useAnnouncements(): UseAnnouncementsResult {
+  const [customCatalog, setCustomCatalog] = usePersistState<Announcement[]>(
+    ANNOUNCEMENT_CATALOG_KEY,
+    EMPTY_CATALOG,
+  );
   const [delivery, setDelivery] = usePersistState<AnnouncementDelivery>(
     ANNOUNCEMENT_DELIVERY_KEY,
     EMPTY_DELIVERY,
   );
   const [now, setNow] = useState(() => Date.now());
+
+  const announcements = useMemo(
+    () => [...ANNOUNCEMENTS, ...customCatalog],
+    [customCatalog],
+  );
 
   useEffect(() => {
     const currentTime = Date.now();
@@ -62,6 +87,21 @@ export function useAnnouncements(): UseAnnouncementsResult {
     [setDelivery],
   );
 
+  const createAnnouncement = useCallback(
+    (input: AnnouncementInput): string => {
+      const id = createAnnouncementId();
+      const announcement: Announcement = { id, ...input };
+
+      setCustomCatalog((state) => [...state, announcement]);
+      setDelivery((state) =>
+        showAnnouncement(state, id, input.preferredPresentation, Date.now()),
+      );
+
+      return id;
+    },
+    [setCustomCatalog, setDelivery],
+  );
+
   const hideForLater = useCallback(
     (id: string) => {
       setDelivery((state) => snoozeAnnouncement(state, id, Date.now()));
@@ -77,16 +117,17 @@ export function useAnnouncements(): UseAnnouncementsResult {
   );
 
   const visible = useMemo(
-    () => getVisibleAnnouncement(delivery, ANNOUNCEMENTS, now),
-    [delivery, now],
+    () => getVisibleAnnouncement(delivery, announcements, now),
+    [announcements, delivery, now],
   );
 
   return {
-    announcements: ANNOUNCEMENTS,
+    announcements,
     delivery,
     now,
     visible,
     announce,
+    createAnnouncement,
     hideForLater,
     dismiss,
   };

@@ -10,6 +10,8 @@ export interface Announcement {
   preferredPresentation: AnnouncementPresentation;
 }
 
+export type AnnouncementInput = Omit<Announcement, "id">;
+
 export interface AnnouncementDelivery {
   activeId: string | null;
   presentation: AnnouncementPresentation | null;

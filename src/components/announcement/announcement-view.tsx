@@ -1,11 +1,12 @@
 import type React from "react";
 import { useState } from "react";
-import { ChevronRightIcon, InboxIcon } from "lucide-react";
+import { ChevronRightIcon, InboxIcon, PlusIcon } from "lucide-react";
 
 import { useTranslation } from "@/components/context/translation.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import {
   Card,
+  CardAction,
   CardDescription,
   CardHeader,
   CardPanel,
@@ -33,29 +34,31 @@ import {
   AnnouncementVariantBadge,
 } from "@/components/announcement/announcement-badge.tsx";
 import { AnnouncementDetail } from "@/components/announcement/announcement-detail.tsx";
+import { AnnouncementForm } from "@/components/announcement/announcement-form.tsx";
 import { getAnnouncementStatus } from "@/components/announcement/delivery.ts";
 import type {
   Announcement,
   AnnouncementDelivery,
-  AnnouncementPresentation,
+  AnnouncementInput,
 } from "@/components/announcement/types.ts";
 
 export interface AnnouncementViewProps {
   announcements: Announcement[];
   delivery: AnnouncementDelivery;
   now: number;
-  onShow: (id: string, presentation: AnnouncementPresentation) => void;
+  onCreate: (input: AnnouncementInput) => void;
 }
 
-/** Shows the announcement catalog and the detail sheet. */
+/** Shows the announcement archive and the creation form. */
 export function AnnouncementView({
   announcements,
   delivery,
   now,
-  onShow,
+  onCreate,
 }: AnnouncementViewProps): React.ReactElement {
   const { t } = useTranslation();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const selected =
     announcements.find((announcement) => announcement.id === selectedId) ??
     null;
@@ -67,6 +70,12 @@ export function AnnouncementView({
         <CardDescription>
           {t("system_announcements_description")}
         </CardDescription>
+        <CardAction>
+          <Button onClick={() => setIsFormOpen(true)} size="sm">
+            <PlusIcon aria-hidden="true" />
+            {t("system_announcements_new")}
+          </Button>
+        </CardAction>
       </CardHeader>
       <CardPanel>
         {announcements.length === 0 ? (
@@ -166,10 +175,15 @@ export function AnnouncementView({
           onOpenChange={(next) => {
             if (!next) setSelectedId(null);
           }}
-          onShow={onShow}
           open={selected !== null}
         />
       )}
+
+      <AnnouncementForm
+        onCreate={onCreate}
+        onOpenChange={setIsFormOpen}
+        open={isFormOpen}
+      />
     </Card>
   );
 }
