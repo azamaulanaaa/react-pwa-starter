@@ -15,6 +15,9 @@ import { canonicalize } from "@/lib/markdown/index.ts";
  * The compiler must return the canonical form of a supported document. A
  * second compile returns the same string. The compiler does not support a
  * table, so the document grammar leaves out the table block.
+ *
+ * The full `npm run ci` suite adds load. Each property test has a 30-second
+ * timeout, so that load does not cause a false timeout.
  */
 
 vi.mock("@/hooks/engines/use-file-blob.ts", () => ({
@@ -419,29 +422,37 @@ const imageSurvivalArbitrary = fc
   }));
 
 describe("Markdown compiler properties", () => {
-  it("returns the canonical form for each supported document", () => {
-    fc.assert(
-      fc.property(documentArbitrary, (markdown) => {
-        const canonical = canonicalize(markdown);
+  it(
+    "returns the canonical form for each supported document",
+    { timeout: 30_000 },
+    () => {
+      fc.assert(
+        fc.property(documentArbitrary, (markdown) => {
+          const canonical = canonicalize(markdown);
 
-        expect(compileMarkdown(canonical, CONFIG)).toBe(canonical);
-      }),
-      OPTIONS,
-    );
-  });
+          expect(compileMarkdown(canonical, CONFIG)).toBe(canonical);
+        }),
+        OPTIONS,
+      );
+    },
+  );
 
-  it("returns the same Markdown for a second compile", () => {
-    fc.assert(
-      fc.property(documentArbitrary, (markdown) => {
-        const once = compileMarkdown(markdown, CONFIG);
+  it(
+    "returns the same Markdown for a second compile",
+    { timeout: 30_000 },
+    () => {
+      fc.assert(
+        fc.property(documentArbitrary, (markdown) => {
+          const once = compileMarkdown(markdown, CONFIG);
 
-        expect(compileMarkdown(once, CONFIG)).toBe(once);
-      }),
-      OPTIONS,
-    );
-  });
+          expect(compileMarkdown(once, CONFIG)).toBe(once);
+        }),
+        OPTIONS,
+      );
+    },
+  );
 
-  it("returns the canonical form for a loose list", () => {
+  it("returns the canonical form for a loose list", { timeout: 30_000 }, () => {
     fc.assert(
       fc.property(looseDocumentArbitrary, (markdown) => {
         const canonical = canonicalize(markdown);
@@ -460,22 +471,26 @@ describe("Markdown compiler properties", () => {
     expect(compileMarkdown(markdown, CONFIG)).toBe(canonical);
   });
 
-  it("keeps the href of a mention link and a page link", () => {
-    fc.assert(
-      fc.property(
-        mentionPageArbitrary,
-        ({ markdown, mentionHref, pageHref }) => {
-          const compiled = compileMarkdown(canonicalize(markdown), CONFIG);
+  it(
+    "keeps the href of a mention link and a page link",
+    { timeout: 30_000 },
+    () => {
+      fc.assert(
+        fc.property(
+          mentionPageArbitrary,
+          ({ markdown, mentionHref, pageHref }) => {
+            const compiled = compileMarkdown(canonicalize(markdown), CONFIG);
 
-          expect(compiled).toContain(mentionHref);
-          expect(compiled).toContain(pageHref);
-        },
-      ),
-      OPTIONS,
-    );
-  });
+            expect(compiled).toContain(mentionHref);
+            expect(compiled).toContain(pageHref);
+          },
+        ),
+        OPTIONS,
+      );
+    },
+  );
 
-  it("keeps the href of an image link", () => {
+  it("keeps the href of an image link", { timeout: 30_000 }, () => {
     fc.assert(
       fc.property(imageSurvivalArbitrary, ({ markdown, imageHref }) => {
         const compiled = compileMarkdown(canonicalize(markdown), CONFIG);

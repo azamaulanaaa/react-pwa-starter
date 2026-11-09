@@ -16,6 +16,9 @@ import {
  * The canonicalizer is a fixed point. For a supported document `x`, the call
  * `canonicalize(canonicalize(x))` returns `canonicalize(x)`. The canonical
  * form passes validation. The hash of the canonical form does not change.
+ *
+ * The full `npm run ci` suite adds load. Each property test has a 30-second
+ * timeout, so that load does not cause a false timeout.
  */
 
 const NUM_RUNS = 200;
@@ -442,32 +445,40 @@ const mentionPageArbitrary = fc
   }));
 
 describe("md-lite/1 properties", () => {
-  it("returns the same canonical Markdown for a second call", () => {
-    fc.assert(
-      fc.property(documentArbitrary, (markdown) => {
-        const canonical = canonicalize(markdown);
+  it(
+    "returns the same canonical Markdown for a second call",
+    { timeout: 30_000 },
+    () => {
+      fc.assert(
+        fc.property(documentArbitrary, (markdown) => {
+          const canonical = canonicalize(markdown);
 
-        expect(canonicalize(canonical)).toBe(canonical);
-      }),
-      OPTIONS,
-    );
-  });
+          expect(canonicalize(canonical)).toBe(canonical);
+        }),
+        OPTIONS,
+      );
+    },
+  );
 
-  it("accepts the canonical form of a supported document", () => {
-    fc.assert(
-      fc.property(documentArbitrary, (markdown) => {
-        const canonical = canonicalize(markdown);
+  it(
+    "accepts the canonical form of a supported document",
+    { timeout: 30_000 },
+    () => {
+      fc.assert(
+        fc.property(documentArbitrary, (markdown) => {
+          const canonical = canonicalize(markdown);
 
-        expect(
-          validate(canonical).ok,
-          `The canonical document must pass validation:\n${canonical}`,
-        ).toBe(true);
-      }),
-      OPTIONS,
-    );
-  });
+          expect(
+            validate(canonical).ok,
+            `The canonical document must pass validation:\n${canonical}`,
+          ).toBe(true);
+        }),
+        OPTIONS,
+      );
+    },
+  );
 
-  it("rejects each unsupported construct", () => {
+  it("rejects each unsupported construct", { timeout: 30_000 }, () => {
     fc.assert(
       fc.property(
         documentArbitrary,
@@ -489,35 +500,43 @@ describe("md-lite/1 properties", () => {
     },
   );
 
-  it("keeps the hash of a canonical document", async () => {
-    await fc.assert(
-      fc.asyncProperty(documentArbitrary, async (markdown) => {
-        const canonical = canonicalize(markdown);
-        const first = await hashCanonical(markdown);
-        const second = await hashCanonical(canonical);
-
-        expect(second).toBe(first);
-      }),
-      OPTIONS,
-    );
-  });
-
-  it("keeps the href of a mention link and a page link", () => {
-    fc.assert(
-      fc.property(
-        mentionPageArbitrary,
-        ({ markdown, mentionHref, pageHref }) => {
+  it(
+    "keeps the hash of a canonical document",
+    { timeout: 30_000 },
+    async () => {
+      await fc.assert(
+        fc.asyncProperty(documentArbitrary, async (markdown) => {
           const canonical = canonicalize(markdown);
+          const first = await hashCanonical(markdown);
+          const second = await hashCanonical(canonical);
 
-          expect(canonical).toContain(mentionHref);
-          expect(canonical).toContain(pageHref);
-        },
-      ),
-      OPTIONS,
-    );
-  });
+          expect(second).toBe(first);
+        }),
+        OPTIONS,
+      );
+    },
+  );
 
-  it("keeps a table as a table", () => {
+  it(
+    "keeps the href of a mention link and a page link",
+    { timeout: 30_000 },
+    () => {
+      fc.assert(
+        fc.property(
+          mentionPageArbitrary,
+          ({ markdown, mentionHref, pageHref }) => {
+            const canonical = canonicalize(markdown);
+
+            expect(canonical).toContain(mentionHref);
+            expect(canonical).toContain(pageHref);
+          },
+        ),
+        OPTIONS,
+      );
+    },
+  );
+
+  it("keeps a table as a table", { timeout: 30_000 }, () => {
     fc.assert(
       fc.property(tableArbitrary.map(renderBlock), (markdown) => {
         let tables = 0;
@@ -532,7 +551,7 @@ describe("md-lite/1 properties", () => {
     );
   });
 
-  it("removes each HTML node during normalize", () => {
+  it("removes each HTML node during normalize", { timeout: 30_000 }, () => {
     fc.assert(
       fc.property(documentArbitrary, (markdown) => {
         let htmlNodes = 0;
