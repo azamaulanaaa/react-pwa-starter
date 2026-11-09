@@ -300,7 +300,7 @@ describe("FormAnnouncement", () => {
     });
   });
 
-  it("rejects a javascript link with the Markdown message", async () => {
+  it("removes a javascript link from the editor body", async () => {
     const onSubmit = vi.fn();
 
     renderForm(onSubmit);
@@ -308,28 +308,39 @@ describe("FormAnnouncement", () => {
     fillForm("Maintenance tonight", "[Open](javascript:alert(1))");
     submitForm();
 
-    expect(
-      await screen.findByText(
-        dictionary.system_announcements_form_markdown_invalid,
-      ),
-    ).toBeTruthy();
-    expect(onSubmit).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ body: "Open\n" }),
+      );
+    });
+
+    const submittedBody = onSubmit.mock.calls[0]?.[0]?.body ?? "";
+
+    expect(submittedBody).not.toContain("javascript:");
   });
 
-  it("records one invalid Markdown event with the validation code", async () => {
+  it("records one invalid Markdown event for the raw fallback", async () => {
     const record = vi.mocked(recordEditorEvent);
     const onSubmit = vi.fn();
+    const body = "| Link |\n| --- |\n| [Open](javascript:alert(1)) |";
 
     record.mockClear();
-    renderForm(onSubmit);
+    renderForm(onSubmit, {
+      defaultValues: {
+        title: "Maintenance tonight",
+        body,
+        variant: "info",
+        preferredPresentation: "banner",
+      },
+    });
 
-    fillForm("Maintenance tonight", "[Open](javascript:alert(1))");
     submitForm();
 
     await screen.findByText(
       dictionary.system_announcements_form_markdown_invalid,
     );
 
+    expect(onSubmit).not.toHaveBeenCalled();
     expect(record).toHaveBeenCalledWith("editor.markdown.invalid", {
       code: "link_not_allowed",
     });
