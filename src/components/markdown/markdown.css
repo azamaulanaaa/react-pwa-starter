@@ -193,29 +193,60 @@
   max-inline-size: 100%;
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
-  padding-block: 0.0625em;
-  padding-inline: 0.5em;
+  padding-block: 0.125em;
+  padding-inline: 0.375em;
   font-size: 0.875em;
   font-weight: 500;
-  line-height: 1.5;
+  line-height: 1.25;
   overflow-wrap: anywhere;
   text-decoration: none;
+  transition-property: background-color, border-color;
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
   white-space: normal;
   vertical-align: baseline;
 }
 
 .markdown-body .md-chip-mention,
 .markdown-body a[href^="/users/"] {
-  border-color: var(--info);
-  background: color-mix(in srgb, var(--info) 10%, transparent);
+  background: color-mix(in srgb, var(--info) 8%, transparent);
   color: var(--info-foreground);
+}
+
+.dark .markdown-body .md-chip-mention,
+.dark .markdown-body a[href^="/users/"] {
+  background: color-mix(in srgb, var(--info) 16%, transparent);
 }
 
 .markdown-body .md-chip-page,
 .markdown-body a[href^="/pages/"] {
-  border-color: color-mix(in srgb, var(--foreground) 60%, transparent);
-  background: color-mix(in srgb, var(--foreground) 5%, transparent);
-  color: var(--foreground);
+  background: var(--secondary);
+  color: var(--secondary-foreground);
+}
+
+@media (hover: hover) {
+  .markdown-body .md-chip-mention:hover,
+  .markdown-body a[href^="/users/"]:hover {
+    background: color-mix(in srgb, var(--info) 12%, transparent);
+  }
+
+  .dark .markdown-body .md-chip-mention:hover,
+  .dark .markdown-body a[href^="/users/"]:hover {
+    background: color-mix(in srgb, var(--info) 24%, transparent);
+  }
+
+  .markdown-body .md-chip-page:hover,
+  .markdown-body a[href^="/pages/"]:hover {
+    background: color-mix(in srgb, var(--foreground) 8%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .markdown-body .md-chip,
+  .markdown-body a[href^="/users/"],
+  .markdown-body a[href^="/pages/"] {
+    transition: none;
+  }
 }
 
 .markdown-body :not(pre) > code,
