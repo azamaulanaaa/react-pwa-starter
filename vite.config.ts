@@ -76,6 +76,9 @@ const VENDOR_GROUPS: Record<string, string[]> = {
     "cnfast",
     "react-day-picker",
   ],
+  // Lexical editor runtime. The separate chunk keeps the editor out of the
+  // initial page load, while the PWA glob patterns still precache the chunk.
+  lexical: ["lexical", "@lexical"],
   // Functional effect system (heavy runtime split into its own chunk)
   effect: ["effect"],
   // Client-side storage engine (WASM key-value store)
