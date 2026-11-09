@@ -44,6 +44,10 @@ import {
 } from "@/components/editor/compiler.ts";
 import { recordEditorEvent } from "@/components/editor/editor-telemetry.ts";
 import { EditorToolbar } from "@/components/editor/editor-toolbar.tsx";
+import {
+  type ImageResolver,
+  ImageResolverContext,
+} from "@/components/editor/image-node.tsx";
 import { ImagePlugin } from "@/components/editor/image-plugin.tsx";
 import type { ImageUploadHandler } from "@/components/editor/image-upload.ts";
 import { MentionTypeaheadPlugin } from "@/components/editor/mention-typeahead.tsx";
@@ -169,6 +173,11 @@ export interface MarkdownEditorProps {
    * The image button and the image plugin appear when this value is set.
    */
   onUploadImage?: ImageUploadHandler;
+  /**
+   * Loads one image file for a file id.
+   * A resolver takes priority over the worker file store.
+   */
+  resolveImageFile?: ImageResolver;
   /** The extra class names for the outer element. */
   className?: string;
 }
@@ -414,6 +423,7 @@ export const MarkdownEditor = forwardRef<
     onUploadImage,
     placeholder,
     readOnly = false,
+    resolveImageFile,
     showMentions,
     showToolbar,
     value,
@@ -467,35 +477,37 @@ export const MarkdownEditor = forwardRef<
   }
 
   return (
-    <LexicalComposer
-      initialConfig={{
-        namespace: NAMESPACE,
-        nodes: MARKDOWN_EDITOR_NODES,
-        theme: EDITOR_THEME,
-        editable: !readOnly,
-        onError: reportEditorError,
-        editorState: (editor) => {
-          loadMarkdown(editor, value, transformers);
-        },
-      }}
-    >
-      <EditorSurface
-        ariaDescribedBy={ariaDescribedBy}
-        ariaInvalid={ariaInvalid}
-        ariaLabel={ariaLabel}
-        capabilities={capabilities}
-        className={className}
-        handleRef={ref}
-        id={id}
-        mentionSource={mentionSource}
-        onChange={onChange}
-        onUploadImage={onUploadImage}
-        placeholder={placeholder}
-        readOnly={readOnly}
-        showToolbar={toolbarVisible}
-        transformers={transformers}
-        value={value}
-      />
-    </LexicalComposer>
+    <ImageResolverContext.Provider value={resolveImageFile}>
+      <LexicalComposer
+        initialConfig={{
+          namespace: NAMESPACE,
+          nodes: MARKDOWN_EDITOR_NODES,
+          theme: EDITOR_THEME,
+          editable: !readOnly,
+          onError: reportEditorError,
+          editorState: (editor) => {
+            loadMarkdown(editor, value, transformers);
+          },
+        }}
+      >
+        <EditorSurface
+          ariaDescribedBy={ariaDescribedBy}
+          ariaInvalid={ariaInvalid}
+          ariaLabel={ariaLabel}
+          capabilities={capabilities}
+          className={className}
+          handleRef={ref}
+          id={id}
+          mentionSource={mentionSource}
+          onChange={onChange}
+          onUploadImage={onUploadImage}
+          placeholder={placeholder}
+          readOnly={readOnly}
+          showToolbar={toolbarVisible}
+          transformers={transformers}
+          value={value}
+        />
+      </LexicalComposer>
+    </ImageResolverContext.Provider>
   );
 });

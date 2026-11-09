@@ -4,19 +4,24 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useFileBlob } from "@/hooks/engines/use-file-blob.ts";
 
-const { getFile, worker } = vi.hoisted(() => {
+const { getFile, worker, workerState } = vi.hoisted(() => {
   const get = vi.fn();
-  return { getFile: get, worker: { fs: { Get: get } } };
+  return {
+    getFile: get,
+    worker: { fs: { Get: get } },
+    workerState: { available: true },
+  };
 });
 
 vi.mock("@/components/context/worker.tsx", () => ({
-  useWorker: () => worker,
+  useOptionalWorker: () => (workerState.available ? worker : null),
 }));
 
 const createObjectUrl = vi.fn(() => "blob:file-url");
 const revokeObjectUrl = vi.fn();
 
 beforeEach(() => {
+  workerState.available = true;
   getFile.mockReset();
   createObjectUrl.mockClear();
   revokeObjectUrl.mockClear();
@@ -80,5 +85,28 @@ describe("useFileBlob", () => {
     await waitFor(() => {
       expect(result.current).toEqual({ status: "error", url: null });
     });
+  });
+
+  it("returns the missing state when there is no worker and no resolver", () => {
+    workerState.available = false;
+
+    const { result } = renderHook(() => useFileBlob("file_1"));
+
+    expect(result.current).toEqual({ status: "missing", url: null });
+    expect(getFile).not.toHaveBeenCalled();
+  });
+
+  it("returns the ready state when a resolver returns a blob", async () => {
+    workerState.available = false;
+    const resolveFile = vi.fn(async () => new Blob(["data"]));
+
+    const { result } = renderHook(() => useFileBlob("file_1", resolveFile));
+
+    await waitFor(() => {
+      expect(result.current).toEqual({ status: "ready", url: "blob:file-url" });
+    });
+    expect(resolveFile).toHaveBeenCalledWith("file_1");
+    expect(getFile).not.toHaveBeenCalled();
+    expect(createObjectUrl).toHaveBeenCalledTimes(1);
   });
 });

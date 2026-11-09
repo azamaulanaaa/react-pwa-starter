@@ -7,9 +7,11 @@
 
 import {
   Component,
+  createContext,
   type MouseEvent,
   type ReactElement,
   type ReactNode,
+  useContext,
 } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { useLexicalNodeSelection } from "@lexical/react/useLexicalNodeSelection";
@@ -28,6 +30,17 @@ import { useFileBlob } from "@/hooks/engines/use-file-blob.ts";
 
 /** Matches a file path and captures the identifier. */
 const FILE_PATH = /^\/fs\/([A-Za-z0-9_-]+)$/;
+
+/** Loads one image file for a file id. */
+export type ImageResolver = (fileId: string) => Promise<Blob | null>;
+
+/**
+ * Carries an optional image resolver through the editor.
+ * A story can supply a resolver when no worker is present.
+ */
+export const ImageResolverContext = createContext<ImageResolver | undefined>(
+  undefined,
+);
 
 /** Defines the values that create one image node. */
 export interface ImageNodeParams {
@@ -68,13 +81,15 @@ function ImageUnavailable({ alt }: { alt: string }): ReactElement {
 function ImageContent({
   alt,
   fileId,
+  resolveFile,
   title,
 }: {
   alt: string;
   fileId: string | null;
+  resolveFile?: ImageResolver;
   title: string;
 }): ReactElement {
-  const state = useFileBlob(fileId);
+  const state = useFileBlob(fileId, resolveFile);
 
   if (fileId !== null && state.status === "ready") {
     return (
@@ -145,6 +160,7 @@ function ImageNodeComponent({
   const [editor] = useLexicalComposerContext();
   const [isSelected, setSelected, clearSelection] =
     useLexicalNodeSelection(nodeKey);
+  const resolveFile = useContext(ImageResolverContext);
   const fileId = readFileId(src);
 
   function handleClick(event: MouseEvent<HTMLSpanElement>): void {
@@ -165,7 +181,12 @@ function ImageNodeComponent({
       onClick={handleClick}
     >
       <FileBlobBoundary fallback={<ImageUnavailable alt={alt} />}>
-        <ImageContent alt={alt} fileId={fileId} title={title} />
+        <ImageContent
+          alt={alt}
+          fileId={fileId}
+          resolveFile={resolveFile}
+          title={title}
+        />
       </FileBlobBoundary>
     </span>
   );

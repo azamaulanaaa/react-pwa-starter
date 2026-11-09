@@ -6,6 +6,7 @@ import {
   LOCAL_MENTION_TARGETS,
   type MentionSource,
 } from "@/lib/mentions/index.ts";
+import type { ImageResolver } from "@/components/editor/image-node.tsx";
 import {
   MarkdownEditor,
   type MarkdownEditorHandle,
@@ -13,6 +14,12 @@ import {
 } from "@/components/editor/markdown-editor.tsx";
 import type { ImageUploadHandler } from "@/components/editor/image-upload.ts";
 import { MarkdownView } from "@/components/markdown/markdown-view.tsx";
+
+const STORY_IMAGE_ID = "story_image";
+
+/** A 32 by 32 checkerboard PNG for the story image. */
+const STORY_IMAGE_PNG =
+  "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAPklEQVR4nGN49+k/VuTv9hQrIlU9w6gFoxYMAQuoZRAu9aMWjFowFCygeUYbtWDUgiFgAc0z2qgFoxYMfgsA9OiyeSy3BMAAAAAASUVORK5CYII=";
 
 const DEFAULT_MARKDOWN = [
   "# Project notes",
@@ -71,8 +78,18 @@ const IMAGE_MARKDOWN = [
 /** Returns one fake upload result for the image story. */
 const FAKE_IMAGE_UPLOAD: ImageUploadHandler = async (file, { onProgress }) => {
   onProgress(100);
-  return { alt: file.name, id: "story_image" };
+  return { alt: file.name, id: STORY_IMAGE_ID };
 };
+
+/** Returns the story PNG for the story image id. */
+function resolveStoryImage(fileId: string): Promise<Blob | null> {
+  if (fileId !== STORY_IMAGE_ID) return Promise.resolve(null);
+
+  const binary = atob(STORY_IMAGE_PNG);
+  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+
+  return Promise.resolve(new Blob([bytes], { type: "image/png" }));
+}
 
 /** Shows one editor and the Markdown that it emits. */
 function EditorStory({
@@ -80,6 +97,7 @@ function EditorStory({
   mentionSource,
   onUploadImage,
   readOnly = false,
+  resolveImageFile,
   showMentions,
   variant = "standard",
 }: {
@@ -87,6 +105,7 @@ function EditorStory({
   mentionSource?: MentionSource;
   onUploadImage?: ImageUploadHandler;
   readOnly?: boolean;
+  resolveImageFile?: ImageResolver;
   showMentions?: boolean;
   variant?: MarkdownEditorVariant;
 }) {
@@ -104,13 +123,14 @@ function EditorStory({
           onUploadImage={onUploadImage}
           placeholder="# Project notes"
           readOnly={readOnly}
+          resolveImageFile={resolveImageFile}
           showMentions={showMentions}
           value={markdown}
           variant={variant}
         />
       </div>
       <div>
-        <MarkdownView markdown={markdown} />
+        <MarkdownView markdown={markdown} resolveImageFile={resolveImageFile} />
       </div>
     </div>
   );
@@ -136,6 +156,7 @@ export const Full: Story = () => (
   <EditorStory
     initialMarkdown={FULL_MARKDOWN}
     onUploadImage={FAKE_IMAGE_UPLOAD}
+    resolveImageFile={resolveStoryImage}
     variant="full"
   />
 );
@@ -151,6 +172,7 @@ export const Images: Story = () => (
   <EditorStory
     initialMarkdown={IMAGE_MARKDOWN}
     onUploadImage={FAKE_IMAGE_UPLOAD}
+    resolveImageFile={resolveStoryImage}
   />
 );
 

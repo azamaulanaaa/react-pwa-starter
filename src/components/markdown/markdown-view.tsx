@@ -4,7 +4,10 @@ import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
 
 import { useTranslation } from "@/components/context/translation.tsx";
-import { useFileBlob } from "@/hooks/engines/use-file-blob.ts";
+import {
+  type FileBlobResolver,
+  useFileBlob,
+} from "@/hooks/engines/use-file-blob.ts";
 import { cn } from "@/lib/utils/cn.ts";
 
 /** Defines the identifier format for a mention, a page, or a file. */
@@ -56,6 +59,11 @@ export interface MarkdownViewProps {
   className?: string;
   /** The optional handler for a link click. The view stops the default navigation. */
   onLinkClick?: (href: string) => void;
+  /**
+   * Loads one image file for a file id.
+   * A resolver takes priority over the worker file store.
+   */
+  resolveImageFile?: FileBlobResolver;
 }
 
 /** Returns the origin that relative URLs resolve against. */
@@ -152,13 +160,15 @@ function ImageUnavailable({ alt }: { alt?: string }): ReactNode {
 function WorkerImage({
   alt,
   fileId,
+  resolveFile,
   title,
 }: {
   alt?: string;
   fileId: string;
+  resolveFile?: FileBlobResolver;
   title?: string;
 }): ReactNode {
-  const state = useFileBlob(fileId);
+  const state = useFileBlob(fileId, resolveFile);
 
   if (state.status === "ready") {
     return (
@@ -187,10 +197,12 @@ function WorkerImage({
 /** Shows one Markdown image. The view loads /fs/ images from the worker store. */
 function MarkdownImage({
   alt,
+  resolveFile,
   src,
   title,
 }: {
   alt?: string;
+  resolveFile?: FileBlobResolver;
   src?: string;
   title?: string;
 }): ReactNode {
@@ -200,7 +212,14 @@ function MarkdownImage({
     return <ImageUnavailable alt={alt} />;
   }
 
-  return <WorkerImage alt={alt} fileId={fileId} title={title} />;
+  return (
+    <WorkerImage
+      alt={alt}
+      fileId={fileId}
+      resolveFile={resolveFile}
+      title={title}
+    />
+  );
 }
 
 /** Renders the Markdown text as sanitized HTML. */
@@ -208,6 +227,7 @@ export function MarkdownView({
   className,
   markdown,
   onLinkClick,
+  resolveImageFile,
 }: MarkdownViewProps): ReactNode {
   const { t } = useTranslation();
 
@@ -266,7 +286,12 @@ export function MarkdownView({
         );
       },
       img: ({ alt, src, title }) => (
-        <MarkdownImage alt={alt} src={src} title={title} />
+        <MarkdownImage
+          alt={alt}
+          resolveFile={resolveImageFile}
+          src={src}
+          title={title}
+        />
       ),
       pre: ({ children }) => (
         <div
@@ -289,7 +314,7 @@ export function MarkdownView({
         </div>
       ),
     };
-  }, [onLinkClick, t]);
+  }, [onLinkClick, resolveImageFile, t]);
 
   return (
     <div className={cn("markdown-body", className)} data-slot="markdown-view">

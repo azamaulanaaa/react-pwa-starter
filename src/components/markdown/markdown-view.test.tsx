@@ -18,7 +18,7 @@ const { getFile, worker } = vi.hoisted(() => {
 });
 
 vi.mock("@/components/context/worker.tsx", () => ({
-  useWorker: () => worker,
+  useOptionalWorker: () => worker,
 }));
 
 const createObjectUrl = vi.fn(() => "blob:test-url");

@@ -39,13 +39,7 @@ const { getFile, worker, workerState } = vi.hoisted(() => {
 });
 
 vi.mock("@/components/context/worker.tsx", () => ({
-  useWorker: () => {
-    if (!workerState.available) {
-      throw new Error("useWorker must be used within a WorkerProvider");
-    }
-
-    return worker;
-  },
+  useOptionalWorker: () => (workerState.available ? worker : null),
 }));
 
 const IMAGE_MARKDOWN = "![Diagram](/fs/file_01)";
@@ -76,7 +70,10 @@ function createEditor() {
 }
 
 /** Shows one editor with one Markdown value. */
-function renderEditor(value: string) {
+function renderEditor(
+  value: string,
+  resolveImageFile?: (fileId: string) => Promise<Blob | null>,
+) {
   const ref = createRef<MarkdownEditorHandle>();
 
   return render(
@@ -85,6 +82,7 @@ function renderEditor(value: string) {
         ref={ref}
         ariaLabel="Note body"
         onChange={vi.fn()}
+        resolveImageFile={resolveImageFile}
         value={value}
         variant="full"
       />
@@ -177,6 +175,17 @@ describe("ImageNode", () => {
     } finally {
       consoleError.mockRestore();
     }
+  });
+
+  it("shows the alt text when the resolver returns null", async () => {
+    workerState.available = false;
+    const resolver = vi.fn(async () => null);
+
+    renderEditor(IMAGE_MARKDOWN, resolver);
+
+    expect(await screen.findByText("Image unavailable")).toBeDefined();
+    expect(screen.getByText("Diagram")).toBeDefined();
+    expect(resolver).toHaveBeenCalledWith("file_01");
   });
 
   it("shows the selection state after a click", async () => {
