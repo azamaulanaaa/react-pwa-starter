@@ -17,7 +17,7 @@ export function FieldInfo({ field, validatingLabel }: FieldInfoProps) {
   return (
     <div className="flex flex-col gap-1">
       {showErrors ? (
-        <FieldError>
+        <FieldError match={showErrors}>
           {field.state.meta.errors.map((error, index) => (
             <span className="block" key={`${error.message}-${index}`}>
               {error.message}

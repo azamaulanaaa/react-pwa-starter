@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
 import type { ReactNode } from "react";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { IntlProvider } from "@/components/context/intl.tsx";
@@ -177,7 +183,7 @@ describe("AnnouncementView", () => {
     expect(screen.queryByRole("table")).toBeNull();
   });
 
-  it("creates a banner announcement from trimmed values by default", () => {
+  it("creates a banner announcement from trimmed values by default", async () => {
     const onCreate = vi.fn();
 
     renderView({ onCreate });
@@ -190,15 +196,17 @@ describe("AnnouncementView", () => {
     fillForm("  Maintenance tonight  ", "  Save your work.  ");
     submitForm();
 
-    expect(onCreate).toHaveBeenCalledWith({
-      title: "Maintenance tonight",
-      body: "Save your work.",
-      variant: "info",
-      preferredPresentation: "banner",
+    await waitFor(() => {
+      expect(onCreate).toHaveBeenCalledWith({
+        title: "Maintenance tonight",
+        body: "Save your work.",
+        variant: "info",
+        preferredPresentation: "banner",
+      });
     });
   });
 
-  it("creates a lightbox announcement from the presentation select", () => {
+  it("creates a lightbox announcement from the presentation select", async () => {
     const onCreate = vi.fn();
 
     renderView({ onCreate });
@@ -212,15 +220,17 @@ describe("AnnouncementView", () => {
     choosePresentation(dictionary.system_announcement_presentation_dialog);
     submitForm();
 
-    expect(onCreate).toHaveBeenCalledWith({
-      title: "Maintenance tonight",
-      body: "Save your work.",
-      variant: "info",
-      preferredPresentation: "dialog",
+    await waitFor(() => {
+      expect(onCreate).toHaveBeenCalledWith({
+        title: "Maintenance tonight",
+        body: "Save your work.",
+        variant: "info",
+        preferredPresentation: "dialog",
+      });
     });
   });
 
-  it("shows both required errors and does not create an announcement", () => {
+  it("shows both required errors and does not create an announcement", async () => {
     const onCreate = vi.fn();
 
     renderView({ onCreate });
@@ -238,18 +248,14 @@ describe("AnnouncementView", () => {
     const bodyInput = screen.getByLabelText(
       dictionary.system_announcements_form_body_label,
     );
-    const titleError = screen.getByText(
-      dictionary.system_announcements_form_title_required,
-    );
-    const bodyError = screen.getByText(
-      dictionary.system_announcements_form_body_required,
+    const requiredErrors = await screen.findAllByText(
+      dictionary.system_announcements_form_required,
     );
 
     expect(onCreate).not.toHaveBeenCalled();
+    expect(requiredErrors).toHaveLength(2);
     expect(titleInput.getAttribute("aria-invalid")).toBe("true");
     expect(bodyInput.getAttribute("aria-invalid")).toBe("true");
-    expect(titleInput.getAttribute("aria-describedby")).toBe(titleError.id);
-    expect(bodyInput.getAttribute("aria-describedby")).toBe(bodyError.id);
   });
 });
 

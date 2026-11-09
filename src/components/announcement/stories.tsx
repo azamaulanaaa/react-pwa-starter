@@ -1,4 +1,5 @@
 import type { Story, StoryDefault } from "@ladle/react";
+import { useId } from "react";
 
 import { AnnouncementBanner } from "@/components/announcement/announcement-banner.tsx";
 import { AnnouncementDialog } from "@/components/announcement/announcement-dialog.tsx";
@@ -7,6 +8,11 @@ import { AnnouncementView as AnnouncementViewComponent } from "@/components/anno
 import { ANNOUNCEMENTS } from "@/components/announcement/data.ts";
 import { SNOOZE_MS } from "@/components/announcement/delivery.ts";
 import type { AnnouncementDelivery } from "@/components/announcement/types.ts";
+import { Button } from "@/components/ui/button.tsx";
+import {
+  FormAnnouncement,
+  type FormAnnouncementValue,
+} from "@/components/form/announcement/index.tsx";
 
 const NOW = Date.UTC(2026, 0, 12, 8, 30);
 
@@ -35,6 +41,22 @@ export const AnnouncementView: Story = () => (
 export const AnnouncementFormStory: Story = () => (
   <AnnouncementForm onCreate={noop} onOpenChange={noop} open />
 );
+
+export const FormAnnouncementStory: Story = () => {
+  const formId = useId();
+  const handleSubmit = (value: FormAnnouncementValue) => {
+    alert(JSON.stringify(value));
+  };
+
+  return (
+    <div className="flex flex-col gap-4 p-6">
+      <FormAnnouncement formId={formId} onSubmit={handleSubmit} />
+      <Button form={formId} type="submit">
+        Submit
+      </Button>
+    </div>
+  );
+};
 
 export const AnnouncementBannerStory: Story = () => (
   <div className="p-6">
