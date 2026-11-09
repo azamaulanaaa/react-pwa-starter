@@ -1,4 +1,4 @@
-import type { Story, StoryDefault } from "@ladle/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 
 import {
   FormAnnouncement,
@@ -6,9 +6,12 @@ import {
 } from "@/components/form/announcement/index.tsx";
 import type { ImageUploadHandler } from "@/components/editor/image-upload.ts";
 
-export default {
+const meta = {
   title: "Form / Announcement",
-} as StoryDefault;
+} satisfies Meta;
+
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 /** Returns one fake upload result. The story does not call the worker. */
 const FAKE_IMAGE_UPLOAD: ImageUploadHandler = async (file, { onProgress }) => {
@@ -23,18 +26,20 @@ const DEFAULT_VALUE: FormAnnouncementValue = {
   preferredPresentation: "banner",
 };
 
-export const Base: Story = () => {
-  const handleSubmit = (value: FormAnnouncementValue) => {
-    console.log(value);
-  };
+export const Base: Story = {
+  render: () => {
+    const handleSubmit = (value: FormAnnouncementValue) => {
+      console.log(value);
+    };
 
-  return (
-    <div className="p-6">
-      <FormAnnouncement
-        defaultValues={DEFAULT_VALUE}
-        onSubmit={handleSubmit}
-        onUploadImage={FAKE_IMAGE_UPLOAD}
-      />
-    </div>
-  );
+    return (
+      <div className="p-6">
+        <FormAnnouncement
+          defaultValues={DEFAULT_VALUE}
+          onSubmit={handleSubmit}
+          onUploadImage={FAKE_IMAGE_UPLOAD}
+        />
+      </div>
+    );
+  },
 };

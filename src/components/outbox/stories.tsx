@@ -1,4 +1,4 @@
-import type { Story, StoryDefault } from "@ladle/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 
 import {
   OutboxView as OutboxViewComponent,
@@ -105,14 +105,17 @@ const EMPTY_OUTBOX_PROPS: OutboxViewProps = {
   status: EMPTY_OUTBOX_STATUS,
 };
 
-export default {
+const meta = {
   title: "Outbox",
-} as StoryDefault;
+} satisfies Meta;
 
-export const OutboxView: Story = () => (
-  <OutboxViewComponent {...OUTBOX_PROPS} />
-);
+export default meta;
+type Story = StoryObj<typeof meta>;
 
-export const OutboxViewEmpty: Story = () => (
-  <OutboxViewComponent {...EMPTY_OUTBOX_PROPS} />
-);
+export const OutboxView: Story = {
+  render: () => <OutboxViewComponent {...OUTBOX_PROPS} />,
+};
+
+export const OutboxViewEmpty: Story = {
+  render: () => <OutboxViewComponent {...EMPTY_OUTBOX_PROPS} />,
+};

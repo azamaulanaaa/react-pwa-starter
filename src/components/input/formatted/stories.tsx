@@ -1,4 +1,4 @@
-import type { Story, StoryDefault } from "@ladle/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 
 import {
@@ -6,9 +6,12 @@ import {
   type InputFormattedProps,
 } from "@/components/input/formatted/index.tsx";
 
-export default {
+const meta: Meta<InputFormattedProps<number>> = {
   title: "Input / Formatted",
-} as StoryDefault;
+};
+
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 const formatPrice = (val?: number) => {
   if (val === undefined || val === null || Number.isNaN(val)) return "";
@@ -31,83 +34,91 @@ const pricePreset = {
   placeholder: "$0.00",
 };
 
-export const Base: Story<InputFormattedProps<number>> = (props) => {
-  const [val, setVal] = useState<number | undefined>(props.value);
+export const Base: Story = {
+  render: (args) => {
+    const [val, setVal] = useState<number | undefined>(args.value);
 
-  return (
+    return (
+      <div className="w-72">
+        <InputFormatted
+          {...pricePreset}
+          {...args}
+          value={val}
+          onChange={(newVal) => {
+            setVal(newVal);
+            args.onChange?.(newVal);
+          }}
+        />
+      </div>
+    );
+  },
+};
+
+export const WithInitialValue: Story = {
+  args: {
+    value: 1250.5,
+  },
+  render: (args) => {
+    const [val, setVal] = useState<number>(args.value ?? 1250.5);
+
+    return (
+      <div className="w-72">
+        <InputFormatted
+          {...pricePreset}
+          {...args}
+          value={val}
+          onChange={(newVal) => {
+            setVal(newVal);
+            args.onChange?.(newVal);
+          }}
+        />
+      </div>
+    );
+  },
+};
+
+export const Disabled: Story = {
+  args: {
+    disabled: true,
+    value: 99.99,
+  },
+  render: (args) => (
     <div className="w-72">
+      <InputFormatted {...pricePreset} {...args} />
+    </div>
+  ),
+};
+
+export const ReadOnly: Story = {
+  args: {
+    readOnly: true,
+    value: 499.0,
+  },
+  render: (args) => (
+    <div className="w-72">
+      <InputFormatted {...pricePreset} {...args} />
+    </div>
+  ),
+};
+
+export const CustomWidthAndStyle: Story = {
+  args: {
+    value: 42.0,
+  },
+  render: (args) => {
+    const [val, setVal] = useState<number | undefined>(args.value ?? 42.0);
+
+    return (
       <InputFormatted
         {...pricePreset}
-        {...props}
+        {...args}
+        className="w-96 border-primary shadow-sm"
         value={val}
         onChange={(newVal) => {
           setVal(newVal);
-          props.onChange?.(newVal);
+          args.onChange?.(newVal);
         }}
       />
-    </div>
-  );
-};
-
-export const WithInitialValue: Story<InputFormattedProps<number>> = (props) => {
-  const [val, setVal] = useState<number>(props.value ?? 1250.5);
-
-  return (
-    <div className="w-72">
-      <InputFormatted
-        {...pricePreset}
-        {...props}
-        value={val}
-        onChange={(newVal) => {
-          setVal(newVal);
-          props.onChange?.(newVal);
-        }}
-      />
-    </div>
-  );
-};
-WithInitialValue.args = {
-  value: 1250.5,
-};
-
-export const Disabled: Story<InputFormattedProps<number>> = (props) => (
-  <div className="w-72">
-    <InputFormatted {...pricePreset} {...props} />
-  </div>
-);
-Disabled.args = {
-  disabled: true,
-  value: 99.99,
-};
-
-export const ReadOnly: Story<InputFormattedProps<number>> = (props) => (
-  <div className="w-72">
-    <InputFormatted {...pricePreset} {...props} />
-  </div>
-);
-ReadOnly.args = {
-  readOnly: true,
-  value: 499.0,
-};
-
-export const CustomWidthAndStyle: Story<InputFormattedProps<number>> = (
-  props,
-) => {
-  const [val, setVal] = useState<number | undefined>(props.value ?? 42.0);
-
-  return (
-    <InputFormatted
-      {...pricePreset}
-      {...props}
-      className="w-96 border-primary shadow-sm"
-      value={val}
-      onChange={(newVal) => {
-        setVal(newVal);
-        props.onChange?.(newVal);
-      }}
-    />
-  );
-};
-CustomWidthAndStyle.args = {
-  value: 42.0,
+    );
+  },
 };

@@ -1,31 +1,37 @@
-import type { Story, StoryDefault } from "@ladle/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 
 import {
   SelfieCapture,
   type SelfieCaptureProps,
 } from "@/components/image/selfie-capture/index.tsx";
 
-export default {
+const meta = {
   title: "Image / Selfie Capture",
-} as StoryDefault;
+  component: SelfieCapture,
+} satisfies Meta<SelfieCaptureProps>;
 
-export const Base: Story<SelfieCaptureProps> = (props) => (
-  <SelfieCapture {...props} />
-);
-Base.args = {
-  locateOnMount: false,
+export default meta;
+type Story = StoryObj<typeof meta>;
+
+export const Base: Story = {
+  args: {
+    locateOnMount: false,
+  },
+  render: (args) => <SelfieCapture {...args} />,
 };
 
-export const NoCamera: Story<SelfieCaptureProps> = (props) => (
-  <SelfieCapture cameraAvailable={false} {...props} />
-);
-NoCamera.args = {
-  locateOnMount: false,
+export const NoCamera: Story = {
+  args: {
+    locateOnMount: false,
+  },
+  render: (args) => <SelfieCapture cameraAvailable={false} {...args} />,
 };
 
-export const Disabled: Story<SelfieCaptureProps> = (props) => (
-  <SelfieCapture cameraAvailable={false} disabled {...props} />
-);
-Disabled.args = {
-  locateOnMount: false,
+export const Disabled: Story = {
+  args: {
+    locateOnMount: false,
+  },
+  render: (args) => (
+    <SelfieCapture cameraAvailable={false} disabled {...args} />
+  ),
 };

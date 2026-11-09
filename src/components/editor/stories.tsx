@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import type { Story, StoryDefault } from "@ladle/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 
 import {
   createLocalMentionSource,
@@ -136,59 +136,76 @@ function EditorStory({
   );
 }
 
-export default {
+const meta = {
   title: "Editor",
-} as StoryDefault;
+} satisfies Meta;
 
-export const Standard: Story = () => (
-  <EditorStory initialMarkdown={DEFAULT_MARKDOWN} />
-);
+export default meta;
+type Story = StoryObj<typeof meta>;
 
-export const Compact: Story = () => (
-  <EditorStory
-    initialMarkdown={COMPACT_MARKDOWN}
-    mentionSource={LOCAL_MENTION_SOURCE}
-    variant="compact"
-  />
-);
+export const Standard: Story = {
+  render: () => <EditorStory initialMarkdown={DEFAULT_MARKDOWN} />,
+};
 
-export const Full: Story = () => (
-  <EditorStory
-    initialMarkdown={FULL_MARKDOWN}
-    onUploadImage={FAKE_IMAGE_UPLOAD}
-    resolveImageFile={resolveStoryImage}
-    variant="full"
-  />
-);
+export const Compact: Story = {
+  render: () => (
+    <EditorStory
+      initialMarkdown={COMPACT_MARKDOWN}
+      mentionSource={LOCAL_MENTION_SOURCE}
+      variant="compact"
+    />
+  ),
+};
 
-export const Mentions: Story = () => (
-  <EditorStory
-    initialMarkdown={MENTION_MARKDOWN}
-    mentionSource={LOCAL_MENTION_SOURCE}
-  />
-);
+export const Full: Story = {
+  render: () => (
+    <EditorStory
+      initialMarkdown={FULL_MARKDOWN}
+      onUploadImage={FAKE_IMAGE_UPLOAD}
+      resolveImageFile={resolveStoryImage}
+      variant="full"
+    />
+  ),
+};
 
-export const Images: Story = () => (
-  <EditorStory
-    initialMarkdown={IMAGE_MARKDOWN}
-    onUploadImage={FAKE_IMAGE_UPLOAD}
-    resolveImageFile={resolveStoryImage}
-  />
-);
+export const Mentions: Story = {
+  render: () => (
+    <EditorStory
+      initialMarkdown={MENTION_MARKDOWN}
+      mentionSource={LOCAL_MENTION_SOURCE}
+    />
+  ),
+};
 
-export const Plain: Story = () => (
-  <EditorStory initialMarkdown={PLAIN_MARKDOWN} variant="plain" />
-);
+export const Images: Story = {
+  render: () => (
+    <EditorStory
+      initialMarkdown={IMAGE_MARKDOWN}
+      onUploadImage={FAKE_IMAGE_UPLOAD}
+      resolveImageFile={resolveStoryImage}
+    />
+  ),
+};
 
-export const ReadOnly: Story = () => (
-  <EditorStory initialMarkdown={DEFAULT_MARKDOWN} readOnly />
-);
+export const Plain: Story = {
+  render: () => (
+    <EditorStory initialMarkdown={PLAIN_MARKDOWN} variant="plain" />
+  ),
+};
 
-export const Empty: Story = () => <EditorStory initialMarkdown="" />;
+export const ReadOnly: Story = {
+  render: () => <EditorStory initialMarkdown={DEFAULT_MARKDOWN} readOnly />,
+};
+
+export const Empty: Story = {
+  render: () => <EditorStory initialMarkdown="" />,
+};
 
 /** Shows the editor at the 320px reflow width. */
-export const Narrow: Story = () => (
-  <div className="w-80 max-w-full">
-    <EditorStory initialMarkdown={DEFAULT_MARKDOWN} />
-  </div>
-);
+export const Narrow: Story = {
+  render: () => (
+    <div className="w-80 max-w-full">
+      <EditorStory initialMarkdown={DEFAULT_MARKDOWN} />
+    </div>
+  ),
+};

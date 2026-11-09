@@ -1,11 +1,14 @@
-import type { Story, StoryDefault } from "@ladle/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 
 import { FileUpload } from "@/components/upload/file-upload.tsx";
 import type { FileMetadata } from "@/hooks/primitives/use-file-upload.ts";
 
-export default {
+const meta = {
   title: "Upload",
-} as StoryDefault;
+} satisfies Meta;
+
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 const IMAGE_URL =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
@@ -34,44 +37,54 @@ const SAMPLE_FILES: FileMetadata[] = [
   },
 ];
 
-export const Empty: Story = () => (
-  <div className="max-w-2xl p-6">
-    <FileUpload />
-  </div>
-);
+export const Empty: Story = {
+  render: () => (
+    <div className="max-w-2xl p-6">
+      <FileUpload />
+    </div>
+  ),
+};
 
-export const WithFiles: Story = () => (
-  <div className="max-w-2xl p-6">
-    <FileUpload initialFiles={SAMPLE_FILES} />
-  </div>
-);
+export const WithFiles: Story = {
+  render: () => (
+    <div className="max-w-2xl p-6">
+      <FileUpload initialFiles={SAMPLE_FILES} />
+    </div>
+  ),
+};
 
-export const SingleFile: Story = () => (
-  <div className="max-w-2xl p-6">
-    <FileUpload
-      initialFiles={[SAMPLE_FILES[1]]}
-      maxFiles={1}
-      multiple={false}
-    />
-  </div>
-);
+export const SingleFile: Story = {
+  render: () => (
+    <div className="max-w-2xl p-6">
+      <FileUpload
+        initialFiles={[SAMPLE_FILES[1]]}
+        maxFiles={1}
+        multiple={false}
+      />
+    </div>
+  ),
+};
 
-export const WithProgress: Story = () => (
-  <div className="max-w-2xl p-6">
-    <FileUpload
-      busy
-      initialFiles={SAMPLE_FILES}
-      progressByFileId={{ "audio-01": 0.75, "image-01": 0.42 }}
-    />
-  </div>
-);
+export const WithProgress: Story = {
+  render: () => (
+    <div className="max-w-2xl p-6">
+      <FileUpload
+        busy
+        initialFiles={SAMPLE_FILES}
+        progressByFileId={{ "audio-01": 0.75, "image-01": 0.42 }}
+      />
+    </div>
+  ),
+};
 
-export const WithError: Story = () => (
-  <div className="max-w-2xl p-6">
-    <FileUpload
-      busy={false}
-      errorsByFileId={{ "intro-zip": "The upload failed. Try again." }}
-      initialFiles={SAMPLE_FILES}
-    />
-  </div>
-);
+export const WithError: Story = {
+  render: () => (
+    <div className="max-w-2xl p-6">
+      <FileUpload
+        busy={false}
+        errorsByFileId={{ "intro-zip": "The upload failed. Try again." }}
+        initialFiles={SAMPLE_FILES}
+      />
+    </div>
+  ),
+};

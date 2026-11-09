@@ -1,12 +1,17 @@
-import type { Story, StoryDefault } from "@ladle/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import { FormTask, FormTaskProps } from "@/examples/task/form/index.tsx";
+import { FormTask } from "@/examples/task/form/index.tsx";
 
-export default {
+const meta = {
   title: "Form / Task",
-} as StoryDefault;
+  component: FormTask,
+} satisfies Meta<typeof FormTask>;
 
-export const Base: Story<FormTaskProps> = (props) => <FormTask {...props} />;
-Base.args = {
-  onSubmit: (value) => alert(`New Task: ${value.task}`),
+export default meta;
+type Story = StoryObj<typeof meta>;
+
+export const Base: Story = {
+  args: {
+    onSubmit: (value) => alert(`New Task: ${value.task}`),
+  },
 };

@@ -1,4 +1,4 @@
-import type { Story, StoryDefault } from "@ladle/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 
 import {
   QueueView as QueueViewComponent,
@@ -104,12 +104,17 @@ const EMPTY_QUEUE_PROPS: QueueViewProps = {
   jobs: [],
 };
 
-export default {
+const meta = {
   title: "Queue",
-} as StoryDefault;
+} satisfies Meta;
 
-export const QueueView: Story = () => <QueueViewComponent {...QUEUE_PROPS} />;
+export default meta;
+type Story = StoryObj<typeof meta>;
 
-export const QueueViewEmpty: Story = () => (
-  <QueueViewComponent {...EMPTY_QUEUE_PROPS} />
-);
+export const QueueView: Story = {
+  render: () => <QueueViewComponent {...QUEUE_PROPS} />,
+};
+
+export const QueueViewEmpty: Story = {
+  render: () => <QueueViewComponent {...EMPTY_QUEUE_PROPS} />,
+};

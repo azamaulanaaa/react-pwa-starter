@@ -1,18 +1,26 @@
-import type { Story, StoryDefault } from "@ladle/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import {
   FormSetting,
-  FormSettingProps,
-  FormSettingValue,
+  type FormSettingProps,
+  type FormSettingValue,
 } from "@/components/form/setting/index.tsx";
 
-export default {
+const meta: Meta<FormSettingProps> = {
   title: "Form / Setting",
-} as StoryDefault;
+  args: {
+    onSubmit: () => {},
+  },
+};
 
-export const Base: Story<FormSettingProps> = (props) => {
-  const handleSubmit = (value: FormSettingValue) => {
-    alert(JSON.stringify(value));
-  };
+export default meta;
+type Story = StoryObj<typeof meta>;
 
-  return <FormSetting {...props} onSubmit={handleSubmit} />;
+export const Base: Story = {
+  render: (args) => {
+    const handleSubmit = (value: FormSettingValue) => {
+      alert(JSON.stringify(value));
+    };
+
+    return <FormSetting {...args} onSubmit={handleSubmit} />;
+  },
 };

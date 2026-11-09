@@ -1,4 +1,4 @@
-import type { Story, StoryDefault } from "@ladle/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 
 import { AnnouncementBanner } from "@/components/announcement/announcement-banner.tsx";
 import { AnnouncementDialog } from "@/components/announcement/announcement-dialog.tsx";
@@ -18,33 +18,42 @@ const DELIVERY: AnnouncementDelivery = {
 
 function noop(): void {}
 
-export default {
+const meta = {
   title: "Announcement",
-} as StoryDefault;
+} satisfies Meta;
 
-export const AnnouncementView: Story = () => (
-  <AnnouncementViewComponent
-    announcements={ANNOUNCEMENTS}
-    delivery={DELIVERY}
-    now={NOW}
-  />
-);
+export default meta;
+type Story = StoryObj<typeof meta>;
 
-export const AnnouncementBannerStory: Story = () => (
-  <div className="p-6">
-    <AnnouncementBanner
-      announcement={ANNOUNCEMENTS[1]}
-      onHide={noop}
-      onReadMore={noop}
+export const AnnouncementView: Story = {
+  render: () => (
+    <AnnouncementViewComponent
+      announcements={ANNOUNCEMENTS}
+      delivery={DELIVERY}
+      now={NOW}
     />
-  </div>
-);
+  ),
+};
 
-export const AnnouncementDialogStory: Story = () => (
-  <AnnouncementDialog
-    announcement={ANNOUNCEMENTS[0]}
-    onDismiss={noop}
-    onHide={noop}
-    open
-  />
-);
+export const AnnouncementBannerStory: Story = {
+  render: () => (
+    <div className="p-6">
+      <AnnouncementBanner
+        announcement={ANNOUNCEMENTS[1]}
+        onHide={noop}
+        onReadMore={noop}
+      />
+    </div>
+  ),
+};
+
+export const AnnouncementDialogStory: Story = {
+  render: () => (
+    <AnnouncementDialog
+      announcement={ANNOUNCEMENTS[0]}
+      onDismiss={noop}
+      onHide={noop}
+      open
+    />
+  ),
+};

@@ -1,11 +1,14 @@
 import { useState } from "react";
-import type { Story, StoryDefault } from "@ladle/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 
 import { ImageThumbnail } from "@/components/image/thumbnail/index.tsx";
 
-export default {
+const meta = {
   title: "Image / Thumbnail",
-} as StoryDefault;
+} satisfies Meta;
+
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 const IMAGE_SRC = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`
   <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
@@ -35,38 +38,44 @@ const GALLERY_SOURCES = [
   `)}`,
 ];
 
-export const Default: Story = () => (
-  <div className="p-6">
-    <ImageThumbnail alt="Report" className="max-w-xl" src={IMAGE_SRC} />
-  </div>
-);
-
-export const Controlled: Story = () => {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <div className="flex max-w-xl flex-col gap-4 p-6">
-      <ImageThumbnail
-        alt="Report"
-        onOpenChange={setOpen}
-        open={open}
-        src={IMAGE_SRC}
-      />
-      <p className="text-muted-foreground text-sm">
-        The lightbox is {open ? "open" : "closed"}.
-      </p>
+export const Default: Story = {
+  render: () => (
+    <div className="p-6">
+      <ImageThumbnail alt="Report" className="max-w-xl" src={IMAGE_SRC} />
     </div>
-  );
+  ),
 };
 
-export const Gallery: Story = () => (
-  <div className="grid max-w-3xl grid-cols-2 gap-4 p-6">
-    <ImageThumbnail alt="Teal report" src={GALLERY_SOURCES[0]} />
-    <ImageThumbnail alt="Amber report" src={GALLERY_SOURCES[1]} />
-    <ImageThumbnail
-      alt="Purple report"
-      className="col-span-2 max-w-sm"
-      src={GALLERY_SOURCES[2]}
-    />
-  </div>
-);
+export const Controlled: Story = {
+  render: () => {
+    const [open, setOpen] = useState(false);
+
+    return (
+      <div className="flex max-w-xl flex-col gap-4 p-6">
+        <ImageThumbnail
+          alt="Report"
+          onOpenChange={setOpen}
+          open={open}
+          src={IMAGE_SRC}
+        />
+        <p className="text-muted-foreground text-sm">
+          The lightbox is {open ? "open" : "closed"}.
+        </p>
+      </div>
+    );
+  },
+};
+
+export const Gallery: Story = {
+  render: () => (
+    <div className="grid max-w-3xl grid-cols-2 gap-4 p-6">
+      <ImageThumbnail alt="Teal report" src={GALLERY_SOURCES[0]} />
+      <ImageThumbnail alt="Amber report" src={GALLERY_SOURCES[1]} />
+      <ImageThumbnail
+        alt="Purple report"
+        className="col-span-2 max-w-sm"
+        src={GALLERY_SOURCES[2]}
+      />
+    </div>
+  ),
+};

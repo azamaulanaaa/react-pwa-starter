@@ -1,4 +1,4 @@
-import type { Story, StoryDefault } from "@ladle/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 
 import { createMemoryTokenStore } from "../shared/client.ts";
 import { RustApiAuthCard as RustApiAuthCardComponent } from "./auth-ui.tsx";
@@ -18,20 +18,27 @@ const RUST_API_BACKEND = createRustApiBackendIfEnabled({
   tokens: createMemoryTokenStore(),
 });
 
-export default {
+const meta = {
   title: "Rust API",
-} as StoryDefault;
+} satisfies Meta;
 
-export const RustApiAuthCard: Story = () => (
-  <div className="w-full max-w-sm">
-    <RustApiSessionBoundary backend={RUST_API_BACKEND}>
+export default meta;
+type Story = StoryObj<typeof meta>;
+
+export const RustApiAuthCard: Story = {
+  render: () => (
+    <div className="w-full max-w-sm">
+      <RustApiSessionBoundary backend={RUST_API_BACKEND}>
+        <RustApiAuthCardComponent />
+      </RustApiSessionBoundary>
+    </div>
+  ),
+};
+
+export const RustApiAuthCardOff: Story = {
+  render: () => (
+    <div className="w-full max-w-sm">
       <RustApiAuthCardComponent />
-    </RustApiSessionBoundary>
-  </div>
-);
-
-export const RustApiAuthCardOff: Story = () => (
-  <div className="w-full max-w-sm">
-    <RustApiAuthCardComponent />
-  </div>
-);
+    </div>
+  ),
+};

@@ -1,4 +1,4 @@
-import type { Story, StoryDefault } from "@ladle/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 
 import { AccessDenied as AccessDeniedComponent } from "@/components/auth/access-denied.tsx";
 import { AuthCard } from "@/components/auth/auth-card.tsx";
@@ -44,64 +44,83 @@ function handleLogin(provider: OAuthProvider): void {
   alert(`Provider: ${provider}`);
 }
 
-export default {
+const meta = {
   title: "Auth",
-} as StoryDefault;
+} satisfies Meta;
 
-export const OAuthButton: Story = () => (
-  <div className="w-80">
-    <OAuthButtonComponent onLogin={handleLogin} provider="google" />
-  </div>
-);
+export default meta;
+type Story = StoryObj<typeof meta>;
 
-export const ProviderList: Story = () => (
-  <div className="w-80">
-    <OAuthProviderList onLogin={handleLogin} providers={PROVIDERS} />
-  </div>
-);
+export const OAuthButton: Story = {
+  render: () => (
+    <div className="w-80">
+      <OAuthButtonComponent onLogin={handleLogin} provider="google" />
+    </div>
+  ),
+};
 
-export const SignInCard: Story = () => (
-  <div className="w-full max-w-sm">
-    <AuthCard onLogin={handleLogin} providers={PROVIDERS} />
-  </div>
-);
+export const ProviderList: Story = {
+  render: () => (
+    <div className="w-80">
+      <OAuthProviderList onLogin={handleLogin} providers={PROVIDERS} />
+    </div>
+  ),
+};
 
-export const SignInCardWithError: Story = () => (
-  <div className="w-full max-w-sm">
-    <AuthCard
-      errorCode="access_denied"
-      onLogin={handleLogin}
-      onRetry={() => alert("Retry the sign-in")}
-      providers={PROVIDERS}
-    />
-  </div>
-);
+export const SignInCard: Story = {
+  render: () => (
+    <div className="w-full max-w-sm">
+      <AuthCard onLogin={handleLogin} providers={PROVIDERS} />
+    </div>
+  ),
+};
 
-export const AccessDenied: Story = () => (
-  <div className="w-full max-w-md">
-    <AccessDeniedComponent
-      onRetry={() => alert("Retry access")}
-      onSignIn={() => alert("Open sign in")}
-    />
-  </div>
-);
+export const SignInCardWithError: Story = {
+  render: () => (
+    <div className="w-full max-w-sm">
+      <AuthCard
+        errorCode="access_denied"
+        onLogin={handleLogin}
+        onRetry={() => alert("Retry the sign-in")}
+        providers={PROVIDERS}
+      />
+    </div>
+  ),
+};
 
-export const AuthLoading: Story = () => <AuthLoadingComponent />;
+export const AccessDenied: Story = {
+  render: () => (
+    <div className="w-full max-w-md">
+      <AccessDeniedComponent
+        onRetry={() => alert("Retry access")}
+        onSignIn={() => alert("Open sign in")}
+      />
+    </div>
+  ),
+};
 
-export const UserMenu: Story = () => (
-  <div className="flex justify-center">
-    <UserMenuComponent
-      onProfile={() => alert("Open profile")}
-      onSignOut={() => alert("Sign out")}
-      user={SESSION.user}
-    />
-  </div>
-);
+export const AuthLoading: Story = {
+  render: () => <AuthLoadingComponent />,
+};
 
-export const SessionUserMenu: Story = () => (
-  <div className="flex justify-center">
-    <SessionProvider provider={SESSION_PROVIDER}>
-      <SessionUserMenuComponent onProfile={() => alert("Open profile")} />
-    </SessionProvider>
-  </div>
-);
+export const UserMenu: Story = {
+  render: () => (
+    <div className="flex justify-center">
+      <UserMenuComponent
+        onProfile={() => alert("Open profile")}
+        onSignOut={() => alert("Sign out")}
+        user={SESSION.user}
+      />
+    </div>
+  ),
+};
+
+export const SessionUserMenu: Story = {
+  render: () => (
+    <div className="flex justify-center">
+      <SessionProvider provider={SESSION_PROVIDER}>
+        <SessionUserMenuComponent onProfile={() => alert("Open profile")} />
+      </SessionProvider>
+    </div>
+  ),
+};

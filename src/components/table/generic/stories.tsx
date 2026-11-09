@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Story, StoryDefault } from "@ladle/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ColumnDef, RowSelectionState } from "@tanstack/react-table";
 
 import {
@@ -9,16 +9,15 @@ import {
 } from "@/components/table/generic/index.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 
-export default {
-  title: "Table / Generic",
-} as StoryDefault;
-
 const data = [
   { id: 1, name: "John", status: "Online" },
   { id: 2, name: "Sophia", status: "Online" },
   { id: 3, name: "Yusuf", status: "Offline" },
 ];
-const columns: ColumnDef<TableGenericFeatures, (typeof data)[number]>[] = [
+
+type Row = (typeof data)[number];
+
+const columns: ColumnDef<TableGenericFeatures, Row>[] = [
   {
     accessorKey: "name",
     header: "Name",
@@ -54,30 +53,41 @@ const columns: ColumnDef<TableGenericFeatures, (typeof data)[number]>[] = [
   },
 ];
 
-export const Base: Story<TableGenericProps<(typeof data)[number]>> = (
-  props,
-) => {
-  const [rowSelections, setRowSelections] = useState<RowSelectionState>({});
-  const [columnVisibility, setColumnVisibility] = useState({});
-
-  return (
-    <TableGeneric
-      {...props}
-      rowSelection={rowSelections}
-      onRowSelectionChange={(state) => setRowSelections(state)}
-      columnVisibility={columnVisibility}
-      onColumnVisibilityChange={setColumnVisibility}
-      data={data}
-    />
-  );
-};
-Base.args = {
-  columns,
+const meta: Meta<TableGenericProps<Row>> = {
+  title: "Table / Generic",
+  args: {
+    columns,
+    data: [],
+  },
 };
 
-export const Empty: Story<TableGenericProps<(typeof data)[number]>> = (
-  props,
-) => {
-  return <TableGeneric {...props} />;
+export default meta;
+type Story = StoryObj<typeof meta>;
+
+export const Base: Story = {
+  args: {
+    columns,
+  },
+  render: (args) => {
+    const [rowSelections, setRowSelections] = useState<RowSelectionState>({});
+    const [columnVisibility, setColumnVisibility] = useState({});
+
+    return (
+      <TableGeneric
+        {...args}
+        rowSelection={rowSelections}
+        onRowSelectionChange={(state) => setRowSelections(state)}
+        columnVisibility={columnVisibility}
+        onColumnVisibilityChange={setColumnVisibility}
+        data={data}
+      />
+    );
+  },
 };
-Empty.args = { columns, data: [] };
+
+export const Empty: Story = {
+  args: { columns, data: [] },
+  render: (args) => {
+    return <TableGeneric {...args} />;
+  },
+};

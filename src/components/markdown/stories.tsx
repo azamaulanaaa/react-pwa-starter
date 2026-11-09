@@ -1,4 +1,4 @@
-import type { Story, StoryDefault } from "@ladle/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 
 import { MarkdownView } from "@/components/markdown/markdown-view.tsx";
 
@@ -108,49 +108,64 @@ const TYPOGRAPHY_MARKDOWN = [
   "Final paragraph with a long URL: https://example.com/a/very/long/path/that/keeps/going/without/a/break.",
 ].join("\n");
 
-export default {
+const meta = {
   title: "Markdown",
-} as StoryDefault;
+} satisfies Meta;
 
-export const DefaultView: Story = () => (
-  <div className="p-6">
-    <MarkdownView markdown={DEFAULT_MARKDOWN} />
-  </div>
-);
+export default meta;
+type Story = StoryObj<typeof meta>;
 
-export const MentionChips: Story = () => (
-  <div className="p-6">
-    <MarkdownView markdown={CHIP_MARKDOWN} />
-  </div>
-);
+export const DefaultView: Story = {
+  render: () => (
+    <div className="p-6">
+      <MarkdownView markdown={DEFAULT_MARKDOWN} />
+    </div>
+  ),
+};
 
-export const CodeAndTable: Story = () => (
-  <div className="p-6">
-    <MarkdownView markdown={CODE_AND_TABLE_MARKDOWN} />
-  </div>
-);
+export const MentionChips: Story = {
+  render: () => (
+    <div className="p-6">
+      <MarkdownView markdown={CHIP_MARKDOWN} />
+    </div>
+  ),
+};
 
-export const MaliciousInput: Story = () => (
-  <div className="p-6">
-    <MarkdownView markdown={MALICIOUS_MARKDOWN} />
-  </div>
-);
+export const CodeAndTable: Story = {
+  render: () => (
+    <div className="p-6">
+      <MarkdownView markdown={CODE_AND_TABLE_MARKDOWN} />
+    </div>
+  ),
+};
 
-export const Empty: Story = () => (
-  <div className="p-6">
-    <MarkdownView markdown="" />
-  </div>
-);
+export const MaliciousInput: Story = {
+  render: () => (
+    <div className="p-6">
+      <MarkdownView markdown={MALICIOUS_MARKDOWN} />
+    </div>
+  ),
+};
+
+export const Empty: Story = {
+  render: () => (
+    <div className="p-6">
+      <MarkdownView markdown="" />
+    </div>
+  ),
+};
 
 /** Shows every prose element at the normal width and in a narrow container. */
-export const Typography: Story = () => (
-  <div className="grid gap-8 p-6 lg:grid-cols-[minmax(0,48rem)_20rem]">
-    <div className="min-w-0">
-      <MarkdownView markdown={TYPOGRAPHY_MARKDOWN} />
+export const Typography: Story = {
+  render: () => (
+    <div className="grid gap-8 p-6 lg:grid-cols-[minmax(0,48rem)_20rem]">
+      <div className="min-w-0">
+        <MarkdownView markdown={TYPOGRAPHY_MARKDOWN} />
+      </div>
+      <div className="min-w-0 self-start rounded-lg border border-border p-4">
+        <p className="mb-3 text-muted-foreground text-sm">Narrow container</p>
+        <MarkdownView markdown={TYPOGRAPHY_MARKDOWN} />
+      </div>
     </div>
-    <div className="min-w-0 self-start rounded-lg border border-border p-4">
-      <p className="mb-3 text-muted-foreground text-sm">Narrow container</p>
-      <MarkdownView markdown={TYPOGRAPHY_MARKDOWN} />
-    </div>
-  </div>
-);
+  ),
+};
