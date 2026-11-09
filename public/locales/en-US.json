@@ -1,4 +1,7 @@
 {
+  "announcement_got_it": "Got it",
+  "announcement_hide_for_later": "Hide for later",
+  "announcement_read_more": "Read more",
   "app_error_description": "An unexpected error stopped this page. Try again.",
   "app_error_retry": "Try again",
   "app_error_title": "The page did not load",

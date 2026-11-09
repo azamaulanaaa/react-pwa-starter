@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/sidebar.tsx";
 import { useTranslation } from "@/components/context/translation.tsx";
 import { useConfig } from "@/components/context/config.tsx";
+import { AnnouncementHost } from "@/components/announcement/index.ts";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -170,6 +171,7 @@ function Page() {
                   </Breadcrumb>
                 </div>
               </div>
+              <AnnouncementHost />
               <main className="p-2">
                 <Outlet />
               </main>
