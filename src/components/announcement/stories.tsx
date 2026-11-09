@@ -27,7 +27,6 @@ export const AnnouncementView: Story = () => (
     announcements={ANNOUNCEMENTS}
     delivery={DELIVERY}
     now={NOW}
-    onCreate={noop}
   />
 );
 
