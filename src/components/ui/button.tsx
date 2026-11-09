@@ -77,6 +77,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function (
         {children}
         {loading && (
           <Spinner
+            aria-hidden="true"
             className="pointer-events-none absolute"
             data-slot="button-loading-indicator"
           />

@@ -44,7 +44,6 @@ export function OAuthButton({
 
   return (
     <Button
-      aria-label={loading ? text : undefined}
       className={cn("w-full justify-center", className)}
       data-provider={provider}
       data-slot="oauth-button"

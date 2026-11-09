@@ -49,7 +49,7 @@ export function DetailField({
         {label}
       </dt>
       <dd
-        className={cn("text-sm", mono && "font-mono break-all")}
+        className={cn("text-sm", mono && "font-mono wrap-anywhere")}
         data-slot="detail-field-value"
       >
         {children}

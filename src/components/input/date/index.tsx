@@ -210,7 +210,7 @@ export function InputDate({
   return (
     <div className={cn("flex w-full flex-col gap-2", className)}>
       <Popover open={isOpen} onOpenChange={handleOpenChange}>
-        <InputGroup className="has-read-only:border-transparent">
+        <InputGroup>
           <InputGroupInput
             aria-describedby={describedBy}
             aria-invalid={isInvalid || undefined}

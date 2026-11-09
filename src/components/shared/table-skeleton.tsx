@@ -25,7 +25,7 @@ export function TableSkeleton({
       aria-busy="true"
       aria-live="polite"
       className={cn(
-        "flex flex-col overflow-hidden rounded-md border",
+        "flex flex-col overflow-hidden rounded-xl border",
         className,
       )}
       data-slot="table-skeleton"
