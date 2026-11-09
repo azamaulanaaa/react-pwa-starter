@@ -14,9 +14,14 @@ vi.mock("@/components/queue/index.ts", () => ({
   QueuePanel: () => <div>Queue panel</div>,
 }));
 
+vi.mock("@/components/announcement/index.ts", () => ({
+  AnnouncementPanel: () => <div>Announcement panel</div>,
+}));
+
 const DICTIONARY = {
   page_dashboard_system_description: "Review outbox writes and queue jobs.",
   page_dashboard_system_title: "System",
+  system_tab_announcements: "Announcements",
   system_tab_outbox: "Outbox",
   system_tab_queue: "Queue",
 };
@@ -61,5 +66,18 @@ describe("SystemPage", () => {
       screen.getByRole("tab", { name: "Outbox" }).getAttribute("aria-selected"),
     ).toBe("true");
     expect(screen.getByText("Outbox panel")).toBeDefined();
+  });
+
+  it("shows the announcements tab", () => {
+    renderPage();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Announcements" }));
+
+    expect(
+      screen
+        .getByRole("tab", { name: "Announcements" })
+        .getAttribute("aria-selected"),
+    ).toBe("true");
+    expect(screen.getByText("Announcement panel")).toBeDefined();
   });
 });
