@@ -29,7 +29,13 @@ const EVENT_NAMES: readonly EditorEventName[] = [
 ];
 
 /** Lists the attribute keys that can carry a safe value. */
-const SAFE_ATTRIBUTE_KEYS = new Set(["code", "feature", "reason", "retryable"]);
+const SAFE_ATTRIBUTE_KEYS = new Set([
+  "code",
+  "count",
+  "feature",
+  "reason",
+  "retryable",
+]);
 
 /** Matches one value that can carry a URL. */
 const URL_VALUE = /(?:[a-z][a-z\d+.-]*:\/\/|^\/|^www\.)/i;

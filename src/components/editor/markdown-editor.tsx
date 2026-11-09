@@ -17,11 +17,7 @@ import {
   type ReactNode,
   type Ref,
 } from "react";
-import {
-  $convertFromMarkdownString,
-  $convertToMarkdownString,
-  type Transformer,
-} from "@lexical/markdown";
+import { type Transformer } from "@lexical/markdown";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
@@ -33,14 +29,15 @@ import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPl
 import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import {
-  $createParagraphNode,
-  $getRoot,
-  type EditorState,
-  type EditorThemeClasses,
-} from "lexical";
+import { type EditorState, type EditorThemeClasses } from "lexical";
 
 import { useTranslation } from "@/components/context/translation.tsx";
+import {
+  getMarkdown,
+  loadMarkdown,
+  readMarkdown,
+  reportUnknownNodeTypes,
+} from "@/components/editor/compiler.ts";
 import { recordEditorEvent } from "@/components/editor/editor-telemetry.ts";
 import { EditorToolbar } from "@/components/editor/editor-toolbar.tsx";
 import { ImagePlugin } from "@/components/editor/image-plugin.tsx";
@@ -179,30 +176,6 @@ function reportEditorError(error: Error): void {
   throw error;
 }
 
-/**
- * Replaces the editor content with one Markdown string.
- * The function appends an empty paragraph when the result has no blocks.
- */
-function $seedEditor(markdown: string, transformers: Transformer[]): void {
-  const root = $getRoot();
-  root.clear();
-  $convertFromMarkdownString(canonicalize(markdown), transformers);
-
-  if (root.getChildrenSize() === 0) {
-    root.append($createParagraphNode());
-  }
-}
-
-/** Returns canonical Markdown for one editor state. */
-function readMarkdown(
-  editorState: EditorState,
-  transformers: Transformer[],
-): string {
-  return editorState.read(() =>
-    canonicalize($convertToMarkdownString(transformers)),
-  );
-}
-
 /** Defines the props of the raw Markdown fallback. */
 interface UnsupportedMarkdownFallbackProps {
   ariaDescribedBy?: string;
@@ -329,12 +302,7 @@ function EditorSurface({
     syncingRef.current = true;
 
     try {
-      editor.update(
-        () => {
-          $seedEditor(value, transformers);
-        },
-        { discrete: true },
-      );
+      loadMarkdown(editor, value, transformers);
     } finally {
       syncingRef.current = false;
     }
@@ -344,18 +312,13 @@ function EditorSurface({
     handleRef,
     () => ({
       getMarkdown() {
-        return readMarkdown(editor.getEditorState(), transformers);
+        return getMarkdown(editor, transformers);
       },
       setMarkdown(markdown: string) {
         syncingRef.current = true;
 
         try {
-          editor.update(
-            () => {
-              $seedEditor(markdown, transformers);
-            },
-            { discrete: true },
-          );
+          loadMarkdown(editor, markdown, transformers);
         } finally {
           syncingRef.current = false;
         }
@@ -368,6 +331,7 @@ function EditorSurface({
   );
 
   function handleChange(editorState: EditorState): void {
+    reportUnknownNodeTypes(editorState);
     const markdown = readMarkdown(editorState, transformers);
 
     if (markdown === lastEmittedRef.current) return;
@@ -497,8 +461,8 @@ export const MarkdownEditor = forwardRef<
         theme: EDITOR_THEME,
         editable: !readOnly,
         onError: reportEditorError,
-        editorState: () => {
-          $seedEditor(value, transformers);
+        editorState: (editor) => {
+          loadMarkdown(editor, value, transformers);
         },
       }}
     >
