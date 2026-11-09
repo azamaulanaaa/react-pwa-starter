@@ -1,5 +1,5 @@
 import { useId, useMemo } from "react";
-import { useForm } from "@tanstack/react-form";
+import { useForm, useStore } from "@tanstack/react-form";
 import { Schema } from "effect";
 
 import { useTranslation } from "@/components/context/translation.tsx";
@@ -8,6 +8,7 @@ import {
   type FormAnnouncementValue,
   useFormAnnouncementSchema,
 } from "@/components/form/announcement/schema.ts";
+import { Button } from "@/components/ui/button.tsx";
 import { Field, FieldLabel } from "@/components/ui/field.tsx";
 import { Form } from "@/components/ui/form.tsx";
 import { Input } from "@/components/ui/input.tsx";
@@ -30,7 +31,6 @@ export const FormAnnouncementDefaultValue: FormAnnouncementValue = {
 };
 
 export type FormAnnouncementProps = {
-  formId?: string;
   defaultValues?: FormAnnouncementValue;
   onChange?: (value: FormAnnouncementValue) => void;
   onSubmit: (value: FormAnnouncementValue) => void | Promise<void>;
@@ -70,12 +70,13 @@ export function FormAnnouncement(props: FormAnnouncementProps) {
     validators: {
       onChange: standardSchema,
     },
-    onSubmit: async ({ value }) => {
+    onSubmit: async ({ value, formApi }) => {
       await props.onSubmit({
         ...value,
         title: value.title.trim(),
         body: value.body.trim(),
       });
+      formApi.reset(FormAnnouncementDefaultValue);
     },
     listeners: {
       onChange: ({ formApi }) => {
@@ -84,10 +85,11 @@ export function FormAnnouncement(props: FormAnnouncementProps) {
     },
   });
 
+  const isSubmitting = useStore(form.store, (state) => state.isSubmitting);
+
   return (
     <Form
       className="flex flex-col gap-4"
-      id={props.formId}
       noValidate
       onSubmit={(e) => {
         e.preventDefault();
@@ -211,6 +213,9 @@ export function FormAnnouncement(props: FormAnnouncementProps) {
           </Field>
         )}
       </form.Field>
+      <Button loading={isSubmitting} type="submit">
+        {t("system_announcements_form_submit")}
+      </Button>
     </Form>
   );
 }

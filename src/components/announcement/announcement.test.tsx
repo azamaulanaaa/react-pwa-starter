@@ -188,11 +188,6 @@ describe("AnnouncementView", () => {
 
     renderView({ onCreate });
 
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: dictionary.system_announcements_new,
-      }),
-    );
     fillForm("  Maintenance tonight  ", "  Save your work.  ");
     submitForm();
 
@@ -211,11 +206,6 @@ describe("AnnouncementView", () => {
 
     renderView({ onCreate });
 
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: dictionary.system_announcements_new,
-      }),
-    );
     fillForm("Maintenance tonight", "Save your work.");
     choosePresentation(dictionary.system_announcement_presentation_dialog);
     submitForm();
@@ -235,11 +225,6 @@ describe("AnnouncementView", () => {
 
     renderView({ onCreate });
 
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: dictionary.system_announcements_new,
-      }),
-    );
     submitForm();
 
     const titleInput = screen.getByLabelText(
@@ -257,6 +242,25 @@ describe("AnnouncementView", () => {
     expect(titleInput.getAttribute("aria-invalid")).toBe("true");
     expect(bodyInput.getAttribute("aria-invalid")).toBe("true");
   });
+
+  it("resets the title and message after a successful submit", async () => {
+    renderView();
+
+    fillForm("Maintenance tonight", "Save your work.");
+    submitForm();
+
+    const titleInput = screen.getByLabelText(
+      dictionary.system_announcements_form_title_label,
+    ) as HTMLInputElement;
+    const bodyInput = screen.getByLabelText(
+      dictionary.system_announcements_form_body_label,
+    ) as HTMLTextAreaElement;
+
+    await waitFor(() => {
+      expect(titleInput.value).toBe("");
+      expect(bodyInput.value).toBe("");
+    });
+  });
 });
 
 describe("AnnouncementPanel", () => {
@@ -268,11 +272,6 @@ describe("AnnouncementPanel", () => {
   it("adds a custom announcement to the table and the delivery state", async () => {
     renderWithProviders(<AnnouncementPanel />);
 
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: dictionary.system_announcements_new,
-      }),
-    );
     fillForm("Custom notice", "Custom body text.");
     fireEvent.click(
       screen.getByRole("button", {

@@ -1,12 +1,11 @@
 import type React from "react";
 import { useState } from "react";
-import { ChevronRightIcon, InboxIcon, PlusIcon } from "lucide-react";
+import { ChevronRightIcon, InboxIcon } from "lucide-react";
 
 import { useTranslation } from "@/components/context/translation.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import {
   Card,
-  CardAction,
   CardDescription,
   CardHeader,
   CardPanel,
@@ -34,8 +33,8 @@ import {
   AnnouncementVariantBadge,
 } from "@/components/announcement/announcement-badge.tsx";
 import { AnnouncementDetail } from "@/components/announcement/announcement-detail.tsx";
-import { AnnouncementForm } from "@/components/announcement/announcement-form.tsx";
 import { getAnnouncementStatus } from "@/components/announcement/delivery.ts";
+import { FormAnnouncement } from "@/components/form/announcement/index.tsx";
 import type {
   Announcement,
   AnnouncementDelivery,
@@ -58,132 +57,132 @@ export function AnnouncementView({
 }: AnnouncementViewProps): React.ReactElement {
   const { t } = useTranslation();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [isFormOpen, setIsFormOpen] = useState(false);
   const selected =
     announcements.find((announcement) => announcement.id === selectedId) ??
     null;
 
   return (
-    <Card data-slot="announcement-view">
-      <CardHeader>
-        <CardTitle>{t("system_announcements_title")}</CardTitle>
-        <CardDescription>
-          {t("system_announcements_description")}
-        </CardDescription>
-        <CardAction>
-          <Button onClick={() => setIsFormOpen(true)} size="sm">
-            <PlusIcon aria-hidden="true" />
-            {t("system_announcements_new")}
-          </Button>
-        </CardAction>
-      </CardHeader>
-      <CardPanel>
-        {announcements.length === 0 ? (
-          <Empty>
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <InboxIcon aria-hidden="true" />
-              </EmptyMedia>
-              <EmptyTitle>{t("system_announcements_empty_title")}</EmptyTitle>
-              <EmptyDescription>
-                {t("system_announcements_empty_description")}
-              </EmptyDescription>
-            </EmptyHeader>
-          </Empty>
-        ) : (
-          <div className="overflow-hidden rounded-xl border">
-            <Table className="table-fixed">
-              <TableCaption className="sr-only">
-                {t("system_announcements_table_caption")}
-              </TableCaption>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>
-                    {t("system_announcements_column_title")}
-                  </TableHead>
-                  <TableHead className="hidden w-28 sm:table-cell">
-                    {t("system_announcements_column_variant")}
-                  </TableHead>
-                  <TableHead className="hidden w-40 md:table-cell">
-                    {t("system_announcements_column_preferred")}
-                  </TableHead>
-                  <TableHead className="hidden w-28 sm:table-cell">
-                    {t("system_announcements_column_status")}
-                  </TableHead>
-                  <TableHead className="w-12">
-                    <span className="sr-only">{t("system_actions")}</span>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {announcements.map((announcement) => (
-                  <TableRow key={announcement.id}>
-                    <TableCell className="max-w-0">
-                      <div className="flex min-w-0 flex-col leading-tight">
-                        <span className="truncate font-medium">
-                          {announcement.title}
-                        </span>
-                        <span className="truncate text-muted-foreground text-xs">
-                          {announcement.body}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden w-28 sm:table-cell">
-                      <AnnouncementVariantBadge
-                        variant={announcement.variant}
-                      />
-                    </TableCell>
-                    <TableCell className="hidden w-40 md:table-cell">
-                      <AnnouncementPresentationBadge
-                        presentation={announcement.preferredPresentation}
-                      />
-                    </TableCell>
-                    <TableCell className="hidden w-28 sm:table-cell">
-                      <AnnouncementStatusBadge
-                        status={getAnnouncementStatus(
-                          delivery,
-                          announcement.id,
-                          now,
-                        )}
-                      />
-                    </TableCell>
-                    <TableCell className="w-12">
-                      <div className="flex justify-end">
-                        <Button
-                          aria-label={t("system_view_details")}
-                          onClick={() => setSelectedId(announcement.id)}
-                          size="icon-sm"
-                          variant="ghost"
-                        >
-                          <ChevronRightIcon className="rtl:rotate-180" />
-                        </Button>
-                      </div>
-                    </TableCell>
+    <div className="flex flex-col gap-4" data-slot="announcement-view">
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("system_announcements_form_title")}</CardTitle>
+          <CardDescription>
+            {t("system_announcements_form_description")}
+          </CardDescription>
+        </CardHeader>
+        <CardPanel>
+          <FormAnnouncement onSubmit={onCreate} />
+        </CardPanel>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("system_announcements_title")}</CardTitle>
+          <CardDescription>
+            {t("system_announcements_description")}
+          </CardDescription>
+        </CardHeader>
+        <CardPanel>
+          {announcements.length === 0 ? (
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <InboxIcon aria-hidden="true" />
+                </EmptyMedia>
+                <EmptyTitle>{t("system_announcements_empty_title")}</EmptyTitle>
+                <EmptyDescription>
+                  {t("system_announcements_empty_description")}
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          ) : (
+            <div className="overflow-hidden rounded-xl border">
+              <Table className="table-fixed">
+                <TableCaption className="sr-only">
+                  {t("system_announcements_table_caption")}
+                </TableCaption>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>
+                      {t("system_announcements_column_title")}
+                    </TableHead>
+                    <TableHead className="hidden w-28 sm:table-cell">
+                      {t("system_announcements_column_variant")}
+                    </TableHead>
+                    <TableHead className="hidden w-40 md:table-cell">
+                      {t("system_announcements_column_preferred")}
+                    </TableHead>
+                    <TableHead className="hidden w-28 sm:table-cell">
+                      {t("system_announcements_column_status")}
+                    </TableHead>
+                    <TableHead className="w-12">
+                      <span className="sr-only">{t("system_actions")}</span>
+                    </TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {announcements.map((announcement) => (
+                    <TableRow key={announcement.id}>
+                      <TableCell className="max-w-0">
+                        <div className="flex min-w-0 flex-col leading-tight">
+                          <span className="truncate font-medium">
+                            {announcement.title}
+                          </span>
+                          <span className="truncate text-muted-foreground text-xs">
+                            {announcement.body}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden w-28 sm:table-cell">
+                        <AnnouncementVariantBadge
+                          variant={announcement.variant}
+                        />
+                      </TableCell>
+                      <TableCell className="hidden w-40 md:table-cell">
+                        <AnnouncementPresentationBadge
+                          presentation={announcement.preferredPresentation}
+                        />
+                      </TableCell>
+                      <TableCell className="hidden w-28 sm:table-cell">
+                        <AnnouncementStatusBadge
+                          status={getAnnouncementStatus(
+                            delivery,
+                            announcement.id,
+                            now,
+                          )}
+                        />
+                      </TableCell>
+                      <TableCell className="w-12">
+                        <div className="flex justify-end">
+                          <Button
+                            aria-label={t("system_view_details")}
+                            onClick={() => setSelectedId(announcement.id)}
+                            size="icon-sm"
+                            variant="ghost"
+                          >
+                            <ChevronRightIcon className="rtl:rotate-180" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardPanel>
+
+        {selected !== null && (
+          <AnnouncementDetail
+            announcement={selected}
+            delivery={delivery}
+            now={now}
+            onOpenChange={(next) => {
+              if (!next) setSelectedId(null);
+            }}
+            open={selected !== null}
+          />
         )}
-      </CardPanel>
-
-      {selected !== null && (
-        <AnnouncementDetail
-          announcement={selected}
-          delivery={delivery}
-          now={now}
-          onOpenChange={(next) => {
-            if (!next) setSelectedId(null);
-          }}
-          open={selected !== null}
-        />
-      )}
-
-      <AnnouncementForm
-        onCreate={onCreate}
-        onOpenChange={setIsFormOpen}
-        open={isFormOpen}
-      />
-    </Card>
+      </Card>
+    </div>
   );
 }
