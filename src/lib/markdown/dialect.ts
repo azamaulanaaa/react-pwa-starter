@@ -139,6 +139,8 @@ export function stringify(tree: Root): string {
  * Normalizes an mdast tree for the md-lite/1 dialect.
  * The function resolves reference links, removes definitions, and converts
  * a line break element to a hard break.
+ * The function sets `spread` to false on every list and list item.
+ * md-lite/1 uses tight lists. The editor has no node for a loose list.
  */
 export function normalize(tree: Root): Root {
   const normalized = structuredClone(tree);
@@ -149,6 +151,10 @@ export function normalize(tree: Root): Root {
   });
 
   visit(normalized, (node, index, parent) => {
+    if (node.type === "list" || node.type === "listItem") {
+      node.spread = false;
+    }
+
     if (!parent || index === undefined) {
       return;
     }

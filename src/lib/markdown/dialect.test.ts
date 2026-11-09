@@ -49,6 +49,14 @@ describe("canonical Markdown", () => {
     expect(canonicalize(once)).toBe(once);
   });
 
+  it("canonicalizes the loose-list failure input", () => {
+    const input = "1. alpha\n\n1. [alpha](https://example.com/A)\n\n---\n";
+    const canonical = "1. alpha\n2. [alpha](https://example.com/A)\n\n---\n";
+
+    expect(canonicalize(input)).toBe(canonical);
+    expect(canonicalize(canonical)).toBe(canonical);
+  });
+
   it("round-trips a mention link and a page link", () => {
     const markdown = "[Alice](/users/123) and [Q3 Plan](/pages/456)\n";
 
@@ -109,6 +117,8 @@ describe("normalize", () => {
       "[Q3 Plan][plan]\n\n[plan]: /pages/456\n",
       "[Q3 Plan](/pages/456)\n",
     ],
+    ["a loose ordered list", "1. alpha\n\n1. bravo\n", "1. alpha\n2. bravo\n"],
+    ["a loose unordered list", "- alpha\n\n- bravo\n", "- alpha\n- bravo\n"],
   ])("converts %s", (_label, input, canonical) => {
     expect(canonicalize(input)).toBe(canonical);
   });

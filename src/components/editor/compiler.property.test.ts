@@ -140,14 +140,17 @@ type Block =
   | { readonly kind: "blockquote"; readonly children: readonly Inline[] }
   | {
       readonly kind: "unorderedList";
+      readonly loose: boolean;
       readonly items: readonly (readonly Inline[])[];
     }
   | {
       readonly kind: "orderedList";
+      readonly loose: boolean;
       readonly items: readonly (readonly Inline[])[];
     }
   | {
       readonly kind: "taskList";
+      readonly loose: boolean;
       readonly items: readonly {
         readonly checked: boolean;
         readonly children: readonly Inline[];
@@ -269,14 +272,27 @@ const blockArbitraries: readonly fc.Arbitrary<Block>[] = [
     children,
   })),
   fc
-    .array(itemArbitrary, { minLength: 1, maxLength: 3 })
-    .map((items): Block => ({ kind: "unorderedList", items })),
+    .record({
+      loose: fc.boolean(),
+      items: fc.array(itemArbitrary, { minLength: 1, maxLength: 3 }),
+    })
+    .map(({ loose, items }): Block => ({
+      kind: "unorderedList",
+      loose,
+      items,
+    })),
   fc
-    .array(itemArbitrary, { minLength: 1, maxLength: 3 })
-    .map((items): Block => ({ kind: "orderedList", items })),
+    .record({
+      loose: fc.boolean(),
+      items: fc.array(itemArbitrary, { minLength: 1, maxLength: 3 }),
+    })
+    .map(({ loose, items }): Block => ({ kind: "orderedList", loose, items })),
   fc
-    .array(taskItemArbitrary, { minLength: 1, maxLength: 3 })
-    .map((items): Block => ({ kind: "taskList", items })),
+    .record({
+      loose: fc.boolean(),
+      items: fc.array(taskItemArbitrary, { minLength: 1, maxLength: 3 }),
+    })
+    .map(({ loose, items }): Block => ({ kind: "taskList", loose, items })),
   fc
     .record({
       language: fc.constantFrom("ts", "js", "json", "bash", "text", "md"),
@@ -288,6 +304,28 @@ const blockArbitraries: readonly fc.Arbitrary<Block>[] = [
 
 const documentArbitrary = fc
   .array(fc.oneof(...blockArbitraries), { minLength: 1, maxLength: 5 })
+  .map(renderDocument);
+
+const looseListArbitrary: fc.Arbitrary<Block> = fc.oneof(
+  fc
+    .record({
+      items: fc.array(itemArbitrary, { minLength: 2, maxLength: 3 }),
+    })
+    .map(({ items }): Block => ({ kind: "unorderedList", loose: true, items })),
+  fc
+    .record({
+      items: fc.array(itemArbitrary, { minLength: 2, maxLength: 3 }),
+    })
+    .map(({ items }): Block => ({ kind: "orderedList", loose: true, items })),
+  fc
+    .record({
+      items: fc.array(taskItemArbitrary, { minLength: 2, maxLength: 3 }),
+    })
+    .map(({ items }): Block => ({ kind: "taskList", loose: true, items })),
+);
+
+const looseDocumentArbitrary = fc
+  .array(looseListArbitrary, { minLength: 1, maxLength: 3 })
   .map(renderDocument);
 
 /** Renders one inline node as Markdown. */
@@ -329,18 +367,20 @@ function renderBlock(block: Block): string {
     case "blockquote":
       return `> ${renderChildren(block.children)}`;
     case "unorderedList":
-      return block.items.map((item) => `- ${renderChildren(item)}`).join("\n");
+      return block.items
+        .map((item) => `- ${renderChildren(item)}`)
+        .join(block.loose ? "\n\n" : "\n");
     case "orderedList":
       return block.items
         .map((item, index) => `${index + 1}. ${renderChildren(item)}`)
-        .join("\n");
+        .join(block.loose ? "\n\n" : "\n");
     case "taskList":
       return block.items
         .map(
           (item) =>
             `- [${item.checked ? "x" : " "}] ${renderChildren(item.children)}`,
         )
-        .join("\n");
+        .join(block.loose ? "\n\n" : "\n");
     case "code":
       return `\`\`\`${block.language}\n${block.lines.join("\n")}\n\`\`\``;
     case "rule":
@@ -348,38 +388,13 @@ function renderBlock(block: Block): string {
   }
 }
 
-/** Returns the list family of one block, or null for a block that is not a list. */
-function listFamily(block: Block): string | null {
-  if (block.kind === "unorderedList") return "unordered";
-  if (block.kind === "orderedList") return "ordered";
-  if (block.kind === "taskList") return "task";
-  return null;
-}
-
 /**
  * Renders one document with blank lines between its blocks.
- * A horizontal rule separates two lists of the same family. A blank line
- * between two lists of the same family makes one loose list. Lexical has no
- * node for a loose list, so the compiler cannot return the loose form.
+ * A blank line between two list items makes the list loose. md-lite/1 uses
+ * tight lists, so the canonical form of a loose list is a tight list.
  */
 function renderDocument(blocks: readonly Block[]): string {
-  const rendered: string[] = [];
-  let previous: Block | undefined;
-
-  for (const block of blocks) {
-    const family = listFamily(block);
-
-    if (
-      previous !== undefined &&
-      family !== null &&
-      family === listFamily(previous)
-    ) {
-      rendered.push("---");
-    }
-
-    rendered.push(renderBlock(block));
-    previous = block;
-  }
+  const rendered = blocks.map(renderBlock);
 
   return `${rendered.join("\n\n")}\n`;
 }
@@ -424,6 +439,25 @@ describe("Markdown compiler properties", () => {
       }),
       OPTIONS,
     );
+  });
+
+  it("returns the canonical form for a loose list", () => {
+    fc.assert(
+      fc.property(looseDocumentArbitrary, (markdown) => {
+        const canonical = canonicalize(markdown);
+
+        expect(compileMarkdown(markdown, CONFIG)).toBe(canonical);
+      }),
+      OPTIONS,
+    );
+  });
+
+  it("compiles the loose-list failure input", () => {
+    const markdown = "1. alpha\n\n1. [alpha](https://example.com/A)\n\n---\n";
+    const canonical = "1. alpha\n2. [alpha](https://example.com/A)\n\n---\n";
+
+    expect(canonicalize(markdown)).toBe(canonical);
+    expect(compileMarkdown(markdown, CONFIG)).toBe(canonical);
   });
 
   it("keeps the href of a mention link and a page link", () => {
