@@ -2,5 +2,6 @@ node_modules
 .vite
 dist
 build
+storybook-static
 stats.html
 .env

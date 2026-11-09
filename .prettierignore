@@ -1,6 +1,7 @@
 node_modules
 dist
 build
+storybook-static
 stats.html
 package-lock.json
 src/routeTree.gen.ts

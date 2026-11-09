@@ -41,5 +41,5 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": [".ladle", "src/**/*", "*.config.ts"]
+  "include": [".storybook", "src/**/*", "*.config.ts"]
 }
