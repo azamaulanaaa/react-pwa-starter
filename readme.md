@@ -701,6 +701,8 @@ const provider: SessionContract = {
 ## Announcements
 
 - The `/system` page has an `Announcements` tab. The tab shows the announcement table.
+- A row opens a detail sheet. The sheet shows the full announcement content and the two show actions.
+- The table uses a fixed layout. Long content truncates with an ellipsis. The table hides the secondary columns on small screens.
 - `src/components/announcement/data.ts` holds the seed catalog. An application can replace the list with its own data source.
 - The `Show lightbox` action uses the existing `Dialog` primitive. The `Show banner` action uses the existing `Alert` primitive. The feature adds no new UI primitive.
 - `Hide for later` snoozes the announcement for 24 hours. The announcement returns when the snooze ends.
