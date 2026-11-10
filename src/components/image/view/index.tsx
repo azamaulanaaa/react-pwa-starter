@@ -111,9 +111,9 @@ export function ImageView({
 
             <DialogPrimitive.Close
               aria-label={t("image_view_close")}
-              className="fixed end-4 top-4 z-20 rounded-full bg-black/32 backdrop-blur-sm"
+              className="fixed end-4 top-4 z-20"
               data-slot="image-view-close"
-              render={<Button size="icon" variant="ghost" />}
+              render={<Button size="icon" variant="outline" />}
             >
               <XIcon />
             </DialogPrimitive.Close>

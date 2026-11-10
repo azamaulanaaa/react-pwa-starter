@@ -60,11 +60,12 @@ describe("ImageView", () => {
     expect(onOpenChange.mock.calls[0]?.[0]).toBe(false);
   });
 
-  it("shows the ghost close button at the top right", () => {
+  it("shows the outline close button at the top right", () => {
     renderView();
 
     const close = getButton("Close image");
 
+    expect(close.classList.contains("border-input")).toBe(true);
     expect(close.classList.contains("bg-primary")).toBe(false);
     expect(close.classList.contains("fixed")).toBe(true);
     expect(close.classList.contains("top-4")).toBe(true);
@@ -92,6 +93,7 @@ describe("ImageView", () => {
     const download = getLink("Download");
 
     expect(download.classList.contains("border-input")).toBe(true);
+    expect(download.classList.contains("bg-primary")).toBe(false);
     expect(download.classList.contains("fixed")).toBe(true);
     expect(download.classList.contains("bottom-6")).toBe(true);
   });
