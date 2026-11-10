@@ -15,11 +15,7 @@ import {
   DialogPortal,
   DialogPrimitive,
 } from "@/components/ui/dialog.tsx";
-import {
-  Group,
-  GroupSeparator,
-  GroupText,
-} from "@/components/ui/group.tsx";
+import { Group, GroupSeparator, GroupText } from "@/components/ui/group.tsx";
 import { useIntl } from "@/components/context/intl.tsx";
 import { useTranslation } from "@/components/context/translation.tsx";
 
