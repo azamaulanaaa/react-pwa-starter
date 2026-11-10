@@ -97,6 +97,7 @@
   "image_view_description": "Gunakan kontrol zoom untuk memeriksa gambar.",
   "image_view_download": "Unduh",
   "image_view_title": "Pratinjau gambar",
+  "image_view_zoom_controls": "Kontrol zoom",
   "image_view_zoom_in": "Perbesar",
   "image_view_zoom_level": "Zoom {{percent}}",
   "image_view_zoom_out": "Perkecil",

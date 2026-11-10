@@ -96,20 +96,42 @@ describe("ImageView", () => {
     expect(download.classList.contains("bottom-6")).toBe(true);
   });
 
-  it("shows the zoom controls without a border or shadow", () => {
+  it("shows the zoom controls as a named group without a border or shadow", () => {
     renderView();
 
-    const controls = document.querySelector(
-      '[data-slot="image-view-zoom-controls"]',
-    );
+    const controls = screen.getByRole("group", { name: "Zoom controls" });
 
-    expect(controls).not.toBeNull();
+    expect(controls.getAttribute("data-slot")).toBe("image-view-zoom-controls");
 
-    const classes = [...controls!.classList];
+    const classes = [...controls.classList];
 
     expect(classes).not.toContain("shadow-sm");
     expect(classes).not.toContain("border");
     expect(classes.filter((name) => /^border-(?!0$)/.test(name))).toEqual([]);
+  });
+
+  it("shows the zoom readout with tabular numbers", () => {
+    renderView();
+
+    const readout = screen.getByRole("status");
+
+    expect(readout.classList.contains("tabular-nums")).toBe(true);
+    expect(readout.getAttribute("aria-live")).toBe("polite");
+    expect(readout.getAttribute("aria-label")).toBe("Zoom 100%");
+    expect(readout.getAttribute("data-slot")).toBe("group-text");
+  });
+
+  it("shows the readout with the outline button styles", () => {
+    renderView();
+
+    const readout = screen.getByRole("status");
+
+    expect(readout.classList.contains("border-input")).toBe(true);
+    expect(readout.classList.contains("bg-popover")).toBe(true);
+    expect(readout.classList.contains("text-foreground")).toBe(true);
+    expect(readout.classList.contains("dark:bg-input/32")).toBe(true);
+    expect(readout.classList.contains("bg-muted")).toBe(false);
+    expect(readout.classList.contains("text-muted-foreground")).toBe(false);
   });
 
   it("raises the zoom from 100% to 125%", () => {

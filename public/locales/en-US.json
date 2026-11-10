@@ -97,6 +97,7 @@
   "image_view_description": "Use the zoom controls to inspect the image.",
   "image_view_download": "Download",
   "image_view_title": "Image preview",
+  "image_view_zoom_controls": "Zoom controls",
   "image_view_zoom_in": "Zoom in",
   "image_view_zoom_level": "Zoom {{percent}}",
   "image_view_zoom_out": "Zoom out",

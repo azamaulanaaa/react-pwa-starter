@@ -15,7 +15,11 @@ import {
   DialogPortal,
   DialogPrimitive,
 } from "@/components/ui/dialog.tsx";
-import { Group } from "@/components/ui/group.tsx";
+import {
+  Group,
+  GroupSeparator,
+  GroupText,
+} from "@/components/ui/group.tsx";
 import { useIntl } from "@/components/context/intl.tsx";
 import { useTranslation } from "@/components/context/translation.tsx";
 
@@ -125,7 +129,8 @@ export function ImageView({
             </Button>
 
             <Group
-              className="fixed start-4 top-4 z-20 gap-1 rounded-full border-0 bg-background/80 p-1 shadow-none backdrop-blur"
+              aria-label={t("image_view_zoom_controls")}
+              className="fixed start-4 top-4 z-20"
               data-slot="image-view-zoom-controls"
             >
               <Button
@@ -133,38 +138,48 @@ export function ImageView({
                 disabled={currentZoom <= 1}
                 onClick={zoomOut}
                 size="icon-sm"
-                variant="ghost"
+                variant="outline"
               >
                 <MinusIcon />
               </Button>
 
-              <span
-                aria-label={t("image_view_zoom_level", {
-                  percent: formatPercent(currentZoom),
-                })}
-                aria-live="polite"
-                className="min-w-12 text-center text-sm tabular-nums"
-                role="status"
+              <GroupSeparator />
+
+              <GroupText
+                className="min-w-12 justify-center bg-popover text-foreground tabular-nums dark:bg-input/32"
+                render={
+                  <span
+                    aria-label={t("image_view_zoom_level", {
+                      percent: formatPercent(currentZoom),
+                    })}
+                    aria-live="polite"
+                    role="status"
+                  />
+                }
               >
                 {formatPercent(currentZoom)}
-              </span>
+              </GroupText>
+
+              <GroupSeparator />
 
               <Button
                 aria-label={t("image_view_zoom_in")}
                 disabled={currentZoom >= zoomLimit}
                 onClick={zoomIn}
                 size="icon-sm"
-                variant="ghost"
+                variant="outline"
               >
                 <PlusIcon />
               </Button>
+
+              <GroupSeparator />
 
               <Button
                 aria-label={t("image_view_zoom_reset")}
                 disabled={currentZoom <= 1}
                 onClick={zoomReset}
                 size="icon-sm"
-                variant="ghost"
+                variant="outline"
               >
                 <RotateCcwIcon />
               </Button>
